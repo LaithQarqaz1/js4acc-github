@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>محفظتي | JS4Acc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="header.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="loader" class="loader"><div class="spinner"></div></div>
+  <div id="headerContainer"></div>
+  <div id="sidebar"></div>
+
+  <main class="container">
+    <section id="walletPanel" class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">محفظتي</p>
+          <h2>الرصيد وطلبات الشحن</h2>
+        </div>
+        <span class="chip chip-success">ربط مباشر بفايرستور</span>
+      </div>
+      <div class="wallet-grid">
+        <div class="wallet-card">
+          <p class="muted tiny">الرصيد المتاح</p>
+          <h2 id="walletBalance">0</h2>
+          <p class="muted tiny">يتم تحديثه بعد موافقة الأدمن على طلبات الشحن.</p>
+        </div>
+        <form id="walletForm" class="wallet-card">
+          <p class="muted tiny">طلب شحن رصيد (يُراجع من الأدمن)</p>
+          <div class="field">
+            <label for="walletCountrySelect">الدولة</label>
+            <select id="walletCountrySelect" required></select>
+          </div>
+          <div class="field">
+            <label for="walletMethodSelect">طريقة التحويل</label>
+            <select id="walletMethodSelect" required></select>
+            <div id="walletMethodInfo" class="muted tiny"></div>
+          </div>
+          <div class="field">
+            <label for="walletAmountInput">المبلغ (USD)</label>
+            <input id="walletAmountInput" type="number" min="1" placeholder="مثال: 20" required>
+          </div>
+          <div class="field">
+            <label for="walletRefInput">بيانات التحويل / المرجع</label>
+            <input id="walletRefInput" type="text" placeholder="رقم العملية أو ملاحظات" required>
+          </div>
+          <button type="submit" class="btn primary">إرسال طلب شحن</button>
+          <p class="tiny muted">يصل الطلب للأدمن، ويضاف الرصيد بعد الموافقة.</p>
+        </form>
+      </div>
+      <div class="wallet-card">
+        <p class="muted tiny">سجل طلبات الشحن</p>
+        <div id="walletHistory" class="cards"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
+  <script src="header.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

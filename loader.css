@@ -1,0 +1,97 @@
+﻿#preloader {
+  position: fixed;
+  inset: 0;
+  --overlay: rgba(246, 247, 255, 0.65);
+  background: var(--overlay);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 12000;
+  transition: opacity 0.4s ease, visibility 0.4s ease;
+  will-change: opacity, visibility; 
+}
+
+@keyframes preloaderAutoHide { to { opacity: 0; visibility: hidden; } }
+#preloader.auto-hide { animation: preloaderAutoHide 0s linear 1.2s forwards; }
+
+html[data-theme="dark"] #preloader,
+body.dark-mode #preloader {
+  --overlay: rgba(5, 5, 11, 0.72);
+}
+
+#preloader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+.loader {
+  position: relative;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  --c1: #3A8BD1; 
+  --c2: #66aee9; 
+  --c3: #9dc5e8; 
+  filter: drop-shadow(0 6px 18px rgba(66, 68, 150, 0.35));
+  transition: transform 0.4s ease, opacity 0.4s ease;
+  display: grid;              
+  place-items: center;       
+  background-image: url('loading.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 72px 72px;
+}
+
+html[data-theme="dark"] .loader,
+body.dark-mode .loader {
+  --c1: #2867A5;
+  --c3: #66aee9;
+}
+
+.loader::before,
+.loader::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 7px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 7px));
+}
+
+.loader::before {
+  background: conic-gradient(from 0deg, var(--c1) 0 140deg, transparent 140deg 360deg);
+  animation: ring-spin-a 0.8s linear infinite;
+}
+
+.loader::after {
+  inset: 10px; 
+  background: conic-gradient(from 180deg, var(--c3) 0 110deg, transparent 110deg 360deg);
+  animation: ring-spin-b 0.9s linear infinite reverse;
+}
+
+#preloader.hidden .loader { transform: scale(0.86); opacity: 0; }
+
+@keyframes ring-spin-a { to { transform: rotate(1turn); } }
+@keyframes ring-spin-b { to { transform: rotate(1turn); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .loader::before { animation-duration: 1.4s; }
+  .loader::after  { animation-duration: 1.6s; }
+}
+
+.loader img.loader-logo {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border-radius: 12px;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+@media (max-width: 480px) {
+  #preloader { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .loader { filter: none; }
+}
+
+
+

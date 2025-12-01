@@ -1,0 +1,4445 @@
+﻿<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة الحساب | سوق الحسابات</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+
+body {
+  font-family: 'Cairo', sans-serif;
+  direction: rtl;
+  margin: 0;
+  padding-top: 60px; /* حتى لا يغطي الهيدر الصفحة */
+  background: #f8f9fa;
+  overflow-x: hidden;
+}
+:root {
+  --scroll-track-color: rgba(22, 23, 35, 0.92);
+  --scroll-thumb-color: rgba(188, 190, 209, 0.9);
+  --scroll-thumb-hover: rgba(214, 215, 228, 0.95);
+  --scroll-thumb-active: rgba(236, 237, 246, 0.98);
+  --scroll-thumb-border: rgba(255, 255, 255, 0.25);
+}
+html[data-theme="light"] {
+  --scroll-track-color: rgba(236, 237, 248, 0.92);
+  --scroll-thumb-color: rgba(121, 123, 192, 0.85);
+  --scroll-thumb-hover: rgba(137, 139, 204, 0.9);
+  --scroll-thumb-active: rgba(153, 155, 216, 0.95);
+  --scroll-thumb-border: rgba(73, 75, 130, 0.28);
+}
+html,
+body {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb-color) var(--scroll-track-color);
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 14px;
+}
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0)) top / 100% 16px no-repeat,
+    linear-gradient(0deg, rgba(255,255,255,0.18), rgba(255,255,255,0)) bottom / 100% 16px no-repeat,
+    linear-gradient(180deg, var(--scroll-track-color) 0%, rgba(20,21,34,0.96) 50%, var(--scroll-track-color) 100%);
+  border-radius: 999px;
+  background-color: var(--scroll-track-color);
+}
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--scroll-thumb-color), rgba(158,160,182,0.85));
+  border-radius: 999px;
+  border: 2px solid var(--scroll-thumb-border);
+  box-shadow: inset 0 0 6px rgba(255,255,255,0.35);
+}
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--scroll-thumb-hover), rgba(170,172,194,0.88));
+}
+html::-webkit-scrollbar-thumb:active,
+body::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, var(--scroll-thumb-active), rgba(186,188,208,0.92));
+}
+/* ===== Fix mobile tap highlight and touch focus ===== */
+a, button, .card {
+  -webkit-tap-highlight-color: transparent;
+}
+a:focus:not(:focus-visible),
+button:focus:not(:focus-visible),
+.card:focus:not(:focus-visible) {
+  outline: none;
+}
+.card img,
+a img {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+#sidebar {
+  padding-top: 60px; /* مطابقة للهيدر */
+}
+
+.support-icon.whatsapp img {
+  filter: invert(44%) sepia(78%) saturate(442%) hue-rotate(85deg) brightness(90%) contrast(85%);
+}
+
+.support-icon.facebook img {
+  filter: invert(28%) sepia(89%) saturate(4184%) hue-rotate(197deg) brightness(90%) contrast(92%);
+}
+
+.support-icon.instagram img {
+  filter: invert(42%) sepia(71%) saturate(563%) hue-rotate(320deg) brightness(94%) contrast(100%);
+}
+
+.support-icon.telegram img {
+  filter: invert(48%) sepia(66%) saturate(3665%) hue-rotate(178deg) brightness(85%) contrast(105%);
+}
+
+.support-icon.email img {
+  filter: invert(33%) sepia(96%) saturate(7493%) hue-rotate(348deg) brightness(92%) contrast(90%);
+}
+
+
+
+
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Cairo', sans-serif;
+      margin: 0;
+      padding: 0;
+      direction: rtl;
+      background: #f8f9fa;
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding-top: 70px; /* مساحة للشريط العلوي */
+    }
+
+    /* الشريط العلوي */
+.top-header {
+  display: flex;
+  justify-content: flex-start; /* العناصر تبدأ من اليمين (بسبب RTL) */
+  align-items: center;
+  flex-direction: row;
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 70px;
+  background: linear-gradient(135deg, #2867A5, #3A8BD1);
+  box-shadow: 0 6px 14px rgba(15,16,38,0.22);
+  padding-top: 0;
+  padding-right: 20px; /* تقليل المسافة من الحافة اليمنى */
+  padding-bottom: 0;
+  padding-left: 15px;
+  z-index: 1800;
+}
+
+
+    .top-header img {
+      height: 60px;
+      margin-right: auto; /* عكس التموضع: دفع الشعار لليسار */
+      margin-left: 0;
+      cursor: pointer;
+    }
+
+    /* تأكد من توسيط الشعار عموديًا داخل الهيدر */
+    .top-header a {
+      display: flex;
+      align-items: center;
+      height: 100%;
+      line-height: 0; /* إزالة أي فراغات خطية تؤثر على التوسيط */
+    }
+
+    /* زر الهامبورغر داخل الهيدر */
+    #hamburger {
+      position: static;     /* ضمن التدفق ليلتصق بالرصيد */
+      right: auto;
+      left: auto;
+      top: auto;
+      transform: none;
+      width: 30px;
+      height: 25px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      z-index: 1900;
+    }
+    #hamburger span {
+      height: 4px;
+      background: #fff;     /* التباين مع الخلفية الأرجوانية */
+      border-radius: 2px;
+      transition: background 0.3s;
+    }
+    #hamburger:hover span {
+      background: #e0e0e0;
+    }
+
+
+/* وضع فاتح للهيدر والأزرار */
+/* القائمة الجانبية */
+    #sidebar {
+      text-align: center;
+      position: fixed;
+      top: 0;
+      right: 0;            /* نقل الشريط الجانبي لليمين */
+      left: auto;
+      width: 250px;
+      height: 100%;
+      background: linear-gradient(135deg, #1f3550, #3A8BD1);
+      transform: translateX(100%); /* مخفي خارج الشاشة يمينًا */
+      transition: transform 0.3s ease;
+      z-index: 1500;
+      padding-top: 70px; /* يساوي ارتفاع الهيدر */
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+    #sidebar.active {
+      transform: translateX(0);
+    }
+    #sidebar ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #sidebar ul li {
+      display: flex;
+      align-items: center;
+      padding: 15px 20px;
+      gap: 12px;
+      cursor: pointer;
+      transition: background 0.3s;
+      border-radius: 6px;
+      user-select: none;
+    }
+    #sidebar ul li:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    #sidebar ul li i {
+      color: #fff;
+      font-size: 1.2rem;
+      min-width: 20px;
+      text-align: center;
+    }
+    #sidebar ul li a {
+      color: #fff;
+      text-decoration: none;
+      font-size: 1.1rem;
+      width: 100%;
+      display: block;
+      pointer-events: none;
+    }
+
+    
+    /* محتوى الصفحة */
+    .content-container {
+      max-width: 600px;
+      margin: 80px auto;
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    }
+    label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: bold;
+      font-size: 1.1rem;
+      color: #333;
+      margin-bottom: 12px;
+    }
+    label i {
+      color: #3A8BD1;
+      font-size: 1.3rem;
+    }
+    select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      font-size: 1rem;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    select:focus {
+      border-color: #3A8BD1;
+      box-shadow: 0 0 5px rgba(91,143,194,0.4);
+      outline: none;
+    }
+
+
+
+
+
+
+/* ====== Shimmer Loading for order cards ====== */
+.order-card.loading {
+  position: relative;
+  background: #f0f2f5;
+  border: none;
+  border-radius: 12px;
+  min-height: 100px; /* ✅ ارتفاع أقرب للكرت الحقيقي */
+  margin-bottom: 14px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+
+/* إخفاء محتوى البطاقة الحقيقي مؤقتًا إن وُجد */
+.order-card.loading > * {
+  visibility: hidden;
+}
+
+/* لمعان متحرك */
+.order-card.loading::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: -150px;
+  width: 120px;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
+  animation: orders-shimmer 1.2s infinite;
+}
+
+@keyframes orders-shimmer {
+  0%   { right: -150px; }
+  100% { right: 100%;   }
+}
+
+/* اجعل التوست واللودر فوق النافذة المنبثقة */
+#toast { z-index: 13000 !important; }
+#preloader { z-index: 12000 !important; }
+
+
+
+
+
+
+/* إخفاء الشريط السفلي على الشاشات الكبيرة افتراضيًا */
+.mobile-dock { display: none; }
+
+/* ===== Mobile Bottom Dock (شريط أزرار للجوال) ===== */
+@media (max-width: 768px) {
+  body.mobile-has-dock {
+    /* مساحة أسفل الصفحة كي لا يغطي الشريط المحتوى */
+    padding-bottom: 78px !important; /* height(60) + padding */
+  }
+
+  .mobile-dock {
+    position: fixed;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    gap: 10px;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    background: #05050b;
+    border-top: 1px solid #2b2d52;
+    box-shadow: 0 -8px 22px rgba(5,6,18,.32);
+    z-index: 9000; /* أقل من التوست واللودر والمودالات */
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+
+  /* وضع فاتح */
+  html[data-theme="light"] .mobile-dock {
+    background: #ffffffcf;
+    border-top-color: #e5e7eb;
+    box-shadow: 0 -10px 24px rgba(0,0,0,.06);
+  }
+
+  .mobile-dock a,
+  .mobile-dock button {
+    -webkit-tap-highlight-color: transparent;
+    appearance: none;
+    border: 1px solid #2b2d52;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg,#0f1024,#05050b);
+    color: #f0f1ff;
+    box-shadow: 0 4px 14px rgba(4,5,12,.38);
+    text-decoration: none;
+    font-size: 1.05rem;
+    transition: transform .15s ease, box-shadow .2s ease, filter .15s ease, background .2s ease;
+  }
+
+  html[data-theme="light"] .mobile-dock a,
+  html[data-theme="light"] .mobile-dock button {
+    background: #ffffff;
+    border-color: #e5e7eb;
+    color: #221c3f;
+    box-shadow: 0 4px 12px rgba(0,0,0,.08);
+  }
+
+  .mobile-dock a:active,
+  .mobile-dock button:active {
+    transform: translateY(1px) scale(.98);
+    filter: brightness(.95);
+  }
+
+  .mobile-dock a.active,
+  .mobile-dock button.active {
+    background: linear-gradient(135deg,#2867A5,#3A8BD1);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 8px 22px rgba(95,82,224,.28);
+  }
+
+  /* حجم الأيقونة داخل الزر */
+  .mobile-dock i { pointer-events: none; font-size: 1.15rem; }
+}
+
+
+
+
+
+
+
+/* تحسين شكل البطاقة */
+/* ====== Order Card (الكرت الخارجي) ====== */
+.order-card {
+  position: relative;
+  border: 1px solid transparent;             /* حد شفاف لكي يظهر تدرّج الإطار */
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 16px;
+  background:
+    linear-gradient(#ffffff, #ffffff) padding-box,            /* أرضية بيضاء ناعمة */
+    radial-gradient(120% 120% at 100% 0%, #e0e7ff, #fce7f3 40%, #e0f2fe 80%) border-box; /* إطار متدرّج */
+  box-shadow:
+    0 10px 24px rgba(24, 39, 75, 0.08),
+    0 2px 6px rgba(24, 39, 75, 0.05);
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+  overflow: hidden;  /* لإخفاء توهج الزاوية داخل الحدود */
+}
+
+/* لمسة توهج لطيف في الزاوية العلوية اليمنى */
+.order-card::after {
+  content: "";
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(circle at center, rgba(0,123,255,.12), transparent 60%);
+  filter: blur(6px);
+  pointer-events: none;
+}
+
+/* تفاعل الهوفر/الفوكس */
+.order-card:hover,
+.order-card:focus-within {
+  transform: translateY(-4px);
+  box-shadow:
+    0 16px 36px rgba(24, 39, 75, 0.14),
+    0 4px 10px rgba(24, 39, 75, 0.06);
+}
+
+/* ضغط بسيط عند النقر */
+.order-card:active {
+  transform: translateY(-1px);
+}
+
+/* تحسين الهوامش على الشاشات الصغيرة */
+@media (max-width: 600px) {
+  .order-card {
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+}
+
+.order-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 25px rgba(0,0,0,0.12);
+}
+
+/* رأس البطاقة */
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 50px; /* مسافة بين العناصر */
+}
+
+.order-header .order-status {
+  margin-right: auto; /* تدفعه باتجاه السهم */
+}
+
+.order-header i {
+  margin-left: 0;
+}
+/* حالات الطلب */
+.order-status {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.order-status.تم_الشحن {
+  background-color: #28a745;
+  color: white;
+}
+.order-status.مرفوض {
+  background-color: #dc3545;
+  color: white;
+}
+.order-status.مسترد {
+  background-color: #6c757d;
+  color: white;
+}
+.order-status.قيد_المعالجة {
+  background-color: #17a2b8;
+  color: white;
+}
+
+/* تفاصيل الطلب */
+.order-details {
+  display: none;
+  margin-top: 15px;
+  background: #f8faff;
+  padding: 15px;
+  border-radius: 10px;
+  border: 1px solid #e0e6f7;
+  animation: fadeIn 0.3s ease-in-out;
+}
+.order-details p {
+  margin: 8px 0;
+  font-size: 0.95rem;
+  color: #444;
+}
+.order-details strong {
+  color: #000;
+}
+
+/* أنيميشن */
+@keyframes fadeIn {
+  from {opacity: 0; transform: translateY(-5px);}
+  to {opacity: 1; transform: translateY(0);}
+}
+
+/* زر عرض الصورة */
+.btn-show-proof {
+  display: inline-block;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #3A8BD1, #414391);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-show-proof:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(65,67,145,0.3);
+}
+
+.btn-show-proof:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 8px rgba(65,67,145,0.24);
+}
+
+.btn-show-proof:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(91,143,194,0.4);
+}
+
+
+
+
+
+
+
+
+    @media (max-width: 600px) {
+      .content-container {
+        margin: 60px 15px;
+        padding: 20px;
+      }
+      #hamburger { right: 15px; left: auto; }
+    }
+
+
+    
+.footer-title {
+  color: #ffffff;
+  font-size: 32px;
+  text-align: center;
+  margin-bottom: 40px;
+  font-weight: 700;
+  flex-basis: 100%;
+  width: 100%;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  text-shadow: 1px 1px 4px rgba(0,0,0,0.4);
+}
+
+.footer-icons {
+  background: linear-gradient(135deg, #414391, #3A8BD1);
+  padding: 60px 30px;
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+  border-radius: 15px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.icon-box {
+  background-color: #fff;
+  width: 220px;
+  padding: 25px 20px;
+  border-radius: 15px;
+  text-align: center;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.12);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: default;
+}
+
+.icon-box:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 14px 28px rgba(0,0,0,0.25);
+}
+
+.icon-box i {
+  font-size: 42px;
+  color: #3A8BD1;
+  margin-bottom: 18px;
+  transition: color 0.3s ease;
+}
+
+.icon-box:hover i {
+  color: #414391;
+}
+
+.icon-box h3 {
+  font-size: 20px;
+  margin: 12px 0 8px;
+  color: #111;
+  font-weight: 600;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.icon-box p {
+  font-size: 15px;
+  color: #444;
+  line-height: 1.5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+@media (max-width: 768px) {
+  .footer-icons {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 30px 10px;
+    gap: 20px;
+  }
+
+  .icon-box {
+    width: 45%; /* بدلًا من 90% أو ثابت */
+    max-width: 180px;
+    padding: 15px 10px;
+  }
+
+  .icon-box i {
+    font-size: 28px;
+    margin-bottom: 10px;
+  }
+
+  .icon-box h3 {
+    font-size: 16px;
+  }
+
+  .icon-box p {
+    font-size: 13px;
+  }
+
+  .footer-title {
+    font-size: 24px;
+    margin-bottom: 25px;
+  }
+}
+
+@media (max-width: 480px) {
+  .icon-box {
+    width: 80%;
+    max-width: 160px;
+    padding: 12px 8px;
+  }
+
+  .icon-box i {
+    font-size: 24px;
+    margin-bottom: 8px;
+  }
+
+  .icon-box h3 {
+    font-size: 14px;
+  }
+
+  .icon-box p {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .footer-title {
+    font-size: 20px;
+  }
+}
+
+
+
+
+.support-section {
+  background-color: #f8f9fa;
+  padding: 60px 20px;
+  text-align: center;
+  border-top: 2px solid #e0e0e0;
+}
+
+.support-title {
+  font-family: 'Cairo', sans-serif;
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 35px;
+  color: #333;
+}
+
+.support-icons {
+  display: flex;
+  justify-content: center;
+  gap: 25px;
+  flex-wrap: wrap;
+}
+
+.support-icon {
+  width: 60px;
+  height: 60px;
+  background-color: white;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-decoration: none;
+  font-size: 26px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.support-icon:hover {
+  transform: scale(1.1);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* ألوان الأيقونات حسب المنصة */
+.support-icon.whatsapp { color: #25D366; }
+.support-icon.facebook { color: #3b5998; }
+.support-icon.instagram { color: #E1306C; }
+
+/* استجابة للموبايل */
+@media (max-width: 600px) {
+  .support-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 22px;
+  }
+}
+
+.btn-show-proof {
+  display: inline-block;
+  padding: 0.5em 1em;
+  background: linear-gradient(135deg, #2867A5 0%, #3A8BD1 100%);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 0.5em;
+  box-shadow: 0 4px 8px rgba(20,22,52,0.18);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-show-proof:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(20,22,52,0.26);
+}
+
+.btn-show-proof:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 8px rgba(20,22,52,0.18);
+}
+
+.btn-show-proof:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(91,143,194,0.42);
+}
+
+.btn-show-proof {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  box-sizing: border-box;
+  text-align: center;
+  background: linear-gradient(135deg, #3A8BD1 0%, #414391 100%);
+  color: #fff;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(20,22,52,0.2);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.btn-show-proof:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(20,22,52,0.28);
+}
+
+.btn-show-proof:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 8px rgba(20,22,52,0.22);
+}
+
+.btn-show-proof:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(91,143,194,0.45);
+}
+
+/* الرصيد داخل الهيدر */
+.header-balance {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  direction: rtl;
+  gap: 2px;
+  padding: 0;
+  margin: 0;
+  color: #e2e8f0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.header-balance__metrics {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  direction: ltr;
+}
+
+.header-balance__currency {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.82);
+  direction: ltr;
+  unicode-bidi: plaintext;
+}
+
+.header-balance__value {
+  direction: ltr;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.45px;
+  background: linear-gradient(90deg, #fef3c7 0%, #fefce8 30%, #93c5fd 65%, #38bdf8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-feature-settings: 'tnum' 1, 'kern' 1;
+  text-shadow: 0 8px 20px rgba(56, 189, 248, 0.22);
+}
+
+@media (max-width: 600px) {
+  .header-balance__metrics {
+    gap: 3px;
+  }
+  .header-balance__currency {
+    font-size: 0.7rem;
+  }
+  .header-balance__value {
+    font-size: 0.95rem;
+    letter-spacing: 0.35px;
+  }
+}
+
+
+.support-rights {
+  margin-top: 30px;
+  text-align: center;
+  font-size: 14px;
+  color: #555;
+}
+
+.support-rights a {
+  color: #3A8BD1;
+  text-decoration: none;
+  font-weight: bold;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.support-rights a:hover {
+  text-decoration: underline;
+}
+
+.support-rights p {
+  margin: 0;
+  font-size: 13px;
+  color: #777;
+}
+
+
+/* الشعار */
+.top-header img {
+  height: 60px;
+  margin-right: auto; /* عكس التموضع: دفع الشعار لليسار */
+  margin-left: 0;
+  cursor: pointer;
+  transition: height 0.3s ease;
+}
+
+/* زر الهامبورغر */
+#hamburger {
+  width: 30px;
+  height: 25px;
+  transition: all 0.3s ease;
+}
+
+/* الرصيد */
+
+/* ====== Dark Mode overrides for header & sidebar ====== */
+body.dark-mode {
+  background: #05050b;
+}
+
+/* الهيدر */
+body.dark-mode .top-header {
+  background: linear-gradient(135deg,#1f3550,#2867A5);
+  box-shadow: 0 8px 18px rgba(5,6,18,0.6);
+}
+body.dark-mode #hamburger span {
+  background: #f0f1ff;
+}
+body.dark-mode #hamburger:hover span {
+  background: #cbd5e1;
+}
+
+/* الشعار: يظل كما هو، لكن إن احتجت عكس الألوان ضع فلتر هنا */
+/* body.dark-mode .top-header img { filter: brightness(0.95) contrast(1.05); } */
+
+/* الرصيد داخل الهيدر */
+body.dark-mode .header-balance {
+  color: #f8fafc;
+}
+body.dark-mode .header-balance__value {
+  color: rgba(226, 232, 240, 0.7);
+}
+body.dark-mode .header-balance__currency {
+  color: rgba(191, 219, 254, 0.82);
+}
+/* القائمة الجانبية */
+body.dark-mode #sidebar {
+  background: linear-gradient(135deg,#1f3550,#1f3550);
+  box-shadow: 4px 0 12px rgba(5,6,18,0.65);
+}
+body.dark-mode #sidebar ul li:hover {
+  background: rgba(255,255,255,0.08);
+}
+body.dark-mode #sidebar ul li i,
+body.dark-mode #sidebar ul li a {
+  color: #f0f1ff;
+}
+
+/* بطاقات/حاويات عامة تُستخدم أسفل الهيدر (إن وُجدت) */
+body.dark-mode .content-container {
+  background: #0f1024;
+  box-shadow: 0 8px 22px rgba(4,5,12,0.6);
+}
+body.dark-mode label { color: #f0f1ff; }
+body.dark-mode label i { color: #3A8BD1; }
+body.dark-mode select {
+  background: #0f1024;
+  color: #f0f1ff;
+  border-color: #2b2d52;
+}
+body.dark-mode select:focus {
+  border-color: #3A8BD1;
+  box-shadow: 0 0 5px rgba(91,143,194,0.35);
+}
+
+/* أزرار الأدلّة/المرفقات */
+body.dark-mode .btn-show-proof {
+  background: linear-gradient(135deg, #2867A5 0%, #2867A5 100%);
+  color: #f0f1ff;
+  box-shadow: 0 4px 10px rgba(12,13,32,0.5);
+}
+
+/* أقسام الدعم والفوتر */
+body.dark-mode .support-section {
+  background-color: #05050b;
+  border-top-color: #1c1d38;
+}
+body.dark-mode .support-title { color: #f0f1ff; }
+body.dark-mode .support-icons .support-icon {
+  background-color: #11122a;
+  box-shadow: 0 4px 10px rgba(6,7,20,0.5);
+}
+body.dark-mode .support-icon:hover {
+  box-shadow: 0 8px 16px rgba(6,7,20,0.6);
+}
+
+/* صندوق الأيقونات أسفل الصفحة */
+body.dark-mode .footer-icons {
+  background: linear-gradient(135deg, #1f3550, #0f1024);
+  box-shadow: 0 8px 18px rgba(6,7,20,0.55);
+}
+body.dark-mode .icon-box {
+  background-color: #0f1024;
+  color: #f0f1ff;
+  box-shadow: 0 6px 14px rgba(6,7,20,0.4);
+}
+body.dark-mode .icon-box i { color: #66aee9; }
+body.dark-mode .icon-box:hover i { color: #3A8BD1; }
+body.dark-mode .icon-box h3 { color: #f0f1ff; }
+body.dark-mode .icon-box p { color: #cbd5e1; }
+
+/* حقوق وشيفرات الروابط السفلية */
+body.dark-mode .support-rights { color: #cbd5e1; }
+body.dark-mode .support-rights a { color: #c3dcf4; }
+body.dark-mode .support-rights a:hover { text-decoration: underline; }
+
+
+
+/* تحسين استجابة قسم الدعم */
+@media (max-width: 992px) {
+  .support-icons {
+    gap: 18px;
+  }
+}
+
+@media (max-width: 768px) {
+  .support-icons {
+    gap: 14px;
+  }
+  .support-title {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 360px) {
+  .support-icons {
+    gap: 10px;
+  }
+  .support-title {
+    font-size: 18px;
+    margin-bottom: 20px;
+  }
+}
+/* ===== Smooth Theme + Motion Tokens ===== */
+:root {
+  --theme-trans: 220ms;
+  --anim-fast: 120ms;
+  --anim-med: 220ms;
+  --ease-soft: cubic-bezier(.25,.46,.45,.94);
+  --ease-snappy: cubic-bezier(.22,.61,.36,1);
+  --focus-ring: rgba(91,143,194,.35);
+}
+
+html,
+body,
+input,
+select,
+textarea,
+button,
+.top-header,
+#sidebar,
+.content-container,
+.support-section,
+.footer-icons,
+.icon-box,
+.support-icon,
+.modal,
+.modal-content,
+.card,
+.offer-box,
+.header-balance {
+  transition: background-color var(--theme-trans) var(--ease-soft),
+              color           var(--theme-trans) var(--ease-soft),
+              border-color    var(--theme-trans) var(--ease-soft),
+              box-shadow      var(--theme-trans) var(--ease-soft),
+              transform       var(--anim-fast)   var(--ease-snappy);
+}
+
+/* Hint color-scheme for UA widgets */
+body.dark-mode { color-scheme: dark; }
+html[data-theme="dark"] { color-scheme: dark; }
+
+/* ===== Interactive micro-interactions ===== */
+/* Links and buttons */
+a, button, .btn, .send-button, .search-container button, [role="button"], .header-balance {
+  will-change: transform, box-shadow, background-color, color, border-color;
+}
+button, .btn, .send-button, .search-container button {
+  transition: background-color var(--anim-med) var(--ease-soft),
+              color           var(--anim-med) var(--ease-soft),
+              border-color    var(--anim-med) var(--ease-soft),
+              box-shadow      var(--anim-med) var(--ease-soft),
+              transform       var(--anim-fast) var(--ease-snappy);
+}
+button:hover, .btn:hover, .send-button:hover, .search-container button:hover { transform: translateY(-1px); }
+button:active, .btn:active, .send-button:active, .search-container button:active { transform: translateY(0); }
+button:focus-visible, .btn:focus-visible, .send-button:focus-visible, .search-container button:focus-visible,
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+.header-balance:hover { color: #f8fafc; }
+
+/* Cards and offers */
+.card, .offer-box {
+  transition: background-color var(--anim-med) var(--ease-soft),
+              color           var(--anim-med) var(--ease-soft),
+              border-color    var(--anim-med) var(--ease-soft),
+              box-shadow      var(--anim-med) var(--ease-soft),
+              transform       var(--anim-fast) var(--ease-snappy);
+  will-change: transform, box-shadow;
+  position: relative;
+  overflow: hidden; /* للسماح بالرِبّل داخل حدود البطاقة */
+}
+
+/* Support/Icons */
+.support-icon, .icon-box {
+  transition: background-color var(--anim-med) var(--ease-soft),
+              color           var(--anim-med) var(--ease-soft),
+              border-color    var(--anim-med) var(--ease-soft),
+              box-shadow      var(--anim-med) var(--ease-soft),
+              transform       var(--anim-fast) var(--ease-snappy);
+}
+.support-icon:hover, .icon-box:hover { transform: translateY(-2px); }
+
+/* Sidebar items */
+#sidebar ul li {
+  transition: background-color var(--anim-med) var(--ease-soft),
+              color           var(--anim-med) var(--ease-soft),
+              transform       var(--anim-fast) var(--ease-snappy);
+}
+#sidebar ul li:hover { transform: translateX(2px); }
+
+/* Modal content (generic) */
+.modal .modal-content {
+  transition: background-color var(--anim-med) var(--ease-soft),
+              color           var(--anim-med) var(--ease-soft),
+              box-shadow      var(--anim-med) var(--ease-soft),
+              border-color    var(--anim-med) var(--ease-soft),
+              transform       var(--anim-fast) var(--ease-soft),
+              opacity         var(--anim-med) var(--ease-soft);
+}
+.modal.open .modal-content { opacity: 0; transform: translateY(8px) scale(.98); animation: modalIn var(--anim-med) var(--ease-soft) forwards; }
+@keyframes modalIn { to { opacity: 1; transform: none; } }
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+
+
+
+
+:root {
+  --bg: #0b1024;
+  --bg-2: #0f1433;
+  --panel: #141a3a;
+  --panel-2: #161d42;
+  --text: #ebedff;
+  --muted: #a8b0d3;
+  --primary: #6a6cff;
+  --primary-soft: #8a8cff;
+  --border: rgba(255, 255, 255, 0.08);
+  --accent: #1fe7b5;
+  --warn: #f6b348;
+  --danger: #ef476f;
+  --radius: 18px;
+  --shadow: 0 16px 40px rgba(3, 5, 24, 0.5);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+  background:
+    radial-gradient(circle at 20% 12%, rgba(106,108,255,0.08), transparent 32%),
+    radial-gradient(circle at 82% 10%, rgba(31,231,181,0.08), transparent 30%),
+    linear-gradient(145deg, var(--bg), var(--bg-2));
+  color: var(--text);
+  direction: rtl;
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.container {
+  width: min(1180px, 94vw);
+  margin: 0 auto 80px;
+  padding-top: 18px;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 24px;
+  background: linear-gradient(120deg, #191f4a, #222a62);
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(3, 4, 18, 0.45);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-dot {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #6a6cff, #8a8cff);
+  box-shadow: 0 10px 24px rgba(106,108,255,0.38);
+}
+
+.brand-name {
+  font-weight: 800;
+  font-size: 18px;
+  color: #fff;
+}
+
+.brand-sub {
+  font-size: 12px;
+  color: rgba(255,255,255,0.78);
+}
+
+.session {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.notice {
+  background: rgba(31, 231, 181, 0.1);
+  border: 1px solid rgba(31, 231, 181, 0.35);
+  color: #b4ffeb;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  margin-bottom: 18px;
+  font-weight: 600;
+}
+
+.search-wrap {
+  margin: 18px 0 10px;
+  display: flex;
+  justify-content: center;
+}
+
+.search {
+  width: min(520px, 100%);
+  padding: 12px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
+  box-shadow: inset 0 1px 4px rgba(0,0,0,0.16);
+  font-size: 14px;
+}
+
+.panel {
+  background: linear-gradient(170deg, var(--panel), var(--panel-2));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: var(--shadow);
+  margin-top: 16px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+h1, h2, h3 {
+  margin: 4px 0;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+
+select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
+  font-family: inherit;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(106,108,255,0.12), rgba(21, 25, 60, 0.85));
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.hero .stat-block {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 180px));
+  justify-content: start;
+  gap: 12px;
+}
+
+.game-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(3, 7, 18, 0.35);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border 0.12s ease;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  max-width: 200px;
+}
+
+.game-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.game-card .title {
+  padding: 10px 12px;
+  font-weight: 700;
+  text-align: center;
+  background: rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-card.active {
+  border: 2px solid var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(106,108,255,0.3);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+  box-shadow: 0 10px 26px rgba(3,7,18,0.32);
+  display: grid;
+  grid-template-rows: 170px auto;
+}
+
+.card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-body {
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.price-tag {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(106,108,255,0.15);
+  color: #e0e2ff;
+  font-weight: 700;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.tiny {
+  font-size: 12px;
+}
+
+.btn {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--primary);
+  color: #fff;
+  transition: transform 0.1s ease, box-shadow 0.16s ease, background 0.1s ease, border 0.1s ease;
+  box-shadow: 0 7px 18px rgba(47, 109, 224, 0.18);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(47, 109, 224, 0.25);
+}
+
+.btn:active {
+  transform: translateY(0);
+  box-shadow: 0 5px 14px rgba(47, 109, 224, 0.16);
+}
+
+.btn:focus {
+  outline: 3px solid rgba(106,108,255,0.28);
+  outline-offset: 1px;
+}
+
+.btn.ghost {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: none;
+}
+
+.btn.outline {
+  background: #fff;
+  color: var(--primary);
+  border-color: var(--primary);
+  box-shadow: none;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-soft));
+  border-color: var(--primary);
+}
+
+.btn.danger {
+  background: linear-gradient(135deg, var(--danger), #f68fa4);
+  border-color: #d22650;
+  box-shadow: 0 7px 18px rgba(239, 71, 111, 0.18);
+}
+
+.btn.small {
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.chip {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  color: #dfe2ff;
+  border: 1px solid var(--border);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.chip-muted {
+  color: var(--muted);
+}
+
+.chip-warn {
+  color: #f6d87a;
+  background: rgba(246, 179, 72, 0.12);
+  border-color: rgba(246, 179, 72, 0.25);
+}
+
+.chip-success {
+  color: #8ff0d0;
+  background: rgba(31, 231, 181, 0.12);
+  border-color: rgba(31, 231, 181, 0.25);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.badge.approved {
+  background: #d1f7f0;
+  color: #0f5132;
+}
+
+.badge.pending {
+  background: #fff3cd;
+  color: #9d6400;
+}
+
+.badge.rejected {
+  background: #fde2e7;
+  color: #842029;
+}
+
+.grid.two {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field.full {
+  grid-column: 1 / -1;
+}
+
+input,
+textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-family: inherit;
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
+}
+
+textarea {
+  resize: vertical;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #11152c;
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 10px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.35);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.dual-auth {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.auth-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: 0 8px 18px rgba(3, 7, 18, 0.35);
+  display: grid;
+  gap: 10px;
+}
+
+.cta-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.cta-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: 0 10px 20px rgba(3, 7, 18, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wallet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.wallet-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: 0 8px 18px rgba(3, 7, 18, 0.3);
+  display: grid;
+  gap: 8px;
+}
+
+.wallet-card .cards {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.method-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  box-shadow: 0 8px 18px rgba(3, 7, 18, 0.3);
+  display: grid;
+  gap: 6px;
+}
+
+.loader {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #0b0f24, #121836);
+  display: grid;
+  place-items: center;
+  z-index: 9999;
+}
+
+.loader.hidden {
+  display: none;
+}
+
+.loader .spinner {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  border: 6px solid rgba(255,255,255,0.08);
+  border-top-color: var(--primary);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.hidden {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .session {
+    width: 100%;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <div id="loader" class="loader"><div class="spinner"></div></div>
+  <div id="headerContainer"></div>
+  <div id="sidebar"></div>
+
+<main class="container">
+  <div class="notice">لوحة الحساب: إدارة عروضك والمحفظة</div>
+  <section id="yourSection" class="panel hidden">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">حساباتك</p>
+        <h2>إدارة عروضك</h2>
+      </div>
+      <span class="chip">وضعك الحالي</span>
+    </div>
+    <div id="yourListings" class="cards"></div>
+  </section>
+  <section id="add-account" class="panel hidden">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">إضافة حساب</p>
+        <h2>إرسال إعلان لمراجعة الادمن</h2>
+      </div>
+      <span class="chip chip-warn">يحتاج موافقة</span>
+    </div>
+    <form id="addAccountForm" class="grid two">
+      <div class="field">
+        <label for="gameSelect">القسم / اللعبة</label>
+        <select id="gameSelect" required></select>
+      </div>
+      <div class="field">
+        <label for="titleInput">عنوان الإعلان</label>
+        <input id="titleInput" type="text" placeholder="مثال: حساب ببجي ماستر مع شدات" required>
+      </div>
+      <div class="field">
+        <label for="priceInput">السعر (USD)</label>
+        <input id="priceInput" type="number" min="1" step="1" placeholder="150" required>
+      </div>
+      <div class="field">
+        <label for="contactInput">طريقة التواصل</label>
+        <input id="contactInput" type="text" placeholder="واتساب / تليجرام" required>
+      </div>
+      <div class="field">
+        <label for="imageInput">صورة العرض (رابط)</label>
+        <input id="imageInput" type="url" placeholder="https://example.com/preview.jpg">
+      </div>
+      <div class="field full">
+        <label for="descInput">وصف الحساب</label>
+        <textarea id="descInput" rows="3" placeholder="تفاصيل السكنات / الربط / الأوسمـة" required></textarea>
+      </div>
+      <div class="field submit">
+        <button type="submit" class="btn primary">إرسال للمراجعة</button>
+        <p class="muted tiny">يبقى مخفيًا حتى موافقة الادمن.</p>
+      </div>
+    </form>
+  </section>
+  <section id="walletPanel" class="panel hidden">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">محفظتي</p>
+        <h2>الرصيد وإعادة التعبئة</h2>
+      </div>
+      <span class="chip chip-success">نظام رصيد</span>
+    </div>
+    <div class="wallet-grid">
+      <div class="wallet-card">
+        <p class="muted tiny">الرصيد المتاح</p>
+        <h2 id="walletBalance">0</h2>
+        <p class="muted tiny">يمكن استخدامه للدفع أو نشر عروض مدفوعة.</p>
+      </div>
+      <form id="walletForm" class="wallet-card">
+        <p class="muted tiny">طلب شحن رصيد (يُراجع من الأدمن)</p>
+        <div class="field">
+          <label for="walletCountrySelect">الدولة</label>
+          <select id="walletCountrySelect" required></select>
+        </div>
+        <div class="field">
+          <label for="walletMethodSelect">طريقة التحويل</label>
+          <select id="walletMethodSelect" required></select>
+          <div id="walletMethodInfo" class="muted tiny"></div>
+        </div>
+        <div class="field">
+          <label for="walletAmountInput">المبلغ (USD)</label>
+          <input id="walletAmountInput" type="number" min="1" placeholder="مثال: 20" required>
+        </div>
+        <div class="field">
+          <label for="walletRefInput">بيانات التحويل / المرجع</label>
+          <input id="walletRefInput" type="text" placeholder="رقم العملية أو ملاحظات" required>
+        </div>
+        <button type="submit" class="btn primary">إرسال طلب شحن</button>
+        <p class="tiny muted">بعد الإرسال يصل الطلب للأدمن للمراجعة.</p>
+      </form>
+    </div>
+    <div class="wallet-card">
+      <p class="muted tiny">سجل طلبات الشحن</p>
+      <div id="walletHistory" class="cards"></div>
+    </div>
+  </section>
+</main>
+  <div id="toast" class="toast hidden"></div>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
+  <script>
+// Deobfuscated and cleaned header logic
+
+// ألغينا حد إعادة تحميل Firebase؛ أعِد الوظائف الأصلية إن وُجدت
+(function(){
+  try {
+    if (typeof firebase !== 'undefined' && window.__ORIG_FIREBASE__) {
+      if (window.__ORIG_FIREBASE__.auth) {
+        firebase.auth = window.__ORIG_FIREBASE__.auth;
+      }
+      if (window.__ORIG_FIREBASE__.firestore) {
+        firebase.firestore = window.__ORIG_FIREBASE__.firestore;
+      }
+    }
+  } catch {}
+  try { window.__SKIP_FIREBASE__ = false; } catch {}
+})();
+
+// Force HTTPS when not local
+(function(){
+  try {
+    const host = location.hostname || '';
+    const isLocal = host === 'localhost' || host === '127.0.0.1' || /^0\.0\.0\.0$/.test(host) ||
+      /^192\.168\./.test(host) || /^10\./.test(host) || /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
+    if (location.protocol === 'http:' && !isLocal) {
+      const to = 'https://' + location.host + location.pathname + location.search + location.hash;
+      try { window.stop && window.stop(); } catch {}
+      location.replace(to);
+      return;
+    }
+  } catch {}
+})();
+
+// Add allow=1 on .html links when clicked (for from-home navigation)
+(function(){
+  function ensureAllowParam(a){
+    try {
+      const href = a.getAttribute('href');
+      if (!href) return;
+      const url = new URL(href, location.href);
+      if (!url.searchParams.has('allow')) {
+        url.searchParams.set('allow','1');
+        a.setAttribute('href', url.pathname + url.search + url.hash);
+      }
+    } catch {}
+  }
+  function onNav(e){
+    try {
+      const link = e.target && e.target.closest ? e.target.closest('a[href$=".html"]') : null;
+      if (!link) return;
+      try { sessionStorage.setItem('nav:fromHome','1'); } catch {}
+      ensureAllowParam(link);
+    } catch {}
+  }
+  document.addEventListener('pointerdown', onNav, true);
+  document.addEventListener('auxclick', onNav, true);
+  document.addEventListener('click', onNav, true);
+})();
+
+// Preload image asset used elsewhere
+(function(){
+  try {
+    const imgHref = 'loading.png';
+    if (document.head && !document.querySelector("link[rel='preconnect'][href='https://i.ibb.co']")){
+      const ln = document.createElement('link'); ln.rel = 'preconnect'; ln.href = 'https://i.ibb.co'; ln.crossOrigin = ''; document.head.appendChild(ln);
+    }
+    if (document.head && !document.querySelector(`link[rel='preload'][as='image'][href='${imgHref}']`)){
+      const ln2 = document.createElement('link'); ln2.rel = 'preload'; ln2.as = 'image'; ln2.href = imgHref; document.head.appendChild(ln2);
+    }
+    const img = new Image(); img.decoding = 'async'; try { img.fetchPriority = 'high'; } catch {} img.loading = 'eager'; img.src = imgHref;
+  } catch {}
+})();
+
+// Loader controls
+// Ensure a preloader element exists so pages and older scripts can safely toggle it
+(function ensurePreloader(){
+  try {
+    if (!document.getElementById('preloader')) {
+      const el = document.createElement('div');
+      el.id = 'preloader';
+      el.className = 'hidden';
+      el.style.position = 'fixed';
+      el.style.inset = '0';
+      el.style.display = 'none';
+      el.style.alignItems = 'center';
+      el.style.justifyContent = 'center';
+      el.style.background = 'rgba(15,23,42,0.28)';
+      el.style.backdropFilter = 'blur(6px)';
+      el.style.zIndex = '10000';
+      const spinner = document.createElement('div');
+      spinner.setAttribute('aria-label','جارِ التحميل');
+      spinner.style.width = '48px';
+      spinner.style.height = '48px';
+      spinner.style.border = '4px solid #fff';
+      spinner.style.borderTopColor = 'transparent';
+      spinner.style.borderRadius = '50%';
+      spinner.style.animation = 'spin 1s linear infinite';
+      el.appendChild(spinner);
+      try {
+        const style = document.createElement('style');
+        style.textContent = '@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}';
+        document.head.appendChild(style);
+      } catch {}
+      (document.body || document.documentElement).appendChild(el);
+    }
+  } catch {}
+})();
+function showPageLoader(){
+  try {
+    const el = document.getElementById('preloader');
+    if (!el) return;
+    try {
+      sessionStorage.setItem('nav:loader:expected','1');
+      sessionStorage.setItem('nav:loader:showAt', String(Date.now()));
+    } catch {}
+    el.classList.remove('hidden');
+    el.style.display = 'flex';
+    el.style.opacity = '1';
+  } catch {}
+}
+function hidePageLoader(){
+  try {
+    const el = document.getElementById('preloader');
+    if (!el) return;
+    el.classList.add('hidden');
+    el.style.transition = 'opacity 0.4s ease';
+    el.style.opacity = '0';
+    setTimeout(()=>{ el.style.display = 'none'; }, 400);
+  } catch {}
+}
+window.addEventListener('pageshow', () => { try { if (sessionStorage.getItem('nav:loader:expected') === '1') return; } catch {} hidePageLoader(); });
+
+// Device fingerprint helpers (legacy stub — device locking disabled)
+const DEVICE_ID_STORAGE_KEY = 'session:device:id';
+function getDeviceFingerprint(){
+  return '';
+}
+function ensureDeviceFingerprint(){
+  return '';
+}
+try { window.getDeviceFingerprint = getDeviceFingerprint; } catch {}
+
+let sessionDocUnsubscribe = null;
+let sessionConflictHandled = false;
+function clearSessionDocWatcher(){
+  if (sessionDocUnsubscribe){
+    try { sessionDocUnsubscribe(); } catch {}
+    sessionDocUnsubscribe = null;
+  }
+}
+function triggerSessionConflictLogout(){
+  if (sessionConflictHandled) return;
+  sessionConflictHandled = true;
+  clearSessionDocWatcher();
+  try { localStorage.removeItem('sessionKeyInfo'); } catch {}
+  try { window.dispatchEvent(new CustomEvent('session:conflict')); } catch {}
+  const message = 'تم تسجيل الدخول من جهاز آخر وتم إنهاء هذه الجلسة.';
+  try { alert(message); } catch {}
+  try {
+    firebase.auth().signOut().catch(()=>{}).finally(() => {
+      try { window.location.href = 'login.html?session=conflict'; }
+      catch { window.location.reload(); }
+    });
+  } catch {
+    try { window.location.href = 'login.html?session=conflict'; }
+    catch { window.location.reload(); }
+  }
+}
+function watchSessionDocForDevice(user){
+  clearSessionDocWatcher();
+}
+
+// Auto-retry worker requests when auth/session errors occur
+(function setupSessionKeyAutoRetry(){
+  try {
+    if (typeof window === 'undefined' || typeof window.fetch !== 'function') return;
+    if (window.__SESSION_KEY_RETRY_PATCHED__) return;
+    const nativeFetch = window.fetch.bind(window);
+    window.__SESSION_KEY_RETRY_PATCHED__ = true;
+
+    const SESSION_HEADER = 'X-SessionKey';
+    const AUTH_HEADER = 'Authorization';
+    const DEVICE_HEADER = 'X-DeviceId';
+    const SESSION_ERROR_CODES = new Set(['session_missing','session_invalid','session_mismatch','session_expired']);
+    const AUTH_ERROR_CODES = new Set([
+      'auth_missing','auth_required','invalid_token','token_expired','invalid_alg','invalid_signature',
+      'invalid_issuer','invalid_audience','jwk_not_found','sub_userid_mismatch','firestore_auth_missing','jwt_parse_error'
+    ]);
+    const RAND_ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const RAND_SYMBOLS = '!@#$%&';
+    let rotatePromise = null;
+    let authRefreshPromise = null;
+
+    function requestCarriesSession(req){
+      try { return !!req.headers.get(SESSION_HEADER); } catch { return false; }
+    }
+    function requestCarriesAuth(req){
+      try {
+        const header = req.headers.get(AUTH_HEADER) || '';
+        return /^Bearer\s+\S+/i.test(header);
+      } catch { return false; }
+    }
+    function shouldIntercept(req){
+      return requestCarriesSession(req) || requestCarriesAuth(req);
+    }
+    function normalizeCode(val){
+      return (typeof val === 'string' ? val : '').trim().toLowerCase();
+    }
+    function isSessionCode(code){
+      if (!code) return false;
+      return SESSION_ERROR_CODES.has(code) || code.startsWith('session_');
+    }
+    function isAuthCode(code){
+      if (!code) return false;
+      return AUTH_ERROR_CODES.has(code);
+    }
+    function grabSessionCode(payload){
+      if (!payload || typeof payload !== 'object') return '';
+      const fields = ['code','errorCode','error_code','error'];
+      for (let i = 0; i < fields.length; i++){
+        const code = normalizeCode(payload[fields[i]]);
+        if (code) return code;
+      }
+      return '';
+    }
+    function extractTtl(payload){
+      if (!payload || typeof payload !== 'object') return 0;
+      const ttl = Number(payload.ttlSeconds ?? payload.ttl ?? payload.ttl_seconds ?? payload.ttlseconds ?? payload.sessionTtl ?? 0);
+      return Number.isFinite(ttl) && ttl > 0 ? ttl : 0;
+    }
+    function randomFromAlphabet(alphabet, len){
+      const set = (typeof alphabet === 'string' && alphabet.length) ? alphabet : RAND_ALPHA;
+      const length = Math.max(1, Number(len) || 1);
+      const cryptoObj = (typeof window !== 'undefined' && window.crypto) || null;
+      if (cryptoObj && typeof cryptoObj.getRandomValues === 'function'){
+        const buf = new Uint32Array(length);
+        cryptoObj.getRandomValues(buf);
+        let out = '';
+        for (let i = 0; i < length; i++){ out += set[buf[i] % set.length]; }
+        return out;
+      }
+      let fallback = '';
+      for (let i = 0; i < length; i++){ fallback += set[Math.floor(Math.random() * set.length)]; }
+      return fallback;
+    }
+    function generateSessionKey(len = 64){
+      return randomFromAlphabet(RAND_ALPHA + RAND_SYMBOLS, len);
+    }
+    function persistSessionInfo(uid, key, ttlSeconds){
+      if (!uid || !key) return;
+      try {
+        localStorage.setItem('sessionKeyInfo', JSON.stringify({
+          uid,
+          sessionKey: key,
+          ts: Date.now(),
+          ttlSeconds: Number(ttlSeconds) || 0
+        }));
+      } catch {}
+    }
+    async function rotateSessionKey(ttlSeconds){
+      if (!window.firebase || !firebase.auth || !firebase.firestore) return null;
+      const user = firebase.auth().currentUser;
+      if (!user) return null;
+      if (!rotatePromise){
+        rotatePromise = (async () => {
+          const freshKey = generateSessionKey();
+          try {
+            const ref = firebase.firestore().collection('users').doc(user.uid).collection('keys').doc('session');
+            const payload = {
+              sessionKey: freshKey,
+              ttlSeconds: Number(ttlSeconds) || 0
+            };
+            const FieldValue = firebase.firestore.FieldValue;
+            if (FieldValue && FieldValue.serverTimestamp) {
+              payload.createdAt = FieldValue.serverTimestamp();
+            }
+            await ref.set(payload, { merge: true });
+          } catch (err) {
+            console.warn('Session key rotation write failed:', err);
+          }
+          persistSessionInfo(user.uid, freshKey, ttlSeconds);
+          return freshKey;
+        })().catch(err => { console.warn('Auto rotate session key failed:', err); return null; }).finally(() => { rotatePromise = null; });
+      }
+      return rotatePromise;
+    }
+    async function refreshAuthToken(){
+      if (!window.firebase || !firebase.auth) return null;
+      const user = firebase.auth().currentUser;
+      if (!user) return null;
+      if (!authRefreshPromise){
+        authRefreshPromise = user.getIdToken(true).catch(err => {
+          console.warn('Auth token refresh failed:', err);
+          return null;
+        }).finally(() => { authRefreshPromise = null; });
+      }
+      return authRefreshPromise;
+    }
+    function rebuildRequestWithHeaders(request, mutateHeaders){
+      try {
+        const headers = new Headers(request.headers);
+        mutateHeaders(headers);
+        return new Request(request, { headers, signal: request.signal });
+      } catch (err) {
+        console.warn('Failed to rebuild request for retry:', err);
+        return null;
+      }
+    }
+    function ensureDeviceHeader(request){
+      if (!requestCarriesSession(request)) return request;
+      const fingerprint = (typeof getDeviceFingerprint === 'function') ? getDeviceFingerprint() : '';
+      if (!fingerprint) return request;
+      try {
+        const current = request.headers.get(DEVICE_HEADER);
+        if (current && current === fingerprint) return request;
+      } catch {}
+      const updated = rebuildRequestWithHeaders(request, headers => { headers.set(DEVICE_HEADER, fingerprint); });
+      return updated || request;
+    }
+    async function classifyForRetry(resp, req){
+      if (!resp || typeof resp.clone !== 'function') return null;
+      let payload = null;
+      try { payload = await resp.clone().json(); } catch {}
+      const code = grabSessionCode(payload);
+      const ttlSeconds = extractTtl(payload);
+      const statusIs401 = Number(resp.status) === 401;
+      const hasSession = requestCarriesSession(req);
+      const hasAuth = requestCarriesAuth(req);
+
+      if (hasSession && (isSessionCode(code) || (statusIs401 && !code))) {
+        return { kind: 'session', ttlSeconds, code: code || (statusIs401 ? 'session_http_401' : '') };
+      }
+      if (hasAuth && (isAuthCode(code) || (statusIs401 && !isSessionCode(code)))) {
+        return { kind: 'auth', ttlSeconds: 0, code: code || (statusIs401 ? 'auth_http_401' : '') };
+      }
+      return null;
+    }
+
+    window.fetch = async function sessionAwareFetch(input, init){
+      let request;
+      try { request = new Request(input, init); }
+      catch (_) { return nativeFetch(input, init); }
+      request = ensureDeviceHeader(request);
+      if (!shouldIntercept(request)) {
+        return nativeFetch(request);
+      }
+
+      let response = await nativeFetch(request.clone());
+      for (let attempt = 0; attempt < 3; attempt++){
+        const action = await classifyForRetry(response, request);
+        if (!action) return response;
+
+        if (action.kind === 'session'){
+          const conflictCodes = new Set(['session_mismatch','session_conflict']);
+          if (conflictCodes.has(action.code)) {
+            triggerSessionConflictLogout();
+            return response;
+          }
+          const newKey = await rotateSessionKey(action.ttlSeconds);
+          if (!newKey) return response;
+          const updated = rebuildRequestWithHeaders(request, headers => {
+            headers.set(SESSION_HEADER, newKey);
+            const fingerprint = (typeof getDeviceFingerprint === 'function') ? getDeviceFingerprint() : '';
+            if (fingerprint) headers.set(DEVICE_HEADER, fingerprint);
+          });
+          if (!updated) return response;
+          request = updated;
+          response = await nativeFetch(request.clone());
+          continue;
+        }
+
+        if (action.kind === 'auth'){
+          const freshToken = await refreshAuthToken();
+          if (!freshToken) return response;
+          const updated = rebuildRequestWithHeaders(request, headers => { headers.set(AUTH_HEADER, `Bearer ${freshToken}`); });
+          if (!updated) return response;
+          request = updated;
+          response = await nativeFetch(request.clone());
+          continue;
+        }
+      }
+      return response;
+    };
+  } catch (err) {
+    console.warn('Session auto-retry bootstrap failed:', err);
+  }
+})();
+
+// =============================
+// Currency utils and formatting
+// =============================
+(function setupCurrency(){
+  try {
+    const CURRENCY_KEY = 'currency:selected';
+    const RATES_CACHE_KEY = 'currency:rates:cache';
+    const RATES_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+    // Rates map — filled from cache or Firebase
+    const CURRENCIES = {};
+    let ratesListenerStarted = false;
+    let ratesCacheMeta = { updatedAt: 0 };
+
+    function readCachedRates(){
+      try {
+        const raw = localStorage.getItem(RATES_CACHE_KEY);
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+        if (!data || typeof data !== 'object') return null;
+        const updatedAt = Number(data.updatedAt);
+        const rates = data.rates;
+        const base = typeof data.base === 'string' ? data.base.toUpperCase() : 'USD';
+        if (!updatedAt || !rates || typeof rates !== 'object') return null;
+        ratesCacheMeta.updatedAt = updatedAt;
+        return { updatedAt, rates, base };
+      } catch { return null; }
+    }
+    function writeCachedRates(rates, base){
+      try {
+        const payload = {
+          updatedAt: Date.now(),
+          base: (base || 'USD'),
+          rates
+        };
+        ratesCacheMeta.updatedAt = payload.updatedAt;
+        localStorage.setItem(RATES_CACHE_KEY, JSON.stringify(payload));
+      } catch {}
+    }
+    function isRatesCacheFresh(){
+      if (!ratesCacheMeta.updatedAt) return false;
+      try {
+        return (Date.now() - ratesCacheMeta.updatedAt) < RATES_CACHE_TTL_MS;
+      } catch { return false; }
+    }
+
+    function getSelected(){
+      try {
+        const c = localStorage.getItem(CURRENCY_KEY);
+        const MAP = (function(){ try { return window.__CURRENCIES__ || CURRENCIES; } catch { return CURRENCIES; } })();
+        if (c && MAP[c]) return c;
+        const keys = Object.keys(MAP);
+        if (keys.length) return keys[0];
+      } catch {}
+      return 'USD';
+    }
+    function setSelected(code){
+      const MAP = (function(){ try { return window.__CURRENCIES__ || CURRENCIES; } catch { return CURRENCIES; } })();
+      if (!MAP[code]) return;
+      try { localStorage.setItem(CURRENCY_KEY, code); } catch {}
+      try { window.dispatchEvent(new CustomEvent('currency:change', { detail: { code } })); } catch {}
+      try { applyCurrencyNow(); } catch {}
+    }
+
+    const STORE_BASE_CODE = 'USD'; // الرصيد المخزن في قاعدة البيانات بالدولار الأمريكي
+    function getFxBase(){ try { return window.__CURRENCY_BASE__ || null; } catch { return null; } }
+    function getRates(){ try { return window.__CURRENCIES__ || CURRENCIES; } catch { return CURRENCIES; } }
+    function convertAmount(amount, fromCode, toCode){
+      const n = Number(amount || 0);
+      if (!Number.isFinite(n)) return 0;
+      const MAP = getRates();
+      const BASE = getFxBase();
+      if (fromCode === toCode) return n;
+      const rFrom = (MAP[fromCode] && Number(MAP[fromCode].rate)) || (fromCode === BASE ? 1 : null);
+      const rTo   = (MAP[toCode]   && Number(MAP[toCode].rate))   || (toCode   === BASE ? 1 : null);
+      let baseAmt;
+      if (fromCode === BASE) baseAmt = n; else baseAmt = rFrom ? (n / rFrom) : n;
+      let out;
+      if (toCode === BASE) out = baseAmt; else out = rTo ? (baseAmt * rTo) : baseAmt;
+      return out;
+    }
+    function convertFromJOD(amountJOD, toCode){
+      return convertAmount(amountJOD, STORE_BASE_CODE, toCode);
+    }
+    function convertToJOD(amount, fromCode){
+      return convertAmount(amount, fromCode, STORE_BASE_CODE);
+    }
+    function formatAmountFromJOD(amountJOD, toCode){
+      const code = toCode || getSelected();
+      const MAP = getRates();
+      const cur = MAP[code] || MAP[STORE_BASE_CODE] || {};
+      const val = convertFromJOD(amountJOD, code);
+      return Number(val).toFixed(2) + ' ' + (cur.symbol || '');
+    }
+
+    // Expose for other scripts/pages if needed
+    try {
+      window.__CURRENCIES__ = CURRENCIES;
+      window.__CURRENCY_BASE__ = null;
+      window.getSelectedCurrencyCode = getSelected;
+      window.setSelectedCurrencyCode = setSelected;
+      window.convertFromJOD = convertFromJOD;
+      window.formatCurrencyFromJOD = (v)=>formatAmountFromJOD(v);
+    } catch {}
+
+    // Price application helpers (best-effort DOM scan)
+    function collectPriceNodes(root){
+  const doc = root || document;
+  const sels = [
+    '#pm-price', '.pm-pill', '.offer-price', '.voucher .price',
+    '.price', "[class*='price']", "[id*='price']", '#balanceAmount',
+    '.buy', '.buy-btn', '.price-btn', '.card .btn', 'a.btn', 'button.btn',
+    '[data-price]', '[data-price-jod]', '[data-price-usd]', '[data-amount]'
+  ];
+  const nodes = new Set();
+  try { sels.forEach(sel => { doc.querySelectorAll(sel).forEach(el => nodes.add(el)); }); } catch {}
+  return Array.from(nodes);
+}
+    function parseRatesJsonSafe(raw){
+      try {
+        if (!raw) return {};
+        if (typeof raw === 'object') return raw;
+        let s = String(raw)
+          .replace(/\uFEFF/g,'')
+          .replace(/[\u200f\u200e\u202a-\u202e]/g,'')
+          .replace(/[“”«»]/g,'"')
+          .replace(/[‘’]/g,"'")
+          .replace(/،/g,',')
+          .replace(/؛/g,',');
+        // إذا كان النص ملفوفًا بعلامات اقتباس ويبدأ بـ {، أزل الاقتباس الزائد
+        if (/^"\{/.test(s) && /\}"$/.test(s)) s = s.slice(1, -1);
+        // مفاتيح غير مقتبسة → اقتباسها
+        s = s.replace(/([\{,]\s*)([A-Za-z_][A-Za-z0-9_-]*)\s*:/g,'$1"$2":');
+        // مفاتيح مقتبسة بأقواس مفردة → مزدوجة
+        s = s.replace(/([\{,]\s*)'([^']*)'\s*:/g,'$1"$2":');
+        // قيم نصية مفردة → مزدوجة
+        s = s.replace(/:\s*'([^']*)'/g,':"$1"');
+        // إزالة الفواصل الزائدة
+        s = s.replace(/,(\s*[}\]])/g,'$1');
+        const obj = JSON.parse(s);
+        return (obj && typeof obj === 'object') ? obj : {};
+      } catch (e) {
+        try { console.warn('Failed to parse ratesJson:', e); } catch {}
+        return {};
+      }
+    }
+    function guessCodeFromText(t){
+      try {
+        const s = String(t||'');
+        if (/\$/.test(s)) return 'USD';
+        if (/د\.أ|دينار/.test(s)) return 'JOD';
+        if (/ر\.س|ريال/.test(s)) return 'SAR';
+        if (/ج\.م|جنيه/.test(s)) return 'EGP';
+      } catch {}
+      return '';
+    }
+    function parseNumberFromText(t){
+      if (!t) return null;
+      const s = String(t).replace(/[\u0660-\u0669]/g, (d)=> String(d.charCodeAt(0) - 0x0660)) // Arabic-Indic digits → Latin
+                          .replace(/[^0-9.,]/g,'')
+                          .replace(/,(?=\d{3}(\D|$))/g, '') // drop thousand commas
+                          .replace(',', '.');
+      const n = parseFloat(s);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    function applyCurrencyToPrices(root){
+      const code = getSelected();
+      const els = collectPriceNodes(root);
+      els.forEach(el => {
+        try {
+          // Skip elements that are clearly not amounts (e.g., durations with 's')
+          const txt = (el.textContent || '').trim();
+          if (!el.dataset) return;
+
+          let base = null;
+          // 1) Explicit base in JOD
+          if (el.dataset.priceJod != null) {
+            const n = Number(el.dataset.priceJod);
+            if (Number.isFinite(n)) base = n;
+          }
+          // 2) Explicit base in USD (or any): allow data-priceUsd or data-price and data-price-base / data-currency
+          if (base == null && el.dataset.priceUsd != null) {
+            const n = Number(el.dataset.priceUsd);
+            if (Number.isFinite(n)) base = convertToJOD(n, 'USD');
+          }
+          if (base == null) {
+            const v = Number(el.dataset.price || el.dataset.amount);
+            const cur = (el.dataset.priceBase || el.dataset.currency || '').toUpperCase();
+            if (Number.isFinite(v) && cur) base = convertToJOD(v, cur);
+          }
+          if (base == null) {
+            const n = parseNumberFromText(txt);
+            if (Number.isFinite(n)) {
+              // Assume initial content is JOD-based when first seen unless overridden
+              const curGuess = (el.dataset.priceBase || el.dataset.currency || guessCodeFromText(txt) || 'USD').toUpperCase();
+              base = convertToJOD(n, curGuess);
+              el.dataset.priceJod = String(base);
+            }
+          }
+          if (base == null) return;
+          el.textContent = formatAmountFromJOD(base, code);
+        } catch {}
+      });
+    }
+
+    let applyPending = false;
+    function applyCurrencyNow(){
+      try { if (!window.__CURRENCIES_READY__) return; } catch {}
+      if (applyPending) return;
+      applyPending = true;
+      try {
+        requestAnimationFrame(()=>{ try { applyCurrencyToPrices(document); } finally { applyPending = false; } });
+      } catch { try { applyCurrencyToPrices(document); } finally { applyPending = false; } }
+    }
+
+    // Observe dynamic pages to keep prices in sync
+    try {
+      if (window.MutationObserver) {
+        const mo = new MutationObserver(()=>{ applyCurrencyNow(); });
+        mo.observe(document.documentElement, { childList: true, subtree: true });
+      }
+    } catch {}
+
+    // Re-apply whenever currency changes
+    window.addEventListener('currency:change', applyCurrencyNow);
+    window.addEventListener('DOMContentLoaded', applyCurrencyNow);
+
+    // Build sidebar currency selector once sidebar exists (styled like other items)
+    function attachSelector(){
+      try {
+        const ul = document.querySelector('#sidebar ul');
+        if (!ul) return;
+        if (document.getElementById('currencyLi')) return; // already attached
+
+        const li = document.createElement('li');
+        li.id = 'currencyLi';
+        li.style.position = 'relative';
+        li.innerHTML = '<i class="fa-solid fa-sack-dollar"></i><a href="#">العملة</a>';
+        const labelA = li.querySelector('a');
+        if (labelA) labelA.style.pointerEvents = 'none';
+
+        function listCodes(){ try { return Object.keys((window.__CURRENCIES__||CURRENCIES)); } catch { return Object.keys(CURRENCIES); } }
+
+        // Invisible select overlay to open native picker on click anywhere in li
+        const select = document.createElement('select');
+        select.id = 'currencySelect';
+        // cover entire li but invisible
+        select.style.position = 'absolute';
+        select.style.inset = '0 0 0 0';
+        select.style.opacity = '0';
+        select.style.width = '100%';
+        select.style.height = '100%';
+        select.style.cursor = 'pointer';
+        select.style.appearance = 'none';
+        select.style.WebkitAppearance = 'none';
+        select.style.MozAppearance = 'none';
+
+        function rebuildOptions(){
+          try {
+            while (select.firstChild) select.removeChild(select.firstChild);
+            const MAP = (function(){ try { return window.__CURRENCIES__ || CURRENCIES; } catch { return CURRENCIES; } })();
+            const codes = Object.keys(MAP);
+            codes.forEach(code => {
+              const cur = MAP[code];
+              const opt = document.createElement('option');
+              opt.value = code;
+              opt.textContent = `${cur?.nameAr || code} (${cur?.symbol || ''})`;
+              select.appendChild(opt);
+            });
+            const wanted = getSelected();
+            if (MAP[wanted]) select.value = wanted; else if (codes.length) select.value = codes[0];
+          } catch {}
+        }
+        function syncSelectedOption(){
+          try {
+            const wanted = getSelected();
+            if (wanted && select.value !== wanted) select.value = wanted;
+          } catch {}
+        }
+        rebuildOptions();
+        select.addEventListener('change', (e)=>{
+          const val = e.target && e.target.value;
+          setSelected(val);
+          syncSelectedOption();
+        });
+        li.appendChild(select);
+
+        ul.appendChild(li);
+        // keep select synced if currency changed elsewhere
+        window.addEventListener('currency:change', () => { syncSelectedOption(); });
+        window.addEventListener('currency:rates:change', () => { rebuildOptions(); });
+      } catch {}
+    }
+    window.addEventListener('DOMContentLoaded', attachSelector);
+    // Retry a few times in case sidebar renders slightly later
+    try { setTimeout(attachSelector, 200); setTimeout(attachSelector, 1000); } catch {}
+    const cachedRatesPayload = readCachedRates();
+    if (cachedRatesPayload && cachedRatesPayload.rates && Object.keys(cachedRatesPayload.rates).length) {
+      const baseFromCache = (cachedRatesPayload.base || 'USD');
+      try { window.__CURRENCY_BASE__ = baseFromCache; } catch {}
+      applyRatesMap(cachedRatesPayload.rates, { base: baseFromCache, cache: false });
+    }
+
+    function ensureRatesFresh(){
+      if (isRatesCacheFresh()) return;
+      initRatesListener();
+    }
+
+    if (!isRatesCacheFresh()) {
+      ensureRatesFresh();
+    }
+
+    try { window.addEventListener('firebase:ready', ensureRatesFresh); } catch {}
+
+    // Live rates from Firestore (config/currency.ratesJson)
+    function normalizeRates(obj){
+      const out = {};
+      try {
+        Object.entries(obj || {}).forEach(([code, v]) => {
+          const C = String(code || '').toUpperCase();
+          if (!C) return;
+          if (v && typeof v === 'object') {
+            const rate = Number(v.rate || v.RATE || v.value);
+            const symbol = v.symbol || v.sym || '';
+            const nameAr = v.nameAr || v.name || C;
+            if (Number.isFinite(rate) && rate > 0) out[C] = { code: C, rate, symbol, nameAr };
+          } else {
+            const rate = Number(v);
+            if (Number.isFinite(rate) && rate > 0) out[C] = { code: C, rate, symbol: '', nameAr: C };
+          }
+        });
+      } catch {}
+      return out;
+    }
+    function applyRatesMap(map, options){
+      try {
+        const opts = options || {};
+        const overrides = normalizeRates(map);
+        const merged = Object.assign({}, overrides);
+        Object.keys(overrides).forEach(k => { if (!merged[k]) merged[k] = overrides[k]; });
+        if (opts.base) {
+          try { window.__CURRENCY_BASE__ = opts.base; } catch {}
+        }
+        window.__CURRENCIES__ = merged;
+        try { window.__CURRENCIES_READY__ = true; } catch {}
+        if (opts.cache !== false && Object.keys(merged).length) {
+          const baseForCache = opts.base || getFxBase() || 'USD';
+          writeCachedRates(merged, baseForCache);
+        }
+        try { applyCurrencyNow(); } catch {}
+        try {
+          const base = (typeof window.__BAL_BASE__ !== 'undefined') ? window.__BAL_BASE__ : null;
+          if (base != null && Number.isFinite(Number(base))) {
+            const txt = (typeof window.formatCurrencyFromJOD === 'function') ? window.formatCurrencyFromJOD(base) : (Number(base).toFixed(2) + ' $');
+            setHeaderBalance(txt);
+          }
+        } catch {}
+        try { window.dispatchEvent(new CustomEvent('currency:rates:change')); } catch {}
+        try { window.dispatchEvent(new Event('currency:ready')); } catch {}
+      } catch {}
+    }
+    function initRatesListener(){
+      if (ratesListenerStarted) return;
+      ratesListenerStarted = true;
+      const PID_FALLBACK = 'js4accweb';
+      try {
+        if (typeof firebase !== 'undefined' && firebase.firestore) {
+          const ref = firebase.firestore().collection('config').doc('currency');
+          const handleSnap = (snap) => {
+            try {
+              if (!snap.exists) return;
+              const data = snap.data() || {};
+              const raw = data.ratesJson || data.rates || {};
+              let parsed;
+              try {
+                if (typeof raw === 'object') parsed = raw; else {
+                  let s = String(raw||'')
+                    .replace(/\uFEFF/g,'')
+                    .replace(/[\u200f\u200e\u202a-\u202e]/g,'')
+                    .replace(/[“”«»]/g,'"')
+                    .replace(/[‘’]/g,"'")
+                    .replace(/،/g,',').replace(/؛/g,',');
+                  s = s.replace(/([\{\[,]\s*)'([^']*)'\s*:/g,'$1"$2":');
+                  s = s.replace(/:\s*'([^']*)'/g,':"$1"');
+                  s = s.replace(/,(\s*[}\]])/g,'$1');
+                  parsed = JSON.parse(s);
+                }
+              } catch { parsed = {}; }
+              let base = 'USD';
+              try {
+                const b = String(data.baseCode || '').trim().toUpperCase();
+                base = b || 'USD';
+              } catch { base = 'USD'; }
+              applyRatesMap(parsed, { base });
+            } catch {}
+          };
+          const handleErr = () => {
+            try {
+              const pid = PID_FALLBACK;
+              fetch(`https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents/config/currency`).then(r=>r.json()).then(doc=>{
+                try {
+                  const fields = (doc && doc.fields) || {};
+                  const raw = (fields.ratesJson && fields.ratesJson.stringValue) || null;
+                  let parsed = {};
+                  try {
+                    if (raw) {
+                      let s = String(raw||'')
+                        .replace(/\uFEFF/g,'')
+                        .replace(/[\u200f\u200e\u202a-\u202e]/g,'')
+                        .replace(/[“”«»]/g,'"')
+                        .replace(/[‘’]/g,"'")
+                        .replace(/،/g,',').replace(/؛/g,',')
+                        .replace(/([\{\[,]\s*)'([^']*)'\s*:/g,'$1"$2":')
+                        .replace(/:\s*'([^']*)'/g,':"$1"')
+                        .replace(/,(\s*[}\]])/g,'$1');
+                      parsed = JSON.parse(s);
+                    }
+                  } catch { parsed = {}; }
+                  let base = 'USD';
+                  try { const b = (fields.baseCode && fields.baseCode.stringValue) ? String(fields.baseCode.stringValue).toUpperCase() : 'USD'; base = b || 'USD'; } catch { base = 'USD'; }
+                  applyRatesMap(parsed, { base });
+                } catch {}
+              }).catch(()=>{});
+            } catch {}
+          };
+          try { ref.onSnapshot(handleSnap, handleErr); } catch { try { ref.onSnapshot(handleSnap); } catch {} }
+          return;
+        }
+      } catch {}
+      try {
+        const pid = PID_FALLBACK;
+        fetch(`https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents/config/currency`).then(r=>r.json()).then(doc=>{
+          try {
+            const fields = (doc && doc.fields) || {};
+            function fromNumberField(f){
+              if (!f) return null;
+              if (typeof f.doubleValue !== 'undefined') return Number(f.doubleValue);
+              if (typeof f.integerValue !== 'undefined') return Number(f.integerValue);
+              if (typeof f.stringValue !== 'undefined') { const n = Number(f.stringValue); return Number.isFinite(n) ? n : null; }
+              return null;
+            }
+            function fromStringField(f){
+              if (!f) return '';
+              if (typeof f.stringValue !== 'undefined') return String(f.stringValue);
+              if (typeof f.integerValue !== 'undefined' || typeof f.doubleValue !== 'undefined') return String(fromNumberField(f) ?? '');
+              return '';
+            }
+            function mapValueToPlain(mv){
+              const out = {};
+              try {
+                const mfields = (mv && mv.mapValue && mv.mapValue.fields) || {};
+                Object.keys(mfields).forEach(code => {
+                  const entry = mfields[code];
+                  if (entry && entry.mapValue && entry.mapValue.fields){
+                    const ef = entry.mapValue.fields;
+                    const rate = fromNumberField(ef.rate ?? ef.RATE ?? ef.value);
+                    const symbol = fromStringField(ef.symbol ?? ef.sym);
+                    const nameAr = fromStringField(ef.nameAr ?? ef.name);
+                    if (Number.isFinite(rate) && rate > 0){ out[String(code).toUpperCase()] = { code: String(code).toUpperCase(), rate, symbol, nameAr: nameAr || String(code).toUpperCase() }; }
+                  } else {
+                    const rate = fromNumberField(entry);
+                    if (Number.isFinite(rate) && rate > 0){ out[String(code).toUpperCase()] = { code: String(code).toUpperCase(), rate, symbol: '', nameAr: String(code).toUpperCase() }; }
+                  }
+                });
+              } catch {}
+              return out;
+            }
+
+            // Prefer ratesJson string, then mapValue (ratesJson or rates)
+            const hasRJ = fields.ratesJson;
+            const hasR = fields.rates;
+            let parsed = {};
+            try {
+              if (hasRJ && typeof hasRJ.stringValue !== 'undefined'){
+                let s = hasRJ.stringValue;
+                if (typeof s === 'object') parsed = s; else {
+                  s = String(s||'')
+                    .replace(/\uFEFF/g,'')
+                    .replace(/[\u200f\u200e\u202a-\u202e]/g,'')
+                    .replace(/[“”«»]/g,'"')
+                    .replace(/[‘’]/g,"'")
+                    .replace(/،/g,',').replace(/؛/g,',');
+                  s = s.replace(/([\{\[,]\s*)'([^']*)'\s*:/g,'$1"$2":');
+                  s = s.replace(/:\s*'([^']*)'/g,':"$1"');
+                  s = s.replace(/,(\s*[}\]])/g,'$1');
+                  parsed = JSON.parse(s);
+                }
+              } else if (hasRJ && hasRJ.mapValue){
+                parsed = mapValueToPlain(hasRJ);
+              } else if (hasR && (hasR.mapValue || typeof hasR.stringValue !== 'undefined')){
+                if (hasR.mapValue) parsed = mapValueToPlain(hasR); else {
+                  let s = String(hasR.stringValue||'');
+                  try {
+                    s = s
+                      .replace(/\uFEFF/g,'')
+                      .replace(/[\u200f\u200e\u202a-\u202e]/g,'')
+                      .replace(/[“”«»]/g,'"')
+                      .replace(/[‘’]/g,"'")
+                      .replace(/،/g,',').replace(/؛/g,',')
+                      .replace(/([\{\[,]\s*)'([^']*)'\s*:/g,'$1"$2":')
+                      .replace(/:\s*'([^']*)'/g,':"$1"')
+                      .replace(/,(\s*[}\]])/g,'$1');
+                    parsed = JSON.parse(s);
+                  } catch { parsed = {}; }
+                }
+              }
+            } catch { parsed = {}; }
+
+            let base = 'USD';
+            try {
+              const b = (fields.baseCode && fields.baseCode.stringValue)
+                ? String(fields.baseCode.stringValue).toUpperCase()
+                : (fields.base && fields.base.stringValue ? String(fields.base.stringValue).toUpperCase() : 'USD');
+              base = b || 'USD';
+            } catch { base = 'USD'; }
+
+            applyRatesMap(parsed, { base });
+          } catch {}
+        }).catch(()=>{});
+      } catch {}
+    }
+  } catch {}
+})();
+document.addEventListener('visibilitychange', () => { try { if (sessionStorage.getItem('nav:loader:expected') === '1') return; } catch {} if (document.visibilityState === 'visible') hidePageLoader(); });
+
+// Sidebar toggle
+function toggleSidebar(){
+  const el = document.getElementById('sidebar');
+  if (!el) { console.warn('الشريط الجانبي غير موجود بعد.'); return; }
+  el.classList.toggle('active');
+}
+
+// Ensure Font Awesome (for icons) is loaded once
+function ensureFontAwesome(){
+  try {
+    const selector = "link[href*='font-awesome'],link[href*='fontawesome'],link[href*='/fa'],link[href*='all.min.css']";
+    if (document.querySelector(selector)) return;
+    const ln = document.createElement('link');
+    ln.rel = 'stylesheet';
+    ln.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css';
+    ln.crossOrigin = 'anonymous';
+    document.head.appendChild(ln);
+  } catch {}
+}
+ensureFontAwesome();
+
+// Build header
+const header = document.createElement('header');
+header.className = 'top-header';
+
+// Hamburger
+const hamburger = document.createElement('div');
+hamburger.id = 'hamburger';
+hamburger.onclick = toggleSidebar;
+for (let i=0;i<3;i++){ hamburger.appendChild(document.createElement('span')); }
+header.appendChild(hamburger);
+
+// Logo
+const logo = document.createElement('img');
+logo.src = 'store.gif';
+logo.alt = 'متجر زعيم';
+logo.className = 'header-logo';
+logo.setAttribute('fetchpriority','high');
+logo.loading = 'eager';
+logo.decoding = 'async';
+(function(){ try { const href = logo.src; if (href && document.head && !document.querySelector(`link[rel='preload'][as='image'][href='${href}']`)){ const l = document.createElement('link'); l.rel='preload'; l.as='image'; l.href=href; document.head.appendChild(l); } } catch {} })();
+const logoLink = document.createElement('a');
+logoLink.href = 'index.html';
+logoLink.setAttribute('aria-label','العودة إلى الرئيسية');
+logoLink.style.marginLeft = '0';
+logoLink.style.marginRight = 'auto';
+logoLink.appendChild(logo);
+
+// Balance display with deposit shortcut
+if (!document.getElementById('header-balance-style')) {
+  try {
+    const style = document.createElement('style');
+    style.id = 'header-balance-style';
+    style.textContent = `
+      .header-balance {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 2px;
+        direction: rtl;
+        color: #e2e8f0;
+        letter-spacing: 0.15px;
+        padding: 0;
+        margin: 0;
+      }
+      .header-balance__metrics {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 4px;
+        direction: ltr;
+      }
+      .header-balance__currency {
+        font-size: 12px;
+        font-weight: 700;
+        color: rgba(148, 163, 184, 0.82);
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+        direction: ltr;
+        unicode-bidi: plaintext;
+      }
+      .header-balance__value {
+        direction: ltr;
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: 0.45px;
+        background: linear-gradient(90deg, #fef3c7 0%, #fefce8 30%, #93c5fd 65%, #38bdf8 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        font-feature-settings: 'tnum' 1, 'kern' 1;
+        text-shadow: 0 8px 20px rgba(56, 189, 248, 0.22);
+      }
+      @media (max-width: 600px) {
+        .header-balance__metrics {
+          gap: 3px;
+        }
+        .header-balance__currency {
+          font-size: 10px;
+        }
+        .header-balance__value {
+          font-size: 17px;
+          letter-spacing: 0.35px;
+        }
+      }
+`;
+    (document.head || document.documentElement).appendChild(style);
+  } catch {}
+}
+const balanceSpan = document.createElement('span');
+balanceSpan.id = 'balanceHeader';
+balanceSpan.className = 'header-balance';
+balanceSpan.style.marginRight = '0px';
+balanceSpan.style.flex = '0 0 auto';
+balanceSpan.style.padding = '0';
+balanceSpan.style.minWidth = '0';
+balanceSpan.innerHTML = `
+  <span class="header-balance__metrics">
+    <span class="header-balance__currency" id="headerBalanceCurrency">—</span>
+    <span class="header-balance__value" id="headerBalanceText">…</span>
+  </span>
+`;
+
+const leftContainer = document.createElement('div');
+leftContainer.style.display = 'flex';
+leftContainer.style.alignItems = 'center';
+leftContainer.style.gap = '10px';
+leftContainer.appendChild(hamburger);
+leftContainer.appendChild(balanceSpan);
+
+header.appendChild(leftContainer);
+header.appendChild(logoLink);
+
+// Balance helpers
+let unsubscribeBalance = null;
+let bannedSessionHandled = false;
+const BAL_KEY = (uid) => `balance:cache:${uid}`;
+const LAST_UID_KEY = 'auth:lastUid';
+const LAST_LOGGED_KEY = 'auth:lastLoggedIn';
+function setHeaderBalance(text){
+  const valueEl = document.getElementById('headerBalanceText') || balanceSpan.querySelector('#headerBalanceText');
+  const currencyEl = document.getElementById('headerBalanceCurrency') || balanceSpan.querySelector('#headerBalanceCurrency');
+  if (!valueEl) return;
+  if (typeof text !== 'string') {
+    valueEl.textContent = text;
+    if (currencyEl) currencyEl.textContent = '—';
+    return;
+  }
+  const trimmed = text.trim();
+  if (!trimmed) {
+    valueEl.textContent = '—';
+    if (currencyEl) currencyEl.textContent = '—';
+    return;
+  }
+  const hasDigits = /[0-9٠-٩]/.test(trimmed);
+  if (!hasDigits) {
+    valueEl.textContent = trimmed;
+    if (currencyEl) currencyEl.textContent = '—';
+    return;
+  }
+  const shouldSplit = /\s/.test(trimmed) || /[^\d.,+\-]/.test(trimmed.slice(-1));
+  if (shouldSplit) {
+    const match = trimmed.match(/^(.*\S)\s+(\S+)$/);
+    if (match) {
+      valueEl.textContent = match[1].trim();
+      if (currencyEl) currencyEl.textContent = match[2] || '—';
+      return;
+    }
+  }
+  valueEl.textContent = trimmed;
+  if (currencyEl) currencyEl.textContent = '—';
+}
+function readCachedBalance(uid){ try { const s = localStorage.getItem(BAL_KEY(uid)); if (s == null) return null; const n = Number(s); return Number.isFinite(n) ? n : null; } catch { return null; } }
+function writeCachedBalance(uid, val){ try { localStorage.setItem(BAL_KEY(uid), String(val)); } catch {} }
+function broadcastBalance(value){
+  try { window.__BALANCE__ = value; window.__BAL_BASE__ = value; } catch {}
+  try {
+    const formatted = (typeof window.formatCurrencyFromJOD === 'function')
+      ? window.formatCurrencyFromJOD(value)
+      : (Number(value || 0).toFixed(2) + ' $');
+    window.dispatchEvent(new CustomEvent('balance:change', { detail: { value: Number(value || 0), formatted } }));
+  } catch {}
+}
+function seedHeaderFromCache(){
+  try {
+    const logged = localStorage.getItem(LAST_LOGGED_KEY) === '1';
+    const uid = localStorage.getItem(LAST_UID_KEY);
+    if (logged && uid){
+      const cached = readCachedBalance(uid);
+      if (cached != null){
+        try { window.__BAL_BASE__ = cached; } catch {}
+        const text = (typeof window.formatCurrencyFromJOD === 'function')
+          ? window.formatCurrencyFromJOD(cached)
+          : (Number(cached).toFixed(2) + ' $');
+        setHeaderBalance(text);
+        broadcastBalance(cached);
+      }
+    } else { setHeaderBalance('0.00 $'); }
+  } catch {}
+}
+seedHeaderFromCache();
+
+// Gracefully block banned accounts across the site
+function showBannedOverlay(){
+  try {
+    let overlay = document.getElementById('ban-block-overlay');
+    if (overlay) return overlay;
+    overlay = document.createElement('div');
+    overlay.id = 'ban-block-overlay';
+    overlay.setAttribute('role','alertdialog');
+    overlay.setAttribute('aria-label','تم حظر الحساب');
+    overlay.style.position = 'fixed';
+    overlay.style.inset = '0';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.padding = '18px';
+    overlay.style.background = 'rgba(5,8,20,0.68)';
+    overlay.style.backdropFilter = 'blur(6px)';
+    overlay.style.zIndex = '15000';
+    const card = document.createElement('div');
+    card.style.maxWidth = '480px';
+    card.style.width = '100%';
+    card.style.background = 'linear-gradient(145deg,#0f172a,#111827)';
+    card.style.color = '#f8fafc';
+    card.style.borderRadius = '18px';
+    card.style.padding = '22px';
+    card.style.boxShadow = '0 24px 70px rgba(0,0,0,0.45)';
+    card.style.border = '1px solid rgba(148,163,184,0.25)';
+    card.innerHTML = `
+      <h2 style="margin:0 0 12px;font-size:1.2rem;">🚫 الحساب محظور</h2>
+      <p style="margin:0 0 18px;line-height:1.7;font-size:1rem;">تم حظر حسابك ولا يمكن متابعة الاستخدام. يُرجى التواصل مع الدعم إذا كنت تعتقد أن هذا خطأ.</p>
+      <button id="banLogoutBtn" type="button" style="width:100%;padding:12px 14px;border-radius:12px;border:none;background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;font-weight:800;font-size:1rem;cursor:pointer;">تسجيل الخروج</button>
+    `;
+    overlay.appendChild(card);
+    (document.body || document.documentElement).appendChild(overlay);
+    return overlay;
+  } catch { return null; }
+}
+function handleBannedAccount(){
+  if (bannedSessionHandled) return;
+  bannedSessionHandled = true;
+  clearSessionDocWatcher();
+  if (typeof unsubscribeBalance === 'function') { try { unsubscribeBalance(); } catch {} unsubscribeBalance = null; }
+  const overlay = showBannedOverlay();
+  const logoutBtn = overlay ? overlay.querySelector('#banLogoutBtn') : null;
+  let logoutTriggered = false;
+  const forceLogout = () => {
+    if (logoutTriggered) return;
+    logoutTriggered = true;
+    try { localStorage.removeItem('sessionKeyInfo'); } catch {}
+    try { firebase.auth().signOut().catch(()=>{}); } catch {}
+    try {
+      const path = (location.pathname || '').toLowerCase();
+      if (path.includes('login')) { window.location.reload(); }
+      else { window.location.href = 'login.html?banned=1'; }
+    } catch { window.location.href = 'login.html?banned=1'; }
+  };
+  if (logoutBtn) logoutBtn.addEventListener('click', forceLogout);
+  setTimeout(forceLogout, 800);
+}
+
+// Update header balance text when currency changes
+try {
+  window.addEventListener('currency:change', function(){
+    try {
+      const base = (typeof window.__BAL_BASE__ !== 'undefined') ? window.__BAL_BASE__ : null;
+      if (base == null || !Number.isFinite(Number(base))) return;
+      const text = (typeof window.formatCurrencyFromJOD === 'function') ? window.formatCurrencyFromJOD(base) : (Number(base).toFixed(2) + ' $');
+      setHeaderBalance(text);
+    } catch {}
+  });
+} catch {}
+
+// Navigate helper
+function navigateTo(href){
+  try { sessionStorage.setItem('nav:fromHome','1'); } catch {}
+  toggleSidebar();
+  let targetKey = href;
+  let currentKey = location.pathname + location.search + location.hash;
+  try {
+    const targetUrl = new URL(href, location.href);
+    targetKey = targetUrl.pathname + targetUrl.search + targetUrl.hash;
+  } catch {}
+  if (targetKey === currentKey){
+    try {
+      sessionStorage.removeItem('nav:loader:expected');
+      sessionStorage.removeItem('nav:loader:showAt');
+    } catch {}
+    hidePageLoader();
+    return;
+  }
+  showPageLoader();
+  setTimeout(()=>{ window.location.href = href; }, 150);
+}
+
+function navigateHomeHash(targetHash, routeKey){
+  const file = (location.pathname.split('/').pop() || '').toLowerCase();
+  const isHome = file === '' || file === 'index.html';
+  try { sessionStorage.setItem('nav:fromHome','1'); } catch {}
+  if (isHome) {
+    const already = (location.hash || '') === targetHash;
+    toggleSidebar();
+    if (already){
+      try {
+        sessionStorage.removeItem('nav:loader:expected');
+        sessionStorage.removeItem('nav:loader:showAt');
+      } catch {}
+      try { hidePageLoader(); } catch {}
+      const key = routeKey || (targetHash || '').replace(/^#\//,'');
+      if (key && typeof window.__reloadInlineRoute === 'function'){
+        try { window.__INLINE_FORCE_ROUTE__ = key; } catch {}
+        try { window.__reloadInlineRoute(key); } catch {}
+      } else if (key){
+        try { window.__INLINE_FORCE_ROUTE__ = null; } catch {}
+      }
+      return;
+    }
+    try { showPageLoader(); } catch {}
+    setTimeout(() => { window.location.hash = targetHash; }, 80);
+  } else {
+    navigateTo('index.html' + targetHash);
+  }
+}
+//
+// Sidebar
+const existingSidebar = document.getElementById('sidebar');
+const sidebar = existingSidebar || document.createElement('nav');
+sidebar.id = 'sidebar';
+while (sidebar.firstChild) { sidebar.removeChild(sidebar.firstChild); }
+
+// Add CSS for scrolling
+sidebar.style.overflowY = 'auto'; // Enable vertical scrolling
+sidebar.style.overflowX = 'hidden'; // Prevent horizontal scrolling
+sidebar.style.maxHeight = '100vh'; // Full viewport height
+
+const ul = document.createElement('ul');
+// الرئيسية
+const homeLi = document.createElement('li');
+homeLi.onclick = () => navigateTo('index.html');
+homeLi.innerHTML = '<i class="fas fa-home"></i><a href="#">الرئيسية</a>';
+ul.appendChild(homeLi);
+// الإيداع
+const depositLi = document.createElement('li');
+depositLi.id = 'depositBtn';
+depositLi.innerHTML = '<i class="fa-solid fa-circle-dollar-to-slot"></i><a href="#">الإيداع</a>';
+depositLi.onclick = () => navigateTo('edaa.html');
+depositLi.style.display = 'none';
+ul.appendChild(depositLi);
+// طلباتي
+const ordersLi = document.createElement('li');
+ordersLi.onclick = () => navigateTo('talabat.html');
+ordersLi.innerHTML = '<i class="fas fa-list"></i><a href="#">طلباتي</a>';
+ul.appendChild(ordersLi);
+// محفظتي
+const walletLi = document.createElement('li');
+walletLi.id = 'walletBtn';
+walletLi.innerHTML = '<i class="fas fa-wallet"></i><a href="#">محفظتي</a>';
+walletLi.onclick = () => navigateHomeHash('#/wallet','wallet');
+walletLi.style.display = 'none';
+ul.appendChild(walletLi);
+// تحويل الرصيد
+const transferLi = document.createElement('li');
+transferLi.id = 'transferBtn';
+transferLi.innerHTML = '<i class="fa-solid fa-right-left"></i><a href="#">تحويل رصيد</a>';
+transferLi.onclick = () => navigateHomeHash('#/transfer','transfer');
+transferLi.style.display = 'none';
+ul.appendChild(transferLi);
+// التقييمات
+const reviewsLi = document.createElement('li');
+reviewsLi.innerHTML = '<i class="fa-solid fa-star"></i><a href="#">التقييمات</a>';
+reviewsLi.onclick = () => navigateHomeHash('#/reviews','reviews');
+ul.appendChild(reviewsLi);
+// الإعدادات
+const settingsLi = document.createElement('li');
+settingsLi.id = 'settingsBtn';
+settingsLi.innerHTML = '<i class="fa-solid fa-gear"></i><a href="#">الإعدادات</a>';
+settingsLi.onclick = () => navigateHomeHash('#/settings','settings');
+settingsLi.style.display = 'none';
+ul.appendChild(settingsLi);
+// تسجيل الدخول / الخروج
+const loginLi = document.createElement('li');
+loginLi.id = 'loginSidebarBtn';
+loginLi.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i><a href="#">تسجيل الدخول</a>';
+loginLi.onclick = () => navigateTo('login.html');
+ul.appendChild(loginLi);
+const logoutLi = document.createElement('li');
+logoutLi.id = 'logoutBtn';
+logoutLi.style.display = 'none';
+logoutLi.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i><a href="#">تسجيل الخروج</a>';
+logoutLi.onclick = () => {
+  try { showPageLoader(); } catch {}
+  try {
+    firebase.auth().signOut().catch(()=>{}).finally(()=>{
+      try { sessionStorage.setItem('nav:fromHome','1'); } catch {}
+      window.location.href = 'index.html';
+    });
+  } catch {
+    try { window.location.href = 'index.html'; } catch {}
+  }
+};
+ul.appendChild(logoutLi);
+sidebar.appendChild(ul);
+
+// Attach to containers
+window.addEventListener('DOMContentLoaded', () => {
+  const hc = document.getElementById('headerContainer'); if (hc) hc.appendChild(header);
+  const sc = document.getElementById('sidebarContainer') || document.getElementById('sidebar');
+  if (sc && sidebar !== sc && !sc.contains(sidebar)) sc.appendChild(sidebar);
+  else if (!sc) { try { (document.body || document.documentElement).appendChild(sidebar); } catch {} }
+  document.addEventListener('click', (e)=>{ const a = e.target.closest ? e.target.closest('a[href$=".html"]') : null; if (a) { try { sessionStorage.setItem('nav:fromHome','1'); } catch {} } });
+  // Ensure support anchor exists for sidebar link
+  try { const sec = document.querySelector('section.support-section'); if (sec && !sec.id) sec.id = 'support'; } catch {}
+});
+
+// Firebase auth + balance live update
+async function ensureFirebaseCompat(){
+  if (typeof firebase !== 'undefined' && firebase.auth && firebase.firestore) return true;
+  return new Promise(resolve => {
+    try {
+      const add = (src)=>{ const s=document.createElement('script'); s.src=src; s.defer=true; s.onload=check; document.head.appendChild(s); };
+      function check(){ if (typeof firebase !== 'undefined' && firebase.auth && firebase.firestore) resolve(true); }
+      add('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
+      add('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js');
+      add('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js');
+      setTimeout(()=>resolve(false), 4000);
+    } catch { resolve(false); }
+  });
+}
+async function initFirebaseApp(){
+  try {
+    const ok = await ensureFirebaseCompat();
+    if (!ok || typeof firebase === 'undefined') return false;
+    if (!firebase.apps || !firebase.apps.length){
+      try {
+const firebaseConfig = {
+  apiKey: "AIzaSyBD4zpvsUdygm7KxRYXPDHbotwvf9Y7pOQ",
+  authDomain: "js4accweb.firebaseapp.com",
+  projectId: "js4accweb",
+  storageBucket: "js4accweb.firebasestorage.app",
+  messagingSenderId: "635891162580",
+  appId: "1:635891162580:web:1ee495e5b51f96ab16ca41",
+  measurementId: "G-0Y3LMPBEWJ"
+};
+        if (typeof firebase.initializeApp === 'function') {
+          const app = firebase.initializeApp(firebaseConfig);
+          try { window.__FIREBASE_APP__ = app; } catch {}
+        }
+      } catch {}
+    }
+    try { window.dispatchEvent(new Event('firebase:ready')); } catch {}
+    return true;
+  } catch { return false; }
+}
+try {
+  (async ()=>{
+    const ok = await initFirebaseApp();
+    if (!ok || typeof firebase === 'undefined' || !firebase.auth) return;
+    firebase.auth().onAuthStateChanged(user => {
+    clearSessionDocWatcher();
+    sessionConflictHandled = false;
+    bannedSessionHandled = false;
+    if (typeof unsubscribeBalance === 'function') { try { unsubscribeBalance(); } catch (err) { console.warn('unsubscribeBalance error:', err); } unsubscribeBalance = null; }
+    const loginBtn = document.getElementById('loginSidebarBtn');
+    const depositBtn = document.getElementById('depositBtn');
+    const walletBtn = document.getElementById('walletBtn');
+    const transferBtn = document.getElementById('transferBtn');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    if (user) {
+      watchSessionDocForDevice(user);
+      try { localStorage.setItem(LAST_UID_KEY, user.uid); } catch {}
+      try { localStorage.setItem(LAST_LOGGED_KEY, '1'); } catch {}
+      if (loginBtn) loginBtn.style.display = 'none';
+      if (depositBtn) depositBtn.style.display = 'flex';
+      if (walletBtn) walletBtn.style.display = 'flex';
+      if (transferBtn) transferBtn.style.display = 'flex';
+      if (settingsBtn) settingsBtn.style.display = 'flex';
+      if (logoutBtn) logoutBtn.style.display = 'flex';
+      const cached = readCachedBalance(user.uid); if (cached != null) { try { window.__BAL_BASE__ = cached; } catch {}; setHeaderBalance((typeof window.formatCurrencyFromJOD === 'function') ? window.formatCurrencyFromJOD(cached) : (Number(cached).toFixed(2) + ' $')); broadcastBalance(cached); }
+      const docRef = firebase.firestore().collection('users').doc(user.uid);
+      unsubscribeBalance = docRef.onSnapshot(snap => {
+        if (snap.exists) {
+          const data = snap.data() || {};
+          if (data.isBanned === true) { handleBannedAccount(); return; }
+          const raw = data.balance ?? 0; const num = Number(raw); const val = Number.isFinite(num) ? num : 0;
+          try { window.__BAL_BASE__ = val; } catch {}
+          setHeaderBalance((typeof window.formatCurrencyFromJOD === 'function') ? window.formatCurrencyFromJOD(val) : (Number(val).toFixed(2) + ' $'));
+          writeCachedBalance(user.uid, val); broadcastBalance(val);
+        } else { try { window.__BAL_BASE__ = 0; } catch {}; setHeaderBalance((typeof window.formatCurrencyFromJOD === 'function') ? window.formatCurrencyFromJOD(0) : '0.00 $'); writeCachedBalance(user.uid, 0); broadcastBalance(0); }
+      }, err => { console.error('Balance listener error:', err); setHeaderBalance('تعذر التحميل'); });
+    } else {
+      setHeaderBalance('0.00 $');
+      try { localStorage.setItem(LAST_LOGGED_KEY, '0'); } catch {}
+      try { localStorage.removeItem(LAST_UID_KEY); } catch {}
+      if (loginBtn) loginBtn.style.display = 'flex';
+      if (depositBtn) depositBtn.style.display = 'none';
+      if (walletBtn) walletBtn.style.display = 'none';
+      if (transferBtn) transferBtn.style.display = 'none';
+      if (settingsBtn) settingsBtn.style.display = 'none';
+      if (logoutBtn) logoutBtn.style.display = 'none';
+      broadcastBalance(null);
+    }
+    });
+  })();
+} catch {}
+
+window.addEventListener('beforeunload', () => { if (typeof unsubscribeBalance === 'function') { try { unsubscribeBalance(); } catch {} } });
+
+// Optional: mobile bottom dock (not auto-run)
+function initMobileDock(){
+  try {
+    try { const hasFA = !!document.querySelector('link[href*="font-awesome"], link[href*="fontawesome"], link[href*="/fa"], link[href*="/all.min.css"]'); if (!hasFA) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css'; l.crossOrigin = 'anonymous'; document.head.appendChild(l); } } catch {}
+    const dock = document.createElement('nav'); dock.className = 'mobile-dock'; dock.setAttribute('aria-label','الشريط السفلي للجوال');
+    const makeItem = (html, key, href) => { if (href) { const a = document.createElement('a'); a.href = href; a.innerHTML = html; a.className = 'dock-item'; a.dataset.key = key; return a; } else { const b = document.createElement('button'); b.type = 'button'; b.innerHTML = html; b.className = 'dock-item'; b.dataset.key = key; return b; } };
+    const wallet = makeItem('<i class="fa-solid fa-wallet" aria-hidden="true"></i>', 'wallet', 'index.html#/wallet'); wallet.setAttribute('aria-label','محفظتي');
+    const orders = makeItem('<i class="fa-solid fa-list" aria-hidden="true"></i>', 'orders', 'talabat.html'); orders.setAttribute('aria-label','طلباتي');
+    const deposit= makeItem('<i class="fa-solid fa-circle-dollar-to-slot" aria-hidden="true"></i>', 'deposit', 'edaa.html'); deposit.setAttribute('aria-label','شحن الرصيد');
+    const home   = makeItem('<i class="fa-solid fa-house" aria-hidden="true"></i>', 'home', 'index.html'); home.setAttribute('aria-label','الرئيسية');
+    dock.appendChild(wallet); dock.appendChild(orders); dock.appendChild(deposit); dock.appendChild(home);
+    window.addEventListener('DOMContentLoaded', () => { try { document.body.appendChild(dock); document.body.classList.add('mobile-has-dock'); } catch {} });
+    wallet.addEventListener('click', () => { try { sessionStorage.setItem('nav:fromHome','1'); showPageLoader(); } catch {} });
+    function updateActive(){
+      try {
+        const file = (location.pathname.split('/').pop() || '').toLowerCase();
+        const hash = (location.hash || '').toLowerCase();
+        let key = 'home';
+        if (hash === '#/wallet') key = 'wallet';
+        else if (hash === '#/reviews') key = 'home';
+        else if (file === 'wallet.html') key = 'wallet';
+        else if (file === 'index.html') key = 'home';
+        else if (file === 'talabat.html') key = 'orders';
+        else if (file === 'edaa.html') key = 'deposit';
+        dock.querySelectorAll('.dock-item').forEach(el => el.classList.remove('active'));
+        if (key){
+          const a = dock.querySelector(`.dock-item[data-key="${key}"]`);
+          if (a) a.classList.add('active');
+        }
+      } catch {}
+    }
+    window.addEventListener('DOMContentLoaded', updateActive); window.addEventListener('pageshow', updateActive);
+  } catch {}
+}
+
+// Page balance box wiring
+function wirePageBalanceBox(){
+  function setBox(val){
+    try {
+      const el = document.getElementById('balanceAmount');
+      if (!el) return;
+      if (val == null || !Number.isFinite(Number(val))) {
+        el.textContent = 'يجب تسجيل الدخول اولا';
+      } else {
+        if (typeof window.formatCurrencyFromJOD === 'function') el.textContent = window.formatCurrencyFromJOD(val);
+        else el.textContent = Number(val).toFixed(2) + ' $';
+      }
+    } catch {}
+  }
+  try {
+    const logged = localStorage.getItem('auth:lastLoggedIn') === '1';
+    const uid = localStorage.getItem('auth:lastUid');
+    if (logged && uid){
+      const cached = (function(){ try { const s = localStorage.getItem('balance:cache:' + uid); const n = Number(s); return Number.isFinite(n) ? n : null; } catch { return null; } })();
+      if (cached != null) setBox(cached);
+    }
+  } catch {}
+  try { window.addEventListener('balance:change', ev => { setBox(ev?.detail?.value ?? null); }); } catch {}
+  try { window.addEventListener('currency:change', () => { try { setBox(window.__BAL_BASE__ ?? null); } catch {} }); } catch {}
+}
+
+// Support/contact section (basic skeleton; links overridden below)
+(function(){
+  try {
+    const section = document.createElement('section'); section.className = 'support-section'; section.id = 'support';
+    const title = document.createElement('h2'); title.className = 'support-title'; title.textContent = 'متواجدون لمساعدتك'; section.appendChild(title);
+    const iconsDiv = document.createElement('div'); iconsDiv.className = 'support-icons';
+    const contacts = [
+      { href: '', iconURL: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/telegram.svg', class: 'telegram' },
+      { href: '', iconURL: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/instagram.svg', class: 'instagram' },
+      { href: '', iconURL: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/whatsapp.svg', class: 'whatsapp' },
+      { href: '', iconURL: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/facebook.svg', class: 'facebook' },
+      { href: '', iconURL: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/gmail.svg', class: 'email' },
+    ];
+    contacts.forEach(c => { const a = document.createElement('a'); a.href = c.href; a.target = '_blank'; a.className = 'support-icon ' + c.class; const img = document.createElement('img'); img.src = c.iconURL; img.alt = c.class + ' icon'; img.style.width = '32px'; img.style.height = '32px'; a.appendChild(img); iconsDiv.appendChild(a); });
+    section.appendChild(iconsDiv);
+    document.body.appendChild(section);
+  } catch {}
+})();
+
+// Override support/contact links to the latest provided ones
+(function(){
+  try{
+    var links = {
+      whatsapp: 'https://wa.me/963981983751',
+      telegram: 'https://t.me/963969898534',
+      facebook: 'https://www.facebook.com/share/1B1b48AcqV/',
+      email: 'mailto:hazemediek@gmail.com',
+      instagram: 'https://www.instagram.com/z3.i.m?igsh=MXRwZGl6dXh2YTd2Zg=='
+    };
+
+    function applySupportLinks(){
+      var defs = [
+        { key: 'whatsapp', sels: ['a.support-icon.whatsapp','i.fa-whatsapp'] },
+        { key: 'telegram', sels: ['a.support-icon.telegram','i.fa-telegram','i.fa-telegram-plane','i.fa-paper-plane'] },
+        { key: 'facebook', sels: ['a.support-icon.facebook','i.fa-facebook','i.fa-facebook-f'] },
+        { key: 'email', sels: ['a.support-icon.email','i.fa-envelope','a[href^="mailto:"]'] },
+        { key: 'instagram', sels: ['a.support-icon.instagram','i.fa-instagram'] }
+      ];
+
+      function ensureAnchor(el){
+        if (!el) return null;
+        if (el.tagName === 'A') return el;
+        try{ return el.closest('a'); }catch(_){ return null; }
+      }
+
+      defs.forEach(function(d){
+        try{
+          var href = links[d.key];
+          var finalSelector = d.sels.join(',');
+          document.querySelectorAll(finalSelector).forEach(function(el){
+            var a = ensureAnchor(el);
+            if(!a) return;
+            if (d.key === 'telegram') {
+              var appHref = 'tg://resolve?phone=201104453086';
+              a.setAttribute('href', href); // web fallback
+              a.setAttribute('data-app-href', appHref);
+              a.setAttribute('target','_blank');
+              a.setAttribute('rel','noopener noreferrer');
+              a.addEventListener('click', function(ev){
+                try{
+                  ev.preventDefault();
+                  var start = Date.now();
+                  window.location.href = appHref;
+                  setTimeout(function(){ if (Date.now() - start < 1500) { window.open(href, '_blank', 'noopener,noreferrer'); } }, 600);
+                }catch(_){ try { window.open(href, '_blank', 'noopener,noreferrer'); } catch(__){} }
+              }, { once: true });
+            } else if (d.key === 'email') {
+              a.setAttribute('href', href);
+              a.addEventListener('click', function(ev){ try{ ev.preventDefault(); window.location.href = href; }catch(_){ } }, { once: true });
+            } else {
+              a.setAttribute('href', href);
+              a.setAttribute('target','_blank');
+              a.setAttribute('rel','noopener noreferrer');
+            }
+          });
+        }catch(_){ }
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function(){ applySupportLinks(); setTimeout(applySupportLinks, 200); setTimeout(applySupportLinks, 1000); });
+    } else { applySupportLinks(); setTimeout(applySupportLinks, 200); setTimeout(applySupportLinks, 1000); }
+  }catch(_){ }
+})();
+
+// Ensure developer credit under قم بتغيير رقم الواتساب الخاص بالدعم بthe Support section
+(function ensureSupportDevCredit(){
+  try{
+    var CREDIT = {
+      href: 'https://wa.me/962790108559', 
+      label: '🔗 تم تطوير المنصة بواسطة LaithDev.',
+      tagline: ''
+    };
+
+    // Add style to limit clickable area
+    const creditStyle = document.createElement('style');
+    creditStyle.textContent = `
+      .support-rights {
+      pointer-events: none; /* Disable clicks on container */
+      }
+      .support-rights a {
+      pointer-events: auto; /* Re-enable clicks just on link */
+      display: inline-block; /* Contains the clickable area */
+      padding: 5px 10px; /* Add some padding for better touch target */
+      }
+    `;
+    document.head.appendChild(creditStyle);
+
+    function applyCredit(){
+      try{
+        var section = document.querySelector('section.support-section');
+        if (!section) return;
+
+        var rights = section.querySelector('.support-rights');
+        if (!rights){
+          rights = document.createElement('div');
+          rights.className = 'support-rights';
+          // Add link-like styling
+          rights.style.textAlign = 'center';
+          rights.style.marginTop = '15px';
+          section.appendChild(rights);
+        }
+
+        var anchor = rights.querySelector('a');
+        if (!anchor){
+          anchor = document.createElement('a');
+          // Add link styling
+          anchor.style.color = '#3b82f6'; // Blue color
+          anchor.style.textDecoration = 'none';
+          anchor.style.transition = 'all 0.2s';
+          
+          // Hover effect
+          anchor.addEventListener('mouseover', () => {
+            anchor.style.color = '#2563eb';
+            anchor.style.textDecoration = 'underline';
+          });
+          anchor.addEventListener('mouseout', () => {
+            anchor.style.color = '#3b82f6';
+            anchor.style.textDecoration = 'none';
+          });
+
+          if (rights.firstChild){
+            rights.insertBefore(anchor, rights.firstChild);
+          } else {
+            rights.appendChild(anchor);
+          }
+        }
+        anchor.href = CREDIT.href;
+        anchor.target = '_blank';
+        anchor.rel = 'noopener noreferrer';
+        anchor.textContent = CREDIT.label;
+
+        var tagline = rights.querySelector('p');
+        if (!tagline){
+          tagline = document.createElement('p');
+          rights.appendChild(tagline);
+        }
+        tagline.textContent = CREDIT.tagline;
+      }catch(_){ }
+    }
+
+    function schedule(){
+      applyCredit();
+      setTimeout(applyCredit, 200);
+      setTimeout(applyCredit, 1000);
+    }
+
+    if (document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', schedule);
+    } else {
+      schedule();
+    }
+  }catch(_){ }
+})();
+
+
+(() => {
+  const KEYS = {
+    sort: 'js4acc_sort',
+  };
+
+  const PLACEHOLDER = 'https://i.imgur.com/BN9T8xY.png';
+
+  const state = {
+    accounts: [],
+    games: [],
+    firebaseUser: null,
+    isAdmin: false,
+    paymentMethods: [],
+    topups: [],
+    selectedGame: null,
+    view: 'games',
+    sort: 'latest',
+    wallet: 0,
+  };
+
+  const els = {
+    userChip: document.getElementById('userChip'),
+    logoutBtn: document.getElementById('logoutBtn'),
+    loginBtn: document.getElementById('loginBtn'),
+    registerBtn: document.getElementById('registerBtn'),
+    searchInput: document.getElementById('searchInput'),
+    gameGrid: document.getElementById('gameGrid'),
+    listingGrid: document.getElementById('listingGrid'),
+    currentGameTitle: document.getElementById('currentGameTitle'),
+    categoriesPanel: document.getElementById('categoriesPanel'),
+    listingsPanel: document.getElementById('listingsPanel'),
+    backToGames: document.getElementById('backToGames'),
+    sortSelect: document.getElementById('sortSelect'),
+    addAccountForm: document.getElementById('addAccountForm'),
+    gameSelect: document.getElementById('gameSelect'),
+    titleInput: document.getElementById('titleInput'),
+    priceInput: document.getElementById('priceInput'),
+    contactInput: document.getElementById('contactInput'),
+    imageInput: document.getElementById('imageInput'),
+    descInput: document.getElementById('descInput'),
+    loginForm: document.getElementById('loginForm'),
+    loginEmailInput: document.getElementById('loginEmailInput'),
+    loginPasswordInput: document.getElementById('loginPasswordInput'),
+    registerForm: document.getElementById('registerForm'),
+    registerNameInput: document.getElementById('registerNameInput'),
+    registerEmailInput: document.getElementById('registerEmailInput'),
+    registerPasswordInput: document.getElementById('registerPasswordInput'),
+    yourSection: document.getElementById('yourSection'),
+    yourListings: document.getElementById('yourListings'),
+    addSection: document.getElementById('add-account'),
+    adminPanel: document.getElementById('admin-panel'),
+    adminList: document.getElementById('adminList'),
+    adminGames: document.getElementById('admin-games'),
+    addGameForm: document.getElementById('addGameForm'),
+    gameNameInput: document.getElementById('gameNameInput'),
+    gameImgInput: document.getElementById('gameImgInput'),
+    gameAdminList: document.getElementById('gameAdminList'),
+    adminMethods: document.getElementById('admin-methods'),
+    addMethodForm: document.getElementById('addMethodForm'),
+    methodCountryInput: document.getElementById('methodCountryInput'),
+    methodNameInput: document.getElementById('methodNameInput'),
+    methodAccountInput: document.getElementById('methodAccountInput'),
+    methodHolderInput: document.getElementById('methodHolderInput'),
+    methodNoteInput: document.getElementById('methodNoteInput'),
+    methodAdminList: document.getElementById('methodAdminList'),
+    walletPanel: document.getElementById('walletPanel'),
+    walletBalance: document.getElementById('walletBalance'),
+    walletForm: document.getElementById('walletForm'),
+    walletAmountInput: document.getElementById('walletAmountInput'),
+    walletCountrySelect: document.getElementById('walletCountrySelect'),
+    walletMethodSelect: document.getElementById('walletMethodSelect'),
+    walletMethodInfo: document.getElementById('walletMethodInfo'),
+    walletRefInput: document.getElementById('walletRefInput'),
+    walletHistory: document.getElementById('walletHistory'),
+    adminTopupsList: document.getElementById('adminTopupsList'),
+    loader: document.getElementById('loader'),
+    toast: document.getElementById('toast'),
+  };
+
+  const isAuthPage = () => {
+    const path = window.location.pathname.toLowerCase();
+    return path.includes('login') || path.includes('auth');
+  };
+  let db = null;
+
+  let toastTimer;
+
+  // ضع بيانات مشروع Firebase هنا
+const firebaseConfig = {
+  apiKey: "AIzaSyBD4zpvsUdygm7KxRYXPDHbotwvf9Y7pOQ",
+  authDomain: "js4accweb.firebaseapp.com",
+  projectId: "js4accweb",
+  storageBucket: "js4accweb.firebasestorage.app",
+  messagingSenderId: "635891162580",
+  appId: "1:635891162580:web:1ee495e5b51f96ab16ca41",
+  measurementId: "G-0Y3LMPBEWJ"
+};
+
+  const ADMIN_EMAILS = ['admin@js4acc.com'];
+
+  function load(key, fallback) {
+    try {
+      const value = localStorage.getItem(key);
+      return value ? JSON.parse(value) : fallback;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function save(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+      console.warn('Storage blocked', e);
+    }
+  }
+
+  function uid(prefix = 'id') {
+    const random = Math.random().toString(16).slice(2);
+    if (window.crypto?.randomUUID) {
+      return `${prefix}-${crypto.randomUUID()}`;
+    }
+    return `${prefix}-${Date.now()}-${random}`;
+  }
+
+  function seedDefaults() {
+    const sort = load(KEYS.sort, 'latest') || 'latest';
+    state.games = [];
+    state.accounts = [];
+    state.sort = sort;
+    persist();
+  }
+
+  function persist() {
+    save(KEYS.sort, state.sort);
+  }
+
+  function getCurrentUser() {
+    return state.firebaseUser;
+  }
+
+  function setSession(user) {
+    state.firebaseUser = user;
+    renderAll();
+    loadWallet();
+  }
+
+  function notify(message) {
+    if (!els.toast) return;
+    clearTimeout(toastTimer);
+    els.toast.textContent = message;
+    els.toast.classList.remove('hidden');
+    els.toast.style.opacity = '1';
+    els.toast.style.transform = 'translate(-50%, 0)';
+    toastTimer = setTimeout(() => {
+      els.toast.style.opacity = '0';
+      els.toast.style.transform = 'translate(-50%, 10px)';
+      setTimeout(() => els.toast.classList.add('hidden'), 200);
+    }, 2200);
+  }
+
+  function scrollToId(id) {
+    const el = document.querySelector(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  async function loadWallet() {
+    if (!els.walletBalance) return;
+    const user = getCurrentUser();
+    if (!user) {
+      state.wallet = 0;
+      renderWallet();
+      renderWalletHistory();
+      return;
+    }
+    if (!db) {
+      renderWallet();
+      renderWalletHistory();
+      return;
+    }
+    try {
+      const doc = await db.collection('wallets').doc(user.id).get();
+      state.wallet = doc.exists ? doc.data().balance || 0 : 0;
+    } catch (e) {
+      state.wallet = 0;
+    }
+    renderWallet();
+    renderWalletHistory();
+  }
+
+  function renderWallet() {
+    if (!els.walletBalance) return;
+    const user = getCurrentUser();
+    const value = user ? (state.wallet || 0) : 0;
+    els.walletBalance.textContent = `${value} $`;
+  }
+
+  function evaluateAdmin(user) {
+    if (!user) return false;
+    const email = (user.email || '').toLowerCase();
+    if (ADMIN_EMAILS.includes(email)) return true;
+    return !!user.customAdmin;
+  }
+
+  function renderPaymentMethods() {
+    if (!els.walletCountrySelect || !els.walletMethodSelect) return;
+    const countries = Array.from(new Set(state.paymentMethods.map((m) => m.country || 'غير محدد')));
+    els.walletCountrySelect.innerHTML = countries.map((c) => `<option value="${c}">${c}</option>`).join('');
+    renderMethodsForCountry();
+  }
+
+  function renderMethodsForCountry() {
+    if (!els.walletCountrySelect || !els.walletMethodSelect) return;
+    const country = els.walletCountrySelect.value;
+    const methods = state.paymentMethods.filter((m) => (m.country || 'غير محدد') === country);
+    els.walletMethodSelect.innerHTML = methods.map((m) => `<option value="${m.id}">${m.name || m.type || 'طريقة'}</option>`).join('');
+    renderMethodInfo();
+  }
+
+  function renderMethodInfo() {
+    if (!els.walletMethodInfo) return;
+    const methodId = els.walletMethodSelect?.value;
+    const method = state.paymentMethods.find((m) => m.id === methodId);
+    if (!method) {
+      els.walletMethodInfo.textContent = '';
+      return;
+    }
+    const details = [
+      method.bankName ? `البنك/المحفظة: ${method.bankName}` : '',
+      method.accountName ? `الاسم: ${method.accountName}` : '',
+      method.accountNumber ? `الرقم/المعرف: ${method.accountNumber}` : '',
+      method.note ? method.note : '',
+    ].filter(Boolean).join(' • ');
+    els.walletMethodInfo.textContent = details;
+  }
+
+  function renderWalletHistory() {
+    if (!els.walletHistory) return;
+    const user = getCurrentUser();
+    if (!user) {
+      els.walletHistory.innerHTML = '<p class="muted tiny">سجّل الدخول لعرض طلباتك.</p>';
+      return;
+    }
+    const mine = state.topups.filter((t) => t.ownerId === user.uid);
+    if (!mine.length) {
+      els.walletHistory.innerHTML = '<p class="muted tiny">لا توجد طلبات شحن بعد.</p>';
+      return;
+    }
+    els.walletHistory.innerHTML = mine.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).map((t) => `
+      <article class="card">
+        <div class="card-body">
+          <div class="actions" style="justify-content: space-between;">
+            <span class="badge ${t.status || 'pending'}">${t.status || 'pending'}</span>
+            <span class="price-tag">$${t.amount || 0}</span>
+          </div>
+          <div class="muted tiny">${t.country || ''} • ${t.methodName || ''}</div>
+          <p class="muted tiny">مرجع: ${t.reference || '-'}</p>
+          <p class="muted tiny">${t.note || ''}</p>
+          <div class="muted tiny">${t.createdAt ? new Date(t.createdAt).toLocaleString('ar-EG') : ''}</div>
+        </div>
+      </article>
+    `).join('');
+  }
+
+  function handleLoginSubmit(e) {
+    e.preventDefault();
+    const email = els.loginEmailInput.value.trim().toLowerCase();
+    const password = els.loginPasswordInput.value.trim();
+    if (!email || !password) {
+      notify('أدخل البريد وكلمة المرور');
+      return;
+    }
+    firebase.auth().signInWithEmailAndPassword(email, password)
+      .then(() => {
+        notify('تم تسجيل الدخول');
+        if (isAuthPage()) window.location.href = 'index.html';
+      })
+      .catch(() => notify('بيانات الدخول غير صحيحة'));
+  }
+
+  function focusAuthFromHash() {
+    if (!isAuthPage()) return;
+    const hash = window.location.hash.toLowerCase();
+    if (hash.includes('register') && els.registerNameInput) {
+      els.registerNameInput.focus();
+    } else if (els.loginEmailInput) {
+      els.loginEmailInput.focus();
+    }
+  }
+
+  function handleRegisterSubmit(e) {
+    e.preventDefault();
+    const name = els.registerNameInput.value.trim() || 'مستخدم جديد';
+    const email = els.registerEmailInput.value.trim().toLowerCase();
+    const password = els.registerPasswordInput.value.trim();
+    if (!email || !password) {
+      notify('أدخل البريد وكلمة المرور');
+      return;
+    }
+    firebase.auth().createUserWithEmailAndPassword(email, password)
+      .then(async (cred) => {
+        if (name) {
+          await cred.user.updateProfile({ displayName: name }).catch(() => {});
+        }
+        if (db) {
+          await db.collection('profiles').doc(cred.user.uid).set({
+            name,
+            email,
+            createdAt: Date.now(),
+          }).catch(() => {});
+        }
+        notify('تم إنشاء الحساب');
+        els.registerForm.reset();
+        if (isAuthPage()) window.location.href = 'index.html';
+      })
+      .catch(() => notify('تعذر إنشاء الحساب'));
+  }
+
+  function handleWalletTopup(e) {
+    e.preventDefault();
+    const user = getCurrentUser();
+    if (!user) {
+      notify('سجّل الدخول أولًا');
+      window.location.href = 'login.html';
+      return;
+    }
+    if (!db) {
+      notify('فعّل اتصال Firebase أولًا');
+      return;
+    }
+    const amount = Number(els.walletAmountInput.value);
+    if (!amount || amount <= 0) {
+      notify('أدخل مبلغ صحيح');
+      return;
+    }
+    const country = els.walletCountrySelect?.value || '';
+    const methodId = els.walletMethodSelect?.value || '';
+    const method = state.paymentMethods.find((m) => m.id === methodId);
+    const reference = els.walletRefInput?.value?.trim() || '';
+    const methodName = method?.name || method?.type || 'تحويل';
+    db.collection('topups').add({
+      ownerId: user.uid,
+      amount,
+      country,
+      methodId,
+      methodName,
+      reference,
+      note: '',
+      status: 'pending',
+      createdAt: Date.now(),
+    }).then(() => {
+      notify('تم إرسال طلب الشحن للأدمن');
+      if (els.walletAmountInput) els.walletAmountInput.value = '';
+      if (els.walletRefInput) els.walletRefInput.value = '';
+      loadFirebaseData();
+    }).catch(() => notify('تعذر إرسال الطلب'));
+  }
+
+  function handleAddAccount(e) {
+    e.preventDefault();
+    const user = getCurrentUser();
+    if (!user) {
+      notify('سجّل الدخول أولًا');
+      window.location.href = 'login.html';
+      return;
+    }
+    if (!db) {
+      notify('فعّل اتصال Firebase أولًا');
+      return;
+    }
+
+    const gameId = els.gameSelect.value;
+    const title = els.titleInput.value.trim();
+    const price = Number(els.priceInput.value);
+    const contact = els.contactInput.value.trim();
+    const image = els.imageInput.value.trim();
+    const description = els.descInput.value.trim();
+
+    if (!gameId || !title || !price || !contact || !description) {
+      notify('أكمل الحقول المطلوبة');
+      return;
+    }
+
+    db.collection('accounts').add({
+      ownerId: user.uid,
+      gameId,
+      title,
+      price,
+      contact,
+      image,
+      description,
+      status: 'pending',
+      createdAt: Date.now(),
+    }).then(() => {
+      notify('تم إرسال الإعلان للمراجعة');
+      els.addAccountForm.reset();
+      loadFirebaseData();
+    }).catch(() => notify('تعذر الحفظ، تحقق من الاتصال'));
+  }
+
+  function handleAdminAction(e) {
+    const btn = e.target.closest('button[data-action][data-id]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    const id = btn.dataset.id;
+    if (!db || !state.isAdmin) {
+      notify('صلاحية الادمن وFirebase مطلوبة');
+      return;
+    }
+
+    // إعلانات
+    if (action === 'approve' || action === 'reject' || action === 'delete') {
+      const account = state.accounts.find((a) => a.id === id);
+      if (!account) return;
+
+      if (action === 'delete') {
+        db.collection('accounts').doc(id).delete()
+          .then(() => {
+            notify('تم حذف الإعلان');
+            loadFirebaseData();
+          })
+          .catch(() => notify('تعذر الحذف'));
+        return;
+      }
+
+      const status = action === 'approve' ? 'approved' : 'rejected';
+      db.collection('accounts').doc(id).update({
+        status,
+        reviewedAt: Date.now(),
+        reviewedBy: getCurrentUser()?.email || '',
+      }).then(() => {
+        notify(action === 'approve' ? 'تمت الموافقة' : 'تم الرفض');
+        loadFirebaseData();
+      }).catch(() => notify('تعذر التحديث'));
+      return;
+    }
+
+    // طلبات شحن الرصيد
+    if (action === 'topup-approve' || action === 'topup-reject') {
+      const topup = state.topups.find((t) => t.id === id);
+      if (!topup) return;
+      const newStatus = action === 'topup-approve' ? 'approved' : 'rejected';
+
+      const applyWallet = action === 'topup-approve'
+        ? db.collection('wallets').doc(topup.ownerId).set({
+            balance: firebase.firestore.FieldValue.increment(topup.amount || 0),
+            updatedAt: Date.now(),
+          }, { merge: true })
+        : Promise.resolve();
+
+      Promise.all([
+        db.collection('topups').doc(id).update({ status: newStatus, reviewedAt: Date.now(), reviewedBy: getCurrentUser()?.email || '' }),
+        applyWallet,
+      ]).then(() => {
+        notify(action === 'topup-approve' ? 'تمت إضافة الرصيد' : 'تم رفض الطلب');
+        loadFirebaseData();
+      }).catch(() => notify('تعذر تحديث الطلب'));
+    }
+  }
+
+  function handleAddGame(e) {
+    e.preventDefault();
+    if (!state.isAdmin) {
+      notify('صلاحية الادمن فقط');
+      return;
+    }
+    if (!db) {
+      notify('فعّل اتصال Firebase أولًا');
+      return;
+    }
+
+    const name = els.gameNameInput.value.trim();
+    const image = els.gameImgInput.value.trim() || PLACEHOLDER;
+    if (!name) {
+      notify('أدخل اسم اللعبة');
+      return;
+    }
+
+    const exists = state.games.find((g) => g.name.toLowerCase() === name.toLowerCase());
+    if (exists) {
+      notify('اسم اللعبة مضاف مسبقًا');
+      return;
+    }
+
+    db.collection('games').add({ name, image }).then(() => {
+      notify('تمت إضافة اللعبة');
+      els.addGameForm.reset();
+      loadFirebaseData();
+    }).catch(() => notify('تعذر الإضافة'));
+  }
+
+  function handleGameAdminClick(e) {
+    const btn = e.target.closest('button[data-game-id]');
+    if (!btn) return;
+    const gameId = btn.dataset.gameId;
+    if (!db || !state.isAdmin) {
+      notify('صلاحية الادمن فقط');
+      return;
+    }
+    db.collection('games').doc(gameId).delete()
+      .then(() => {
+        notify('تم حذف اللعبة');
+        loadFirebaseData();
+      })
+      .catch(() => notify('تعذر الحذف'));
+  }
+
+  function handleAddMethod(e) {
+    e.preventDefault();
+    if (!state.isAdmin) {
+      notify('صلاحية الادمن فقط');
+      return;
+    }
+    if (!db) {
+      notify('فعّل اتصال Firebase أولًا');
+      return;
+    }
+    const country = els.methodCountryInput.value.trim();
+    const name = els.methodNameInput.value.trim();
+    const accountNumber = els.methodAccountInput.value.trim();
+    const accountName = els.methodHolderInput.value.trim();
+    const note = els.methodNoteInput.value.trim();
+    if (!country || !name || !accountNumber) {
+      notify('أكمل الحقول المطلوبة');
+      return;
+    }
+    db.collection('paymentMethods').add({
+      country,
+      name,
+      accountNumber,
+      accountName,
+      note,
+      type: 'wallet',
+      createdAt: Date.now(),
+    }).then(() => {
+      notify('تمت إضافة الطريقة');
+      els.addMethodForm.reset();
+      loadFirebaseData();
+    }).catch(() => notify('تعذر الإضافة'));
+  }
+
+  function handleMethodAdminClick(e) {
+    const btn = e.target.closest('button[data-method-id]');
+    if (!btn) return;
+    const id = btn.dataset.methodId;
+    if (!db || !state.isAdmin) {
+      notify('صلاحية الادمن مطلوبة');
+      return;
+    }
+    db.collection('paymentMethods').doc(id).delete()
+      .then(() => {
+        notify('تم حذف الطريقة');
+        loadFirebaseData();
+      })
+      .catch(() => notify('تعذر الحذف'));
+  }
+
+  function renderSession() {
+    const user = getCurrentUser();
+    const chipText = user?.displayName || user?.email || 'ضيف';
+    if (els.userChip) els.userChip.textContent = chipText;
+    if (els.logoutBtn) els.logoutBtn.classList.toggle('hidden', !user);
+    if (els.loginBtn) els.loginBtn.classList.toggle('hidden', !!user);
+    if (els.registerBtn) els.registerBtn.classList.toggle('hidden', !!user);
+    if (els.addSection) els.addSection.classList.toggle('hidden', !user);
+    if (els.yourSection) els.yourSection.classList.toggle('hidden', !user);
+    if (els.walletPanel) els.walletPanel.classList.toggle('hidden', !user);
+    if (els.adminPanel) els.adminPanel.classList.toggle('hidden', !state.isAdmin);
+    if (els.adminGames) els.adminGames.classList.toggle('hidden', !state.isAdmin);
+  }
+
+  function renderGameOptions() {
+    if (!els.gameSelect) return;
+    els.gameSelect.innerHTML = state.games
+      .map((g) => `<option value="${g.id}">${g.name}</option>`)
+      .join('');
+  }
+
+  function renderGames() {
+    if (!els.gameGrid) return;
+    if (!els.searchInput) return;
+    const term = (els.searchInput.value || '').toLowerCase();
+    const filtered = state.games.filter((g) => g.name.toLowerCase().includes(term));
+    if (!filtered.length) {
+      els.gameGrid.innerHTML = '<p class="muted">لا توجد ألعاب مطابقة للبحث.</p>';
+      if (els.listingGrid) els.listingGrid.innerHTML = '<p class="muted">اختر لعبة لعرض الإعلانات.</p>';
+      if (els.currentGameTitle) els.currentGameTitle.textContent = '(اختر لعبة من الأعلى)';
+      return;
+    }
+
+    els.gameGrid.innerHTML = filtered.map((g) => `
+      <article class="game-card ${state.selectedGame === g.id ? 'active' : ''}" data-game-id="${g.id}">
+        <img src="${g.image || PLACEHOLDER}" alt="${g.name}">
+        <div class="title">${g.name}</div>
+      </article>
+    `).join('');
+    renderListings();
+  }
+
+  function statusBadge(status) {
+    const labels = { approved: 'مقبول', pending: 'بانتظار', rejected: 'مرفوض' };
+    return `<span class="badge ${status}">${labels[status] || status}</span>`;
+  }
+
+  function accountCard(acc, opts = {}) {
+    const game = state.games.find((g) => g.id === acc.gameId);
+    const img = acc.image || game?.image || PLACEHOLDER;
+    const created = acc.createdAt ? new Date(acc.createdAt).toLocaleDateString('ar-EG') : '';
+    const reviewer = acc.reviewedBy ? acc.reviewedBy : '';
+
+    const footer = opts.showContact
+      ? `<div class="muted tiny">${acc.contact ? `تواصل: ${acc.contact}` : ''}</div>`
+      : '';
+
+    const adminActions = opts.admin
+      ? `<div class="actions">
+          <button class="btn primary small" data-action="approve" data-id="${acc.id}">موافقة</button>
+          <button class="btn ghost small" data-action="reject" data-id="${acc.id}">رفض</button>
+          <button class="btn danger small" data-action="delete" data-id="${acc.id}">حذف</button>
+        </div>`
+      : '';
+
+    return `
+      <article class="card">
+        <img src="${img}" alt="${acc.title}">
+        <div class="card-body">
+          <div class="actions" style="justify-content: space-between;">
+            <span>${statusBadge(acc.status)}</span>
+            <span class="price-tag">$${acc.price || 0}</span>
+          </div>
+          <h3>${acc.title}</h3>
+          <div class="muted tiny">${game ? game.name : ''} ${created ? `• ${created}` : ''}</div>
+          <p class="muted">${acc.description || ''}</p>
+          ${reviewer ? `<div class="tiny muted">مراجَع بواسطة ${reviewer}</div>` : ''}
+          ${footer}
+          ${adminActions}
+        </div>
+      </article>
+    `;
+  }
+
+  function sortAccounts(list) {
+    const arr = [...list];
+    switch (state.sort) {
+      case 'oldest':
+        return arr.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      case 'priceHigh':
+        return arr.sort((a, b) => (b.price || 0) - (a.price || 0));
+      case 'priceLow':
+        return arr.sort((a, b) => (a.price || 0) - (b.price || 0));
+      default:
+        return arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    }
+  }
+
+  function renderListings() {
+    if (!els.listingGrid || !els.currentGameTitle) return;
+    const user = getCurrentUser();
+    const selected = state.games.find((g) => g.id === state.selectedGame);
+    els.currentGameTitle.textContent = selected ? `إعلانات ${selected.name}` : '(اختر لعبة من الأعلى)';
+
+    if (!selected) {
+      els.listingGrid.innerHTML = '<p class="muted">اختر لعبة لعرض الإعلانات.</p>';
+      return;
+    }
+
+    const visible = state.accounts.filter((a) => {
+      if (a.gameId !== selected.id) return false;
+      if (user?.isAdmin) return true;
+      return a.status === 'approved';
+    });
+
+    if (!visible.length) {
+      els.listingGrid.innerHTML = '<p class="muted">لا توجد إعلانات لهذا القسم حاليًا.</p>';
+      return;
+    }
+
+    els.listingGrid.innerHTML = sortAccounts(visible)
+      .map((a) => accountCard(a, { showContact: true }))
+      .join('');
+  }
+
+  function renderYourListings() {
+    if (!els.yourListings) return;
+    const user = getCurrentUser();
+    if (!user) return;
+    const mine = state.accounts.filter((a) => a.ownerId === user.uid);
+    if (!mine.length) {
+      els.yourListings.innerHTML = '<p class="muted">لا يوجد لديك إعلانات بعد.</p>';
+      return;
+    }
+    els.yourListings.innerHTML = sortAccounts(mine).map((a) => accountCard(a, { showContact: true })).join('');
+  }
+
+  function renderAdminQueue() {
+    if (!els.adminList) return;
+    const pending = state.accounts.filter((a) => a.status === 'pending');
+    if (!pending.length) {
+      els.adminList.innerHTML = '<p class="muted">لا توجد طلبات بانتظار المراجعة.</p>';
+      return;
+    }
+    els.adminList.innerHTML = sortAccounts(pending).map((a) => accountCard(a, { admin: true, showContact: true })).join('');
+  }
+
+  function renderGameAdminList() {
+    if (!els.gameAdminList) return;
+    els.gameAdminList.innerHTML = state.games.map((g) => {
+      const count = state.accounts.filter((a) => a.gameId === g.id).length;
+      return `
+        <article class="card">
+          <img src="${g.image || PLACEHOLDER}" alt="${g.name}">
+          <div class="card-body">
+            <h3>${g.name}</h3>
+            <div class="muted tiny">إعلانات: ${count}</div>
+            <div class="actions">
+              <button class="btn danger small" data-game-id="${g.id}">حذف</button>
+            </div>
+          </div>
+        </article>
+      `;
+    }).join('');
+  }
+
+  function renderAdminTopups() {
+    if (!els.adminTopupsList) return;
+    const pending = state.topups.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    if (!pending.length) {
+      els.adminTopupsList.innerHTML = '<p class="muted">لا توجد طلبات شحن.</p>';
+      return;
+    }
+    els.adminTopupsList.innerHTML = pending.map((t) => `
+      <article class="card">
+        <div class="card-body">
+          <div class="actions" style="justify-content: space-between;">
+            <span class="badge ${t.status || 'pending'}">${t.status || 'pending'}</span>
+            <span class="price-tag">$${t.amount || 0}</span>
+          </div>
+          <h3>${t.methodName || ''}</h3>
+          <div class="muted tiny">${t.country || ''}</div>
+          <p class="muted tiny">مرجع: ${t.reference || '-'}</p>
+          <div class="actions">
+            <button class="btn primary small" data-action="topup-approve" data-id="${t.id}">تأكيد الشحن</button>
+            <button class="btn ghost small" data-action="topup-reject" data-id="${t.id}">رفض</button>
+          </div>
+        </div>
+      </article>
+    `).join('');
+  }
+
+  function renderMethodAdminList() {
+    if (!els.methodAdminList) return;
+    if (!state.paymentMethods.length) {
+      els.methodAdminList.innerHTML = '<p class="muted">لا توجد طرق دفع.</p>';
+      return;
+    }
+    els.methodAdminList.innerHTML = state.paymentMethods.map((m) => `
+      <article class="card method-card">
+        <div class="muted tiny">${m.country || ''}</div>
+        <h3>${m.name || m.type || 'طريقة تحويل'}</h3>
+        <p class="muted tiny">${m.accountName || ''}</p>
+        <p class="muted tiny">${m.accountNumber || ''}</p>
+        <p class="muted tiny">${m.note || ''}</p>
+        <div class="actions">
+          <button class="btn danger small" data-method-id="${m.id}">حذف</button>
+        </div>
+      </article>
+    `).join('');
+  }
+
+  function hideLoader() {
+    if (els.loader) els.loader.classList.add('hidden');
+  }
+
+  function setSelectedGame(id) {
+    state.selectedGame = id;
+    state.view = 'listings';
+    renderAll();
+  }
+
+  function backToGames() {
+    state.view = 'games';
+    state.selectedGame = null;
+    if (els.currentGameTitle) els.currentGameTitle.textContent = '(اختر لعبة من الأعلى)';
+    if (els.listingGrid) els.listingGrid.innerHTML = '<p class="muted">اختر لعبة لعرض الإعلانات.</p>';
+    renderAll();
+  }
+
+  function attachEvents() {
+    if (els.loginForm) els.loginForm.addEventListener('submit', handleLoginSubmit);
+    if (els.registerForm) els.registerForm.addEventListener('submit', handleRegisterSubmit);
+    if (els.addAccountForm) els.addAccountForm.addEventListener('submit', handleAddAccount);
+    if (els.adminList) els.adminList.addEventListener('click', handleAdminAction);
+    if (els.gameAdminList) els.gameAdminList.addEventListener('click', handleGameAdminClick);
+    if (els.methodAdminList) els.methodAdminList.addEventListener('click', handleMethodAdminClick);
+    if (els.addGameForm) els.addGameForm.addEventListener('submit', handleAddGame);
+    if (els.addMethodForm) els.addMethodForm.addEventListener('submit', handleAddMethod);
+
+    if (els.logoutBtn) {
+      els.logoutBtn.addEventListener('click', () => {
+        firebase.auth().signOut().then(() => notify('تم تسجيل الخروج'));
+      });
+    }
+
+    if (els.loginBtn) {
+      els.loginBtn.addEventListener('click', (e) => {
+        if (isAuthPage()) return;
+        e.preventDefault();
+        window.location.href = 'login.html';
+      });
+    }
+
+    if (els.registerBtn) {
+      els.registerBtn.addEventListener('click', (e) => {
+        if (isAuthPage()) return;
+        e.preventDefault();
+        window.location.href = 'login.html';
+      });
+    }
+
+    if (els.gameGrid) {
+      els.gameGrid.addEventListener('click', (e) => {
+        const card = e.target.closest('[data-game-id]');
+        if (card) {
+          setSelectedGame(card.dataset.gameId);
+          scrollToId('#listingsPanel');
+        }
+      });
+    }
+
+    if (els.searchInput) {
+      els.searchInput.addEventListener('input', () => renderGames());
+    }
+
+    if (els.sortSelect) {
+      els.sortSelect.addEventListener('change', () => {
+        state.sort = els.sortSelect.value;
+        persist();
+        renderListings();
+        renderYourListings();
+        renderAdminQueue();
+      });
+    }
+
+    if (els.backToGames) {
+      els.backToGames.addEventListener('click', (e) => {
+        e.preventDefault();
+        backToGames();
+        scrollToId('#categoriesPanel');
+      });
+    }
+
+    if (els.walletForm) {
+      els.walletForm.addEventListener('submit', handleWalletTopup);
+    }
+
+    if (els.walletCountrySelect) {
+      els.walletCountrySelect.addEventListener('change', renderMethodsForCountry);
+    }
+    if (els.walletMethodSelect) {
+      els.walletMethodSelect.addEventListener('change', renderMethodInfo);
+    }
+  }
+
+  function renderAll() {
+    if (els.categoriesPanel) {
+      els.categoriesPanel.classList.toggle('hidden', state.view !== 'games');
+    }
+    if (els.listingsPanel) {
+      els.listingsPanel.classList.toggle('hidden', state.view === 'games');
+    }
+    renderSession();
+    renderGameOptions();
+    renderGames();
+    renderListings();
+    if (getCurrentUser()) {
+      renderYourListings();
+      renderAdminQueue();
+      renderGameAdminList();
+    }
+    if (els.sortSelect) els.sortSelect.value = state.sort;
+    renderWallet();
+    renderWalletHistory();
+    renderMethodAdminList();
+  }
+
+  async function initFirebase() {
+    if (db || !window.firebase) return;
+    if (!firebase.apps.length) {
+      if (!firebaseConfig.projectId) {
+        notify('أضف إعدادات Firebase في app.js');
+        return;
+      }
+      firebase.initializeApp(firebaseConfig);
+    }
+    db = firebase.firestore();
+  }
+
+  function initAuth() {
+    if (!window.firebase?.auth) return;
+    firebase.auth().onAuthStateChanged(async (user) => {
+      state.firebaseUser = user;
+      state.isAdmin = false;
+      if (user) {
+        try {
+          const token = await user.getIdTokenResult();
+          state.isAdmin = !!token.claims?.admin || evaluateAdmin(user);
+        } catch (e) {
+          state.isAdmin = evaluateAdmin(user);
+        }
+      }
+      renderAll();
+      loadWallet();
+    });
+  }
+
+  async function loadFirebaseData() {
+    if (!db) return;
+    try {
+      const user = getCurrentUser();
+      const [gamesSnap, accountsSnap, methodsSnap, topupsSnap] = await Promise.all([
+        db.collection('games').get(),
+        db.collection('accounts').get(),
+        db.collection('paymentMethods').get(),
+        user
+          ? state.isAdmin
+            ? db.collection('topups').get()
+            : db.collection('topups').where('ownerId', '==', user.uid).get()
+          : Promise.resolve({ docs: [] }),
+      ]);
+      state.games = gamesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      state.accounts = accountsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      state.paymentMethods = methodsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      state.topups = topupsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      await loadWallet();
+      renderPaymentMethods();
+      renderWalletHistory();
+      renderAdminTopups();
+      renderAll();
+      hideLoader();
+    } catch (e) {
+      notify('تعذر جلب البيانات من Firebase');
+      hideLoader();
+    }
+  }
+
+  async function init() {
+    seedDefaults();
+    attachEvents();
+    await initFirebase();
+    initAuth();
+    await loadFirebaseData();
+    focusAuthFromHash();
+    renderAll();
+    setTimeout(hideLoader, 800);
+  }
+
+  init();
+})();
+
+
+(function(){
+  function bindNav(){
+    var walletBtn = document.getElementById('walletBtn');
+    if (walletBtn) walletBtn.onclick = function(){ toggleSidebar(); var sec = document.getElementById('walletPanel'); if (sec) sec.scrollIntoView({ behavior:'smooth', block:'start' }); };
+    var transferBtn = document.getElementById('transferBtn');
+    if (transferBtn) transferBtn.onclick = function(){ toggleSidebar(); var sec = document.getElementById('walletPanel'); if (sec) sec.scrollIntoView({ behavior:'smooth', block:'start' }); };
+    var settingsBtn = document.getElementById('settingsBtn');
+    if (settingsBtn) settingsBtn.onclick = function(){ window.location.href = 'index.html#settings'; };
+  }
+  document.addEventListener('DOMContentLoaded', bindNav);
+})();
+
+  </script>
+</body>
+</html>
+
+
+

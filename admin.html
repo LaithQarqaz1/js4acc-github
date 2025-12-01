@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة الادمن | سوق الحسابات</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="header.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="loader.css">
+  <style>
+    .account-group-admin{margin:0 0 18px;padding:16px;border:1px solid rgba(255,255,255,0.08);border-radius:18px;background:linear-gradient(145deg,rgba(255,255,255,0.05),rgba(255,255,255,0.01));box-shadow:0 16px 40px rgba(0,0,0,0.35)}
+    .account-group-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+    .account-grid-admin{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+    .account-card-admin{background:rgba(8,10,20,0.9);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:12px;display:flex;gap:12px;box-shadow:0 12px 30px rgba(0,0,0,0.4);transition:transform .2s ease, box-shadow .25s ease}
+    .account-card-admin:hover{transform:translateY(-4px);box-shadow:0 18px 44px rgba(0,0,0,0.55)}
+    .account-card-admin img{width:120px;height:120px;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:#0d1220}
+    .account-card-admin .thumb{position:relative;flex:0 0 auto}
+    .account-card-admin .thumb .more{position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,0.65);color:#fff;padding:4px 8px;border-radius:10px;font-size:12px}
+    .account-card-admin .body{flex:1;display:flex;flex-direction:column;gap:8px}
+    .account-card-admin .row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+    .account-card-admin .price-tag{font-weight:800;color:#1fc9ab}
+    .account-card-admin .actions{display:flex;gap:6px;flex-wrap:wrap}
+    @media(max-width:640px){.account-card-admin{flex-direction:column}.account-card-admin img{width:100%;height:200px}}
+    #admin-currencies .currency-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;}
+    #admin-currencies .currency-card{
+      padding:8px;
+      min-height:auto;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,0.08);
+      box-shadow:0 6px 14px rgba(0,0,0,0.28);
+      background:rgba(8,10,20,0.92);
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      justify-content:flex-start;
+      align-items:flex-start;
+    }
+    #admin-currencies .currency-card h3{margin:0 0 4px;}
+    #admin-currencies .currency-card .muted{margin:2px 0;font-size:12px;}
+    #admin-currencies .currency-card .actions{margin-top:6px;width:100%;}
+    #admin-currencies .currency-card .actions .btn{width:100%;padding:8px 10px;}
+    /* إخفاء قسم المساعدة في لوحة الأدمن */
+    .support-section{display:none !important;}
+    /* تحسين الأزرار والحقول */
+    .panel .grid{row-gap:14px;}
+    .panel .field input,
+    .panel .field textarea,
+    .panel .field select{
+      background:rgba(255,255,255,0.04);
+      color:var(--text,#e6edff);
+      border:1px solid rgba(255,255,255,0.12);
+      border-radius:10px;
+      padding:10px 12px;
+      appearance:none;
+      width:100%;
+      min-width:180px;
+    }
+    .panel .field select option{background:#0f1628;color:#e6edff;}
+    .panel .field label{color:var(--text,#e6edff);}
+    .btn{margin:4px 0;}
+    .btn.primary, .btn.danger, .btn.ghost{
+      min-height:40px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+    }
+    .panel .actions{gap:8px;}
+    /* تحسين العرض على الهواتف */
+    @media (max-width: 640px){
+      .panel{padding:12px;border-radius:14px;}
+      .panel-header{flex-direction:column;align-items:flex-start;gap:6px;}
+      .grid.two,.grid.three{grid-template-columns:1fr;gap:10px;}
+      .upload-box{flex-direction:column;align-items:flex-start;}
+      .upload-box button{width:100%;justify-content:center;}
+      .panel .field input,
+      .panel .field textarea,
+      .panel .field select{width:100%;}
+      .account-grid-admin{grid-template-columns:1fr;gap:10px;}
+      #admin-currencies .currency-cards{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;}
+      .btn{width:100%;}
+    }
+    /* إدارة الإعلانات */
+    .manage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;}
+    .manage-card{background:rgba(8,10,20,0.92);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:12px;box-shadow:0 10px 24px rgba(0,0,0,0.35);}
+    .manage-card .thumb{width:96px;height:96px;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,0.12);}
+    .manage-card .row{display:flex;gap:10px;align-items:flex-start;}
+    .manage-card .fields{flex:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;}
+    .manage-card label{color:#9aa6c8;font-size:12px;display:flex;flex-direction:column;gap:4px;}
+    .manage-card input,.manage-card select,.manage-card textarea{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:8px 10px;color:#e6edff;}
+    .manage-card textarea{min-height:70px;resize:vertical;}
+    .manage-card .meta{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:#9aa6c8;}
+    .manage-card .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px;}
+    .manage-card .badge{padding:4px 8px;border-radius:10px;font-size:12px;}
+    /* الأقسام */
+    #admin-categories .category-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;}
+    #admin-categories .category-card{border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px;background:rgba(8,10,20,0.9);display:flex;justify-content:space-between;align-items:center;gap:8px;}
+    #admin-categories .category-card .label{font-weight:700;}
+  </style>
+</head>
+<body>
+  <div id="preloader" class="auto-hide">
+    <div class="loader"></div>
+  </div>
+  <div id="headerContainer"></div>
+  <div id="sidebar"></div>
+
+  <main class="container">
+    <section id="admin-panel" class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">المراجعة</p>
+          <h2>مراجعة الإعلانات بانتظار الموافقة</h2>
+        </div>
+        <div class="field" style="margin-inline-start:auto;min-width:180px;">
+          <label class="muted tiny" for="accountCategoryFilter">تصفية حسب القسم</label>
+          <select id="accountCategoryFilter">
+            <option value="all">كل الأقسام</option>
+          </select>
+        </div>
+      </div>
+      <div id="adminList" class="cards"></div>
+    </section>
+
+    <section id="admin-manage" class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">إدارة الإعلانات</p>
+          <h2>عرض وتعديل الإعلانات</h2>
+        </div>
+        <div class="field" style="margin-inline-start:auto;min-width:180px;">
+          <label class="muted tiny" for="adminManageStatus">تصفية حسب الحالة</label>
+          <select id="adminManageStatus">
+            <option value="all">كل الحالات</option>
+            <option value="approved">مقبول</option>
+            <option value="pending">بانتظار</option>
+            <option value="rejected">مرفوض</option>
+          </select>
+        </div>
+      </div>
+      <div id="adminManageList" class="manage-grid"></div>
+    </section>
+
+    <section id="admin-categories" class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">الأقسام</p>
+          <h2>إضافة أو حذف قسم</h2>
+        </div>
+      </div>
+      <form id="addCategoryForm" class="grid two">
+        <div class="field">
+          <label for="categoryNameInput">اسم القسم</label>
+          <input id="categoryNameInput" type="text" placeholder="مثال: حسابات كلاسية" required>
+        </div>
+        <div class="field submit full">
+          <button class="btn primary" type="submit">حفظ القسم</button>
+          <p class="tiny muted">يظهر فوراً في كل القوائم وواجهة الزوار.</p>
+        </div>
+      </form>
+      <div id="categoryAdminList" class="category-list"></div>
+    </section>
+
+    <section id="admin-add-accounts" class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">إضافة حساب</p>
+        </div>
+      </div>
+
+
+      <form id="addAccountForm" class="grid two">
+        <div class="field">
+          <label for="accountCategory">القسم</label>
+          <select id="accountCategory" required>
+            <option value="">اختر القسم</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="titleInput">عنوان الحساب</label>
+          <input id="titleInput" type="text" placeholder="مثال: حساب ملكي لفل 90" required>
+        </div>
+        <div class="field">
+          <label for="priceInput">السعر (بالدولار)</label>
+          <input id="priceInput" type="number" step="0.01" placeholder="120.00" required>
+        </div>
+        <div class="field">
+          <label for="contactInput">وسيلة التواصل</label>
+          <input id="contactInput" type="text" placeholder="واتساب أو تليجرام" required>
+        </div>
+        <div class="field">
+          <label>صور الحساب</label>
+          <div class="upload-box">
+            <input id="imageFileInput" type="file" accept="image/*" multiple>
+            <button class="btn ghost" type="button" id="imageUploadBtn">رفع الصور</button>
+            <input id="imageInput" type="hidden">
+            <p class="tiny muted">يمكن رفع أكثر من صورة للحساب، وسيتم حفظ الروابط تلقائياً.</p>
+            <div id="imageGalleryPreview" class="thumbs" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+          </div>
+        </div>
+        <div class="field full">
+          <label for="descInput">وصف الحساب</label>
+          <textarea id="descInput" rows="3" placeholder="تفاصيل مختصرة عن الحساب" required></textarea>
+        </div>
+        <div class="field submit full">
+          <button class="btn primary" type="submit">حفظ الحساب</button>
+          <p class="tiny muted">سيظهر في قائمة المراجعة ثم ينشر عند الموافقة.</p>
+        </div>
+      </form>
+    </section>
+
+    <section id="admin-methods" class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">طرق الدفع</p>
+          <h2>إدارة التحويلات / المحافظ</h2>
+        </div>
+      </div>
+
+      <form id="addMethodForm" class="grid two">
+        <div class="field">
+          <label for="methodCountryInput">الدولة</label>
+          <input id="methodCountryInput" type="text" placeholder="مثال: السعودية" required>
+        </div>
+        <div class="field">
+          <label for="methodNameInput">اسم الطريقة</label>
+          <input id="methodNameInput" type="text" placeholder="STC Pay / بنك الراجحي" required>
+        </div>
+        <div class="field">
+          <label for="methodAccountInput">رقم/معرف المحفظة</label>
+          <input id="methodAccountInput" type="text" placeholder="رقم، IBAN، أو معرّف" required>
+        </div>
+        <div class="field">
+          <label for="methodHolderInput">اسم المستقبل</label>
+          <input id="methodHolderInput" type="text" placeholder="الاسم كما في البنك">
+        </div>
+        <div class="field full">
+          <label for="methodNoteInput">ملاحظات</label>
+          <input id="methodNoteInput" type="text" placeholder="تعليمات إضافية أو وصف">
+        </div>
+        <div class="field submit">
+          <button class="btn primary" type="submit">حفظ الطريقة</button>
+        </div>
+      </form>
+
+      <div id="methodAdminList" class="cards"></div>
+    </section>
+
+    <section id="admin-currencies" class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">العملات</p>
+          <h2>إضافة/تحديث أسعار الصرف</h2>
+        </div>
+      </div>
+      <p class="muted">أدخل رمز العملة (مثل USD, SAR, JOD) ورمزها النصي (مثل $، ر.س) وسعر التحويل من الدولار (1 USD =؟).</p>
+      <form id="addCurrencyForm" class="grid three">
+        <div class="field">
+          <label for="currencyCodeInput">رمز العملة</label>
+          <input id="currencyCodeInput" type="text" placeholder="USD / SAR / JOD" maxlength="6" required>
+        </div>
+        <div class="field">
+          <label for="currencySymbolInput">رمز العرض</label>
+          <input id="currencySymbolInput" type="text" placeholder="$ / ر.س" required>
+        </div>
+        <div class="field">
+          <label for="currencyRateInput">السعر مقابل الدولار</label>
+          <input id="currencyRateInput" type="number" step="0.0001" placeholder="مثال: 3.75" required>
+        </div>
+        <div class="field submit full">
+          <button class="btn primary" type="submit">حفظ العملة</button>
+          <p class="tiny muted">يتم تحديث جميع الواجهات مباشرة.</p>
+        </div>
+      </form>
+      <div id="currencyAdminList" class="cards"></div>
+    </section>
+
+    <section id="admin-purchases" class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">طلبات شراء الحسابات</p>
+          <h2>المشتريات الجديدة</h2>
+        </div>
+      </div>
+      <div id="adminPurchasesList" class="cards"></div>
+    </section>
+
+    <section id="admin-topups" class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">طلبات الشحن</p>
+          <h2>مراجعة طلبات الرصيد</h2>
+        </div>
+      </div>
+      <div id="adminTopupsList" class="cards"></div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
+  <script src="loader.js" defer></script>
+  <script src="header.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

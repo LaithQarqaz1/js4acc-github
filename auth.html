@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تسجيل الدخول | سوق حسابات الألعاب</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="header.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="loader" class="loader"><div class="spinner"></div></div>
+  <div id="headerContainer"></div>
+  <div id="sidebar"></div>
+
+  <main class="container">
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">حسابك</p>
+          <h2>تسجيل الدخول / إنشاء حساب</h2>
+        </div>
+        <span class="chip chip-success">صفحة مستقلة</span>
+      </div>
+
+      <div class="dual-auth">
+        <form id="registerForm" class="auth-card">
+          <h3>إنشاء حساب</h3>
+          <div class="field">
+            <label for="registerNameInput">الاسم</label>
+            <input id="registerNameInput" type="text" placeholder="اسمك الظاهر" autocomplete="name" required>
+          </div>
+          <div class="field">
+            <label for="registerEmailInput">الإيميل</label>
+            <input id="registerEmailInput" type="email" placeholder="example@mail.com" autocomplete="email" required>
+          </div>
+          <div class="field">
+            <label for="registerPasswordInput">كلمة المرور</label>
+            <input id="registerPasswordInput" type="password" placeholder="••••••" autocomplete="new-password" required>
+          </div>
+          <button type="submit" class="btn outline">إنشاء الحساب</button>
+          <p class="tiny muted">يحفظ محليًا للتجربة فقط.</p>
+        </form>
+
+        <form id="loginForm" class="auth-card">
+          <h3>تسجيل الدخول</h3>
+          <div class="field">
+            <label for="loginEmailInput">الإيميل</label>
+            <input id="loginEmailInput" type="email" placeholder="example@mail.com" autocomplete="email" required>
+          </div>
+          <div class="field">
+            <label for="loginPasswordInput">كلمة المرور</label>
+            <input id="loginPasswordInput" type="password" placeholder="••••••" autocomplete="current-password" required>
+          </div>
+          <button type="submit" class="btn primary">دخول</button>
+          <p class="tiny muted">استخدم بيانات الادمن للتجربة: admin@js4acc.com / admin123</p>
+        </form>
+      </div>
+
+      <div style="margin-top: 12px;">
+        <a class="btn ghost" href="index.html">العودة للرئيسية</a>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
+  <script src="header.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,2806 @@
+﻿<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script>
+  (function(){
+    try{
+      var h = location.hostname || '';
+      var isLocal = h === 'localhost' || h === '127.0.0.1' || h === '' || /^0\.0\.0\.0$/.test(h) || /^192\.168\./.test(h) || /^10\./.test(h) || /^172\.(1[6-9]|2\d|3[0-1])\./.test(h);
+      if (location.protocol === 'http:' && !isLocal) {
+        var target = 'https://' + location.host + location.pathname + location.search + location.hash;
+        window.location.replace(target);
+      }
+    }catch(e){}
+  })();
+</script>
+<title>تسجيل الدخول</title>
+  <link rel="icon" href="emp.png" type="image/png">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;600&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/css/intlTelInput.min.css" rel="stylesheet"/>
+<link rel="stylesheet" href="loader.css">
+<script src="loader.js" defer></script>
+<style>
+  :root{
+    --bg-start:#eff6ff;         /* blue-50 */
+    --bg-end:#dbeafe;           /* blue-100 */
+    --surface:#ffffff;
+    --text:#1b1d3b;             /* gray-800 */
+    --muted:#4f6fa8;            /* blue-gray */
+    --primary:#2563eb;          /* blue-600 */
+    --primary-2:#1d4ed8;        /* blue-700 */
+    --ring:#93c5fd;             /* blue-300 */
+    --danger:#ef4444;
+    --success:#16a34a;
+    --shadow:0 10px 30px rgba(2,6,23,.10);
+    --shadow-lg:0 20px 50px rgba(2,6,23,.15);
+    --radius-xl:24px;
+    --radius-lg:16px;
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg-start:#0b1020;
+      --bg-end:#131a33;
+      --surface:#0f1024;
+      --text:#e5e7eb;
+      --muted:#9ca3af;
+      --primary:#60a5fa;
+      --primary-2:#93c5fd;
+      --ring:#bfdbfe;
+      --danger:#f87171;
+      --success:#34d399;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+      --shadow-lg:0 20px 60px rgba(0,0,0,.45);
+    }
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    font-family:'Cairo',sans-serif;
+    margin:0;
+    color:var(--text);
+    background:
+      radial-gradient(1200px 700px at 100% -10%, rgba(147,197,253,.15), transparent 60%),
+      radial-gradient(1000px 600px at -10% 110%, rgba(96,165,250,.18), transparent 60%),
+      linear-gradient(135deg,var(--bg-start),var(--bg-end));
+    display:flex;align-items:center;justify-content:center;
+    padding:24px;
+  }
+
+  /* Shell */
+  .auth-shell{
+    width:100%;
+    max-width:980px;
+    display:grid;
+    grid-template-columns:1.1fr .9fr;
+    gap:24px;
+  }
+  @media (max-width:880px){
+    .auth-shell{grid-template-columns:1fr}
+    .brand-side{display:none}
+  }
+
+  /* Brand side */
+  .brand-side{
+    background: linear-gradient(135deg, rgba(37,99,235,.85), rgba(29,78,216,.85)),url('https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?q=80&w=1400&auto=format&fit=crop');background-position: center, center;background-repeat: no-repeat, no-repeat;background-size: auto, contain;
+    box-shadow:var(--shadow-lg);
+    border-radius:18px; overflow:hidden;
+    padding:36px 32px;
+    display:flex;flex-direction:column;justify-content:space-between;min-height:560px;
+    color:#fff;
+  }
+  .brand-logo{
+    display:flex;align-items:center;gap:12px;
+  }
+  .brand-logo .mark{
+    width:40px;height:40px;border-radius:12px;
+    background:#fff; color:var(--primary);
+    display:grid;place-items:center;font-weight:700;box-shadow:0 6px 16px rgba(0,0,0,.15);
+  }
+  .brand-side h1{margin:0;font-size:1.35rem;font-weight:700}
+  .brand-cta{
+    margin-top:auto;
+    background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.25);
+    padding:18px;
+    border-radius:18px;
+    backdrop-filter: blur(6px);
+  }
+  .brand-cta p{margin:0 0 10px;color:#f3f4f6}
+  .brand-badges{display:flex;gap:10px;flex-wrap:wrap}
+  .badge{
+    padding:6px 10px;border-radius:999px;
+    background:rgba(255,255,255,.16);
+    border:1px solid rgba(255,255,255,.25);
+    font-size:.85rem
+  }
+
+  /* Form side */
+  .form-side{
+    background:var(--surface);
+    border:1px solid rgba(2,6,23,.05);
+    border-radius:18px; overflow:hidden;
+    box-shadow:var(--shadow);
+    padding:28px 26px;
+  }
+  .header{
+    display:flex;align-items:center;gap:12px;margin-bottom:6px
+  }
+  .avatar{
+    width:48px;height:48px;border-radius:14px;
+    background:linear-gradient(135deg,#dbeafe,#eff6ff);
+    display:grid;place-items:center;color:var(--primary)
+  }
+  .form-side h2{margin:0;font-size:1.6rem}
+  .subtitle{margin:4px 0 20px;color:var(--muted)}
+
+  /* Cards (login/register/reset) */
+  .login-box{padding:0;background:none;box-shadow:none;border-radius:0;max-width:none}
+  .card{
+    background:var(--surface);
+    border:1px solid rgba(2,6,23,.06);
+    border-radius:var(--radius-lg);
+    padding:22px;
+  }
+
+  .input-group{position:relative;margin-bottom:14px}
+  .input-group input{
+    width:100%;
+    padding:14px 44px;
+    border:1px solid rgba(2,6,23,.12);
+    border-radius:14px;
+    font-size:1rem;
+    background:#fff;
+    color:var(--text);
+    transition:border-color .2s, box-shadow .2s, background-color .2s;
+  }
+  .input-group input::placeholder{color:#5b8fc2}
+  .input-group input:focus{
+    outline:none;
+    border-color:var(--ring);
+    box-shadow:0 0 0 4px rgba(167,139,250,.15);
+    background:#fff;
+  }
+  .input-group i{
+    position:absolute;top:50%;transform:translateY(-50%);color:#9aa3b2;font-size:16px
+  }
+  .input-group i.fa-lock, .input-group i.fa-envelope{right:14px}
+  .input-group .fa-phone{right:14px}
+  .eye-icon{left:14px;top:50%;transform:translateY(-50%);position:absolute;cursor:pointer;color:var(--primary)}
+
+  /* Buttons */
+  .stack{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+  .btn{
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    width:100%; padding:12px 14px; border-radius:14px; border:none;
+    font-size:1rem; cursor:pointer; transition:transform .06s ease, box-shadow .2s ease;
+    box-shadow: 0 6px 14px rgba(79,70,229,.08);
+  }
+  .btn:disabled,
+  .btn.is-loading{
+    opacity:.65;
+    cursor:not-allowed;
+    pointer-events:none;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-2)); color:#fff}
+  .btn-secondary{
+    background:#fff; color:var(--text);
+    border:1px solid rgba(2,6,23,.12);
+  }
+  .btn-info{background:linear-gradient(135deg,#66aee9,#9dc5e8); color:#fff}
+  .btn-success{background:linear-gradient(135deg,#10b981,#34d399); color:#fff}
+
+  /* Helper links */
+  .help{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:8px 0 2px}
+  .help a{color:var(--primary);text-decoration:none;font-size:.95rem}
+  .help a:hover{text-decoration:underline}
+
+  .error-message{color:var(--danger);text-align:center;margin-top:8px}
+
+  /* Modals */
+  .modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:50}
+  .modal.hidden{display:none}
+  .modal-content{
+    background:var(--surface);border:1px solid rgba(2,6,23,.08);
+    padding:26px;border-radius:18px; box-shadow:var(--shadow-lg); width:min(92vw,420px); text-align:center
+  }
+  .modal-content p{color:var(--muted)}
+  .btn-login{width:100%; padding:12px 14px; border:none; border-radius:14px; cursor:pointer;
+             background:linear-gradient(135deg,var(--primary),var(--primary-2)); color:#fff}
+  .bottom-link{border:none}
+
+  /* Loader */
+  #pageLoader{position:fixed;inset:0;background:rgba(255,255,255,.65);display:flex;align-items:center;justify-content:center;z-index:60}
+  #pageLoader.hidden{display:none}
+  .half-circle-spinner{width:60px;height:60px;position:relative}
+  .half-circle-spinner .circle{
+    position:absolute;width:100%;height:100%;border:5px solid transparent;border-top-color:var(--primary);border-radius:50%;animation:spin 1s linear infinite
+  }
+  .half-circle-spinner .circle.circle-2{border-top-color:transparent;border-bottom-color:var(--primary-2);animation-delay:.3s}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* Password strength */
+  .password-strength-bar{width:100%;height:6px;background-color:#e5e7eb;border-radius:4px;margin-top:8px;overflow:hidden}
+  .password-strength-bar #strengthIndicator{height:100%;width:0%;transition:width .35s ease, background-color .35s ease}
+  .strength-text{font-size:.9rem;margin-top:6px;color:var(--muted);text-align:right}
+
+  .hidden{display:none !important}
+
+  /* Phone input plugin tweaks */
+  .iti{width:100%;display:block;}
+  .iti__flag-container{margin:0 !important;}
+  #phoneInput,#googlePhoneInput{direction:ltr;text-align:left;}
+
+  /* Reset page styling */
+  .reset-hero{
+    background:linear-gradient(135deg, rgba(79,70,229,.12), rgba(124,58,237,.10));
+    border:1px solid rgba(79,70,229,.18);
+    border-radius:16px;
+    padding:14px 16px;
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    margin-bottom:14px;
+  }
+  .reset-hero__badge{
+    width:44px;height:44px;border-radius:12px;
+    display:grid;place-items:center;
+    background:linear-gradient(135deg,#2563eb,#1d4ed8);
+    color:#fff;font-weight:800;font-size:1.05rem;
+    box-shadow:0 6px 16px rgba(79,70,229,.25);
+  }
+  .reset-hero__content h4{
+    margin:0 0 4px;font-size:1.05rem;color:var(--text);
+  }
+  .reset-hero__content p{
+    margin:0;color:var(--muted);font-size:.95rem;line-height:1.5;
+  }
+  .reset-meta{
+    display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;
+  }
+  .pill{
+    padding:6px 10px;
+    border-radius:999px;
+    font-size:.9rem;
+    background:rgba(15,23,42,.05);
+    color:var(--text);
+    border:1px solid rgba(15,23,42,.08);
+  }
+  .pill.success{
+    background:rgba(16,185,129,.12);
+    border-color:rgba(16,185,129,.25);
+    color:#047857;
+  }
+  .pill.muted{
+    background:rgba(59,130,246,.1);
+    border-color:rgba(59,130,246,.2);
+    color:#1e3a8a;
+  }
+  .reset-steps{
+    list-style:none;
+    margin:0 0 14px;
+    padding:0;
+    display:grid;
+    gap:8px;
+  }
+  .reset-steps li{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 12px;
+    border:1px solid rgba(15,23,42,.06);
+    border-radius:12px;
+    background:#f8fafc;
+    color:var(--text);
+  }
+  .reset-steps i{color:var(--primary)}
+
+</style>
+
+<style id="polish-overrides">
+  :root{
+    --text:#0f1024;            /* slate-900 for stronger contrast */
+    --muted:#475569;           /* slate-600 */
+    --field-bg:#f8fafc;        /* slate-50 */
+    --field-border:#cbd5e1;    /* slate-300 */
+    --field-icon:#64748b;      /* slate-500 */
+  }
+  .form-side h2{ color: var(--text); }
+  .subtitle{ color: var(--muted); }
+
+  /* Input: make the icon feel INSIDE the field, and strengthen contrast */
+  .input-group{ position:relative; }
+  .input-group input{
+    background: var(--field-bg) !important;
+    border-color: var(--field-border) !important;
+    color: var(--text) !important;
+  }
+  .input-group input::placeholder{
+    color: #64748b !important; /* slate-500 */
+    opacity: .9;
+  }
+  /* RTL-aware padding so text doesn't collide with the icon on the right */
+  html[dir="rtl"] .input-group input{ padding-right: 52px !important; padding-left: 44px !important; }
+  html[dir="ltr"] .input-group input{ padding-left: 52px !important; padding-right: 44px !important; }
+
+  /* Icons as inset elements */
+  .input-group i{
+    width: 34px; height: 34px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #ffffff; /* small chip to feel inset */
+    border: 1px solid var(--field-border);
+    border-radius: 10px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.6);
+    color: var(--field-icon) !important;
+    pointer-events: none; /* don't block clicks */
+  }
+  /* place icon to the right for RTL, left for LTR */
+  html[dir="rtl"] .input-group i{ right: 8px !important; left: auto !important; }
+  html[dir="ltr"] .input-group i{ left: 8px !important; right: auto !important; }
+
+  /* Eye icon: align symmetrically as an inset chip on the opposite side */
+  .eye-icon{
+    width: 34px; height: 34px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #ffffff;
+    border: 1px solid var(--field-border);
+    border-radius: 10px;
+    color: var(--primary);
+  }
+  html[dir="rtl"] .eye-icon{ left: 8px !important; right: auto !important; }
+  html[dir="ltr"] .eye-icon{ right: 8px !important; left: auto !important; }
+
+  /* Focus ring polish */
+  .input-group input:focus{
+    border-color: var(--ring) !important;
+    box-shadow: 0 0 0 4px rgba(167,139,250,.18) !important;
+    background: #fff !important;
+  }
+
+  /* Stronger typography for labels and headings */
+  .brand-side h1{ color: #fff; }
+  .brand-cta p{ color: #e6f4ff; }
+
+  /* Buttons: slightly darker text for secondary */
+  .btn-secondary{ color: var(--text) !important; }
+
+  /* Error text slightly darker for accessibility */
+  .error-message{ color: #b91c1c !important; } /* red-700 */
+</style>
+
+
+<style id="register-form-tweaks">
+  /* 1) Move intl-tel-input selector to the other side only in Register form */
+  #registerForm .iti{ flex-direction: row !important; } /* default LTR flow: flag on the left of input */
+  /* Keep some spacing to the right in RTL layout */
+  html[dir="rtl"] #registerForm .iti__flag-container{ margin-right: 10px !important; margin-left: 0 !important; }
+  html[dir="ltr"] #registerForm .iti__flag-container{ margin-left: 10px !important; margin-right: 0 !important; }
+
+  /* Ensure the tel input remains left-aligned numerically */
+  #registerForm #phoneInput{ direction:rtl !important; text-align:right !important; }
+
+  /* 2) Tighten spacing for password requirements */
+  #registerForm .password-criteria p{
+    margin: 3px 0 !important;
+    line-height: 1.25 !important;
+    font-size: 14px !important;
+  }
+
+  /* 3) Prevent field-side icons from stretching */
+  .input-group i, .eye-icon{
+    flex: 0 0 34px;
+    line-height: 1;
+    font-size: 16px;
+  }
+  /* Make sure chips keep their size and don't scale */
+  .input-group i, .eye-icon{
+    max-width: 34px; max-height: 34px;
+  }
+</style>
+
+
+<style id="quick-fixes-rtl-ux">
+  /* A) Fix "two eyes" + position and ensure only one visible controller */
+  #registerForm .eye-icon{
+    z-index: 2 !important;
+  }
+  /* Hide any direct eye icons injected as siblings to inputs */
+  #registerForm .input-group > i.fa-eye,
+  #registerForm .input-group > i.fa-eye-slash{ display:none !important; }
+
+  /* B) (removed) phone field now handled by .phone-field overrides */
+</style>
+
+
+
+<style id="final-eye-phone-patch">
+  /* Ensure only ONE eye icon in password field */
+  #registerForm .input-group .eye-icon{ position:absolute !important; top:50%; transform:translateY(-50%); }
+  #registerForm .input-group > i.fa-eye,
+  #registerForm .input-group > i.fa-eye-slash{ display:none !important; }
+
+  /* Place the eye icon inside input area */
+  html[dir="rtl"] #registerForm .eye-icon{ left:8px !important; right:auto !important; }
+  html[dir="ltr"] #registerForm .eye-icon{ right:8px !important; left:auto !important; }
+
+  /* Phone number input align right for RTL */
+  html[dir="rtl"] #registerForm #phoneInput{
+    direction: rtl !important;
+    text-align: right !important;
+  }
+</style>
+
+
+<style id="eye-fix-strong">
+  /* Hide any stray eye icons outside the .eye-icon span */
+  #registerForm .input-group > i.fa-eye,
+  #registerForm .input-group > i.fa-eye-slash {
+    display: none !important;
+  }
+  /* Position .eye-icon inside the input field */
+  #registerForm .eye-icon {
+    position: absolute !important;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: #fff;
+    border: 1px solid var(--field-border, #ccc);
+    cursor: pointer;
+    z-index: 2;
+  }
+  html[dir="rtl"] #registerForm .eye-icon {
+    left: 8px !important;
+    right: auto !important;
+  }
+  html[dir="ltr"] #registerForm .eye-icon {
+    right: 8px !important;
+    left: auto !important;
+  }
+</style>
+
+
+<style id="eye-only-one-override">
+  /* Make the chip be the span.eye-icon, not the inner <i> */
+  #registerForm .eye-icon{
+    position:absolute !important;
+    width:34px; height:34px;
+    display:inline-flex; align-items:center; justify-content:center;
+    top:50%; transform:translateY(-50%);
+    z-index:3;
+  }
+  html[dir="rtl"] #registerForm .eye-icon{ left:8px !important; right:auto !important; }
+  html[dir="ltr"] #registerForm .eye-icon{ right:8px !important; left:auto !important; }
+
+  /* Neutralize any styling applied to the inner <i> so it doesn't render as a second chip */
+  #registerForm .eye-icon i{
+    position: static !important;
+    width:auto !important; height:auto !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin:0 !important; padding:0 !important;
+  }
+
+  /* Hide any stray eye icons that might be direct children of .input-group */
+  #registerForm .input-group > i.fa-eye,
+  #registerForm .input-group > i.fa-eye-slash{ display:none !important; }
+
+  /* Force phone input typing from the right in RTL */
+  html[dir="rtl"] #registerForm #phoneInput{
+    direction: rtl !important;
+    text-align: right !important;
+    padding-right: 52px !important;
+    padding-left: 14px !important;
+  }
+</style>
+
+
+<style id="remove-eye-icons">
+  #registerForm .eye-icon,
+  #registerForm .input-group > i.fa-eye,
+  #registerForm .input-group > i.fa-eye-slash{ display:none !important; }
+</style>
+
+
+<style id="unify-register-login-widths">
+  #registerForm .input-group input,
+  #registerForm .iti,
+  #registerForm .iti input[type="tel"] {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+</style>
+
+
+<style id="force-register-fields-width">
+  /* Force same width, padding, and border radius as login form */
+  #registerForm .input-group,
+  #registerForm .input-group input,
+  #registerForm .iti,
+  #registerForm .iti input[type="tel"] {
+    width: 100% !important;
+    max-width: none !important;
+    display: block !important;
+  }
+
+  /* Ensure .iti container doesn't shrink */
+  #registerForm .iti {
+    flex: 1 1 auto !important;
+  }
+
+  /* Adjust input styles to match login form exactly */
+  #registerForm .input-group input,
+  #registerForm .iti input[type="tel"] {
+    padding: 14px 44px !important;
+    border-radius: 14px !important;
+  }
+</style>
+
+
+<style id="register-width-fix">
+  /* Remove group-level padding that was shrinking visual width */
+  #registerForm .input-group{ padding-left: 0 !important; padding-right: 0 !important; }
+
+  /* Make every input truly full-width */
+  #registerForm .input-group input{ width: 100% !important; display:block; }
+
+  /* Ensure the intl-tel-input wrapper spans the full width */
+  #registerForm .iti{ width: 100% !important; }
+  #registerForm .iti .iti__tel-input,
+  #registerForm input[type="tel"]{ width: 100% !important; }
+
+  /* Keep icon chips positioned without stealing width */
+  #registerForm .input-group i,
+  #registerForm .eye-icon{ position:absolute; }
+
+  /* Maintain phone input paddings for RTL without affecting container width */
+  html[dir="rtl"] #registerForm #phoneInput{
+    padding-right: 52px !important;
+    padding-left: 14px !important;
+  }
+</style>
+
+
+<style id="responsive-register-fields">
+  /* Ensure inputs and phone field scale fluidly on all screens */
+  #registerForm .input-group,
+  #registerForm .iti {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  #registerForm input,
+  #registerForm .iti input[type="tel"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Adjust font sizes and paddings for smaller screens */
+  @media (max-width: 600px) {
+    #registerForm .input-group input {
+      font-size: 0.95rem !important;
+      padding: 12px 40px !important;
+    }
+    #registerForm .input-group i,
+    #registerForm .eye-icon {
+      width: 30px; height: 30px;
+      font-size: 14px;
+    }
+    #registerForm .password-criteria p {
+      font-size: 13px !important;
+    }
+  }
+
+  /* On very narrow screens, stack brand and form side */
+  @media (max-width: 880px) {
+    .auth-shell {
+      grid-template-columns: 1fr !important;
+    }
+    .brand-side {
+      display: none !important;
+    }
+  }
+</style>
+
+
+<style id="responsive-all-screens">
+  /* Prevent horizontal scroll */
+  html, body{ overflow-x:hidden; }
+
+  /* Fluid typography */
+  :root{
+    --fs-base: clamp(0.95rem, 0.9rem + 0.3vw, 1.05rem);
+    --fs-h2: clamp(1.25rem, 1.1rem + 1.2vw, 1.8rem);
+  }
+  body{ font-size: var(--fs-base); }
+  .form-side h2{ font-size: var(--fs-h2); }
+
+  /* Container: fluid with safe padding */
+  .auth-shell{ width:min(100%, 1120px); padding: clamp(12px, 2vw, 24px); gap: clamp(12px, 2.5vw, 24px); }
+
+  /* Brand panel: stable aspect without stretching */
+  .brand-side{
+    height: clamp(520px, 60vh, 700px);
+    min-height: unset;
+    border-radius: clamp(16px, 2vw, 24px);
+    background-position:center;
+    background-size:cover;
+  }
+
+  /* Form side padding scales */
+  .form-side{ padding: clamp(18px, 2.8vw, 28px); border-radius: clamp(14px, 2vw, 24px); }
+  .card{ padding: clamp(16px, 2.4vw, 22px); border-radius: clamp(12px, 2vw, 16px); }
+
+  /* Inputs & buttons: touch-friendly */
+  .input-group input{
+    min-height: clamp(44px, 5.2vh, 52px);
+    font-size: var(--fs-base);
+  }
+  .btn{ min-height: clamp(44px, 5.2vh, 52px); font-size: var(--fs-base); }
+
+  /* Eye/phone chips keep size on all screens */
+  .input-group i, .eye-icon{ width:34px; height:34px; }
+
+  /* Phone plugin never exceeds container */
+  .iti, .iti *{ max-width: 100% !important; box-sizing: border-box; }
+
+  /* Breakpoint: <= 1024px */
+  @media (max-width: 1024px){
+    .auth-shell{ width:min(100%, 980px); }
+  }
+
+  /* Breakpoint: <= 880px (stack layout) */
+  @media (max-width: 880px){
+    .brand-side{ display:block; height: 220px; }
+    .auth-shell{ grid-template-columns: 1fr; }
+    .form-side{ padding: clamp(16px, 4vw, 22px); }
+  }
+
+  /* Breakpoint: <= 640px */
+  @media (max-width: 640px){
+    .brand-side{ height: 180px; border-radius: 14px; }
+    .btn{ gap:8px; }
+  }
+
+  /* Breakpoint: <= 420px (small phones) */
+  @media (max-width: 420px){
+    .brand-side{ height: 150px; }
+    .input-group input{ padding: 12px 42px; }
+    .btn{ padding: 10px 12px; }
+    .modal-content{ width: 92vw; padding: 18px; border-radius: 14px; }
+  }
+
+  /* iOS zoom fix in inputs */
+  input, select, textarea{ font-size:16px; }
+</style>
+
+
+<style id="brand-side-image-fix">
+  /* Brand side image fills fully without heavy clipping */
+  .brand-side{
+    background-size: cover !important;
+    background-position: center !important;
+    border-radius: 16px !important; /* softer corners */
+    overflow: hidden; /* ensure no scrollbars from background */
+    height: clamp(520px, 60vh, 700px);
+  }
+
+  /* Brighten headings and text for visibility on image background */
+  .brand-side h1,
+  .brand-side .brand-logo div,
+  .brand-side .brand-cta p,
+  .brand-side .brand-badges .badge{
+    color: #ffffff !important;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+  .brand-side .brand-cta p{ opacity: 1; }
+  .brand-side .badge{
+    background: rgba(255,255,255,0.2);
+    border-color: rgba(255,255,255,0.3);
+  }
+
+  /* Dark text for form headings */
+  .form-side h2,
+  .form-side .subtitle{
+    color: #0f1024 !important;
+    text-shadow: none !important;
+  }
+</style>
+
+
+<style id="heading-contrast-fix">
+  .form-side h2, #registerForm h3, #resetForm h3{ color:#0f1024 !important; } /* slate-900 */
+  .brand-side h1, .brand-side .subtitle{ color:#ffffff !important; text-shadow:0 1px 2px rgba(0,0,0,.35); }
+</style>
+
+
+<style id="white-headings-fix">
+  /* Ensure headings are visible on light backgrounds, and stay white in dark mode */
+  #loginForm h2,
+  #resetForm h2,
+  #registerForm h2,
+  #resetForm h3,
+  #registerForm h3 {
+    color: #0f1024 !important; /* dark for light mode */
+    text-shadow: none !important;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    #loginForm h2,
+    #resetForm h2,
+    #registerForm h2,
+    #resetForm h3,
+    #registerForm h3 {
+      color: #ffffff !important; /* white for dark mode */
+      text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+    }
+  }
+</style>
+
+
+<style id="force-heading-contrast-override-2">
+  /* FINAL OVERRIDE: ensure headings above fields are always visible */
+  .form-side .header h2,
+  .form-side h2,
+  #loginForm h2,
+  #resetForm h2,
+  #registerForm h2,
+  #resetForm h3,
+  #registerForm h3 {
+    color: #0f1024 !important; /* strong dark text on light surfaces */
+    text-shadow: none !important;
+  }
+  @media (prefers-color-scheme: dark) {
+    .form-side .header h2,
+    .form-side h2,
+    #loginForm h2,
+    #resetForm h2,
+    #registerForm h2,
+    #resetForm h3,
+    #registerForm h3 {
+      color: #ffffff !important; /* white on dark surfaces */
+      text-shadow: 0 1px 2px rgba(0,0,0,0.35) !important;
+    }
+  }
+</style>
+
+
+<style id="force-contrast-v3">
+  /* FINAL-FINAL OVERRIDE: make these labels always visible above fields */
+  .form-side .header h2,
+  #loginForm h2,
+  #resetForm h2,
+  #registerForm h2,
+  #resetForm h3,
+  #registerForm h3,
+  /* the line: 'املأ البيانات التالية لإنشاء حساب جديد' */
+  #registerForm .subtitle,
+  .form-side .subtitle {
+    color: #0f1024 !important; /* dark text for light mode */
+    text-shadow: none !important;
+  }
+  @media (prefers-color-scheme: dark) {
+    .form-side .header h2,
+    #loginForm h2,
+    #resetForm h2,
+    #registerForm h2,
+    #resetForm h3,
+    #registerForm h3,
+    #registerForm .subtitle,
+    .form-side .subtitle {
+      color: #ffffff !important; /* white for dark mode */
+      text-shadow: 0 1px 2px rgba(0,0,0,0.35) !important;
+    }
+  }
+</style>
+
+
+<style id="brand-side-sticky-fix">
+  /* Keep the image panel visible while scrolling and prevent disappearing */
+  @media (min-width: 881px){
+    /* Stop vertical centering which shortens the page and makes panels jump */
+    body{ align-items: flex-start !important; }
+    .auth-shell{ align-items: start; }
+
+    .brand-side{
+      position: sticky !important;
+      top: 24px !important;
+      height: calc(100vh - 48px) !important; /* viewport-tall */
+      min-height: 520px !important;
+      background-size: cover !important;
+      background-position: center !important;
+    }
+  }
+</style>
+
+
+<style id="brand-side-mobile-visible">
+  /* Force brand-side to display on mobile */
+  @media (max-width: 880px){
+    .brand-side{
+      display: block !important;
+      order: -1; /* show above form */
+      width: 100% !important;
+      height: auto !important;
+      min-height: 220px !important;
+      margin-bottom: 16px;
+    }
+  }
+</style>
+
+
+<style id="brand-side-mobile-nocrop">
+  /* Make the brand image fully visible on phones (no cropping) */
+  @media (max-width: 880px){
+    .brand-side{
+      /* Two background layers: [0]=gradient, [1]=image */
+      background-size: 100% 100%, contain !important; /* gradient fills, image fits */
+      background-repeat: no-repeat, no-repeat !important;
+      background-position: center, center !important;
+      min-height: 260px !important; /* a bit taller so contain has room */
+    }
+  }
+</style>
+
+
+<style id="brand-side-mobile-strong-v7">
+  /* Ensure brand image is visible and NOT tiny on phones */
+  @media (max-width: 880px){
+    .brand-side{
+      display: block !important;              /* undo any display:none */
+      order: -1;                               /* place above the form */
+      width: 100% !important;
+      height: auto !important;
+      min-height: 420px !important;            /* give the image room */
+      /* Use two-layer sizing: gradient fills, image fits fully */
+      background-size: 100% 100%, contain !important;
+      background-repeat: no-repeat, no-repeat !important;
+      background-position: center, center !important;
+      border-radius: 14px !important;
+    }
+  }
+</style>
+
+
+<style id="mobile-root-cause-fix-v8">
+  /* Root-cause fixes for phones (≤880px) */
+  @media (max-width: 880px){
+    /* 0) Stop vertical centering that can hide top content */
+    body{ align-items: flex-start !important; }
+
+    /* 1) Always show brand-side and place it above the form */
+    .brand-side{
+      display: block !important;
+      order: -1 !important;
+      width: 100% !important;
+      height: auto !important;         /* cancel any fixed heights */
+      min-height: 420px !important;    /* enough room for image + content */
+      /* show the background image fully */
+      background-size: 100% 100%, contain !important; /* gradient fills, image fits */
+      background-position: center, center !important;
+      background-repeat: no-repeat, no-repeat !important;
+      justify-content: center !important; /* cancel space-between that clips top with small heights */
+      padding: 20px 16px !important;
+    }
+
+    /* 2) Remove any later small-height rules */
+    .brand-side{ height: auto !important; }
+
+    /* 3) Ensure grid stacks cleanly */
+    .auth-shell{ grid-template-columns: 1fr !important; }
+  }
+
+  /* Extra small phones: keep at least 360px so image isn't just a strip */
+  @media (max-width: 420px){
+    .brand-side{ min-height: 360px !important; }
+  }
+</style>
+
+
+<style id="brand-side-mobile-benefits-bottom">
+  @media (max-width: 880px){
+    .brand-side{
+      justify-content: flex-end !important; /* Move benefits to bottom */
+      padding-bottom: 20px !important;      /* Add bottom space */
+    }
+  }
+</style>
+
+
+<style id="brand-side-mobile-benefits-absolute-v10">
+  /* Pin the benefits card to the bottom on phones */
+  @media (max-width: 880px){
+    .brand-side{
+      position: relative !important;
+      padding-bottom: 110px !important;  /* reserve space for the card */
+    }
+    .brand-side .brand-cta{
+      position: absolute !important;
+      left: 16px !important;
+      right: 16px !important;
+      bottom: 16px !important;
+      margin-top: 0 !important;          /* override margin-top:auto */
+    }
+    .brand-side .brand-logo{
+      margin-bottom: auto !important;     /* keep logo toward the top */
+    }
+  }
+</style>
+
+
+<style id="brand-side-desktop-fixed">
+  @media (min-width: 881px){
+    .brand-side{
+      position: sticky !important;
+      top: 0 !important;
+      height: 100vh !important; /* full viewport height */
+      overflow: hidden !important;
+    }
+  }
+</style>
+
+<style id="ring-login-theme">
+  :root{
+    --ring-accent-1:#00ff0a;
+    --ring-accent-2:#ff0057;
+    --ring-accent-3:#fffd44;
+    --text:#f5f5f5;
+    --muted:rgba(255,255,255,.75);
+    --panel:rgba(0,0,0,.55);
+    --danger:#ef4444;
+    --success:#16a34a;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    font-family:'Quicksand','Cairo',sans-serif;
+    background:#111;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+    margin:0;
+    color:var(--text);
+    overflow:auto; /* allow full form visibility on short viewports */
+    padding:32px 16px;
+  }
+
+  .ring-shell{
+    position:relative;
+    width:100%;
+    max-width:520px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .center-wrap{
+    min-height:100vh;
+    width:100%;
+    display:grid;
+    place-items:center;
+  }
+  .ring{
+    position:relative;
+    width:min(440px, 92vw);
+    height:min(440px, 92vw, 88vh);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:none;
+  }
+  .ring i{
+    display:none !important; /* remove all rings/lines */
+  }
+  .ring i:nth-child(1){
+    border-radius:38% 62% 63% 37% / 41% 44% 56% 59%;
+  }
+  .ring i:nth-child(2){
+    border-radius:41% 44% 56% 59% / 38% 62% 63% 37%;
+  }
+  .ring i:nth-child(3){
+    border-radius:41% 44% 56% 59% / 38% 62% 63% 37%;
+  }
+  .ring:hover i{
+    border:6px solid var(--clr);
+    filter:drop-shadow(0 0 20px var(--clr));
+  }
+  @keyframes animate{
+    0%{ transform:rotate(0deg); }
+    100%{ transform:rotate(360deg); }
+  }
+  @keyframes animate2{
+    0%{ transform:rotate(360deg); }
+    100%{ transform:rotate(0deg); }
+  }
+
+  .login{
+    position:relative;
+    width:360px;
+    max-width:90%;
+    background:linear-gradient(180deg,rgba(15,15,15,.96),rgba(5,5,5,.94));
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:26px;
+    padding:26px 22px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    align-items:stretch;
+    text-align:center;
+    backdrop-filter:blur(8px);
+    box-shadow:0 24px 60px rgba(0,0,0,.55);
+    z-index:1; /* ensure form stays above ring */
+  }
+  .login h2{
+    margin:0;
+    font-size:2rem;
+    color:#fff;
+    letter-spacing:0.5px;
+  }
+  .login h3{
+    margin:0 0 6px;
+    color:#fff;
+    font-size:1.2rem;
+  }
+  .login-subtitle{
+    margin:0;
+    color:var(--muted);
+    font-size:.95rem;
+  }
+
+  .login-box{
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .phone-field{position:relative;}
+
+  .inputBx{position:relative;width:100%;}
+  .inputBx input{
+    width:100%;
+    padding:12px 18px;
+    background:transparent;
+    border:2px solid #fff;
+    border-radius:40px;
+    font-size:1rem;
+    color:#fff;
+    outline:none;
+    box-shadow:none;
+  }
+  .inputBx input:focus{
+    border-color:var(--ring-accent-2);
+    filter:drop-shadow(0 0 12px rgba(255,255,255,.25));
+    background:rgba(255,255,255,.02);
+  }
+  .inputBx input::placeholder{color:rgba(255,255,255,.75);}
+  .input-group{position:relative;}
+  .input-group input{
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.25);
+    color:#fff;
+    padding:12px 42px;
+    border-radius:18px;
+  }
+  html[dir="rtl"] .input-group input{padding:12px 14px 12px 42px;}
+  .input-group input:focus{
+    border-color:var(--ring-accent-2);
+    box-shadow:0 0 0 3px rgba(255,255,255,.08);
+  }
+  .input-group i{color:var(--muted);}
+
+  /* Intl Tel Input — make phone field match other inputs (single white border) */
+  .phone-field .iti{
+    width:100%;
+    box-sizing:border-box;
+    display:flex;
+    border:none;
+    overflow:visible; /* allow dropdown to escape */
+    background:transparent;
+    direction:ltr;
+    flex-direction:row-reverse !important;
+    align-items:center !important;
+  }
+  html[dir="rtl"] .phone-field .iti{
+    direction:ltr;
+    flex-direction:row-reverse !important;
+  }
+  .phone-field .iti--allow-dropdown{
+    border-radius:40px;
+    box-sizing:border-box;
+    overflow:visible;
+  }
+  .phone-field .iti__flag-container{
+    position:static !important;
+    width:auto !important;
+    border:none !important;
+    background:transparent !important;
+    margin:0 6px 0 0 !important;
+    padding:0 !important;
+  }
+  html[dir="rtl"] .phone-field .iti__flag-container{
+    margin:0 8px 0 0 !important;
+  }
+  .phone-field .iti__selected-flag{
+    width:100%;
+    height:100%;
+    padding:0 10px !important;
+    background:transparent !important;
+    border-radius:40px;
+  }
+  html[dir="rtl"] .phone-field .iti__selected-flag{
+    border-radius:40px;
+  }
+  .phone-field .iti__tel-input,
+  .phone-field .iti input{
+    width:100%;
+    flex:1 1 auto !important;
+    padding:12px 56px 12px 18px !important;
+    padding-inline-start:18px !important;
+    padding-inline-end:56px !important; /* space for flag on right */
+    background:transparent;
+    border:2px solid #fff !important;
+    border-radius:40px !important;
+    font-size:1rem;
+    color:#fff;
+    outline:none;
+    box-shadow:none;
+    direction:rtl !important;
+    text-align:right !important;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  html[dir="rtl"] .phone-field .iti__tel-input,
+  html[dir="rtl"] .phone-field .iti input{
+    padding:12px 56px 12px 18px !important;
+    padding-inline-start:18px !important;
+    padding-inline-end:56px !important;
+    direction:rtl !important;
+    text-align:right !important;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  /* pill shape only on the visible input/flag, not the dropdown list */
+  .phone-field .iti,
+  .phone-field .iti__tel-input,
+  .phone-field .iti input,
+  .phone-field .iti__selected-flag{
+    border-radius:40px !important;
+  }
+  .phone-field #phoneInput{
+    direction:rtl !important;
+    text-align:right !important;
+  }
+  .phone-field .iti__country-list li{padding:6px 10px;}
+  .phone-field .iti__tel-input::placeholder{color:rgba(255,255,255,.75);}
+  .phone-field .iti__selected-dial-code{color:#fff;font-weight:700;}
+  .phone-field .iti__arrow{border-top:6px solid #fff;border-left:4px solid transparent;border-right:4px solid transparent;}
+  .phone-field .iti__country-list{background:#111;border:1px solid rgba(255,255,255,.12);color:#fff;left:auto !important;right:0 !important;}
+  .phone-field .iti__arrow, .phone-field .iti__selected-flag{z-index:1;}
+  .phone-field .iti__dropdown-content{
+    border-radius:8px;
+    overflow:auto;
+    min-width:280px;
+  }
+  .phone-field .iti__country-list,
+  .phone-field .iti__dropdown-content{
+    z-index:10000;
+    min-width:280px;
+  }
+
+  /* Final align + padding for phone text */
+  #phoneInput,
+  #registerForm #phoneInput{
+    direction:rtl !important;
+    text-align:right !important;
+    padding-inline-start:18px !important;
+    padding-inline-end:56px !important;
+  }
+
+  /* Align phone input like other fields (RTL placeholder at start, flag on the right) */
+  .phone-field .iti{
+    display:flex !important;
+    flex-direction:row-reverse !important; /* place flag/code on the right */
+    align-items:center !important;
+    width:100% !important;
+    background:transparent !important;
+    border:none !important;
+  }
+  .phone-field .iti__flag-container{
+    position:absolute !important;
+    inset:6px 12px 6px auto !important;
+    left:auto !important;
+    right:12px !important;
+    margin:0 !important;
+    padding:0 !important;
+    background:transparent !important;
+    border:none !important;
+  }
+  .phone-field .iti__selected-flag{
+    padding:0 12px !important;
+    background:transparent !important;
+    border-radius:40px !important;
+  }
+  .phone-field .iti__tel-input{
+    width:100% !important;
+    padding:12px 48px 12px 18px !important; /* leave more space on the right to shift text left */
+    border:2px solid #fff !important;
+    border-radius:40px !important;
+    background:transparent !important;
+    color:#fff !important;
+    direction:rtl !important;
+    text-align:right !important;
+  }
+  /* Extra overrides for register form to match other fields */
+  #registerForm .phone-field .iti,
+  #registerForm .phone-field .iti--allow-dropdown{
+    display:block !important;
+    flex-direction:row-reverse !important;
+    direction:rtl !important;
+    width:100% !important;
+    background:transparent !important;
+    border:none !important;
+    border-radius:40px !important;
+  }
+  #registerForm .phone-field .iti__flag-container{
+    margin:0 !important;
+    padding:0 !important;
+    inset:6px 12px 6px auto !important;
+    left:auto !important;
+    right:12px !important;
+    background:transparent !important;
+    border:none !important;
+  }
+  html[dir="rtl"] #registerForm .phone-field .iti__flag-container{
+    inset:6px 12px 6px auto !important;
+    left:auto !important;
+    right:12px !important;
+  }
+  #registerForm .phone-field .iti__selected-flag{
+    padding:0 12px !important;
+    background:transparent !important;
+    border-radius:40px !important;
+  }
+  #registerForm .phone-field .iti__tel-input{
+    padding:12px 6px 12px 18px !important;
+    padding-inline-start:6px !important;
+    padding-inline-end:18px !important;
+    border:none !important;
+    border-radius:40px !important;
+    background:transparent !important;
+    color:#fff !important;
+    direction:ltr !important;
+    text-align:left !important;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  html[dir="rtl"] #registerForm .phone-field .iti__tel-input{
+    padding:12px 12px 12px 2px !important;
+    padding-inline-start:12px !important;
+    padding-inline-end:2px !important;
+  }
+
+  .btn{
+    width:100%;
+    padding:12px 16px;
+    border-radius:40px;
+    border:none;
+    cursor:pointer;
+    font-size:1rem;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    transition:transform .08s ease, box-shadow .2s ease, opacity .2s;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn:disabled{opacity:.65;cursor:not-allowed;}
+  .btn-submit{
+    background:linear-gradient(45deg,#ff357a,#fff172);
+    color:#111;
+    box-shadow:0 8px 24px rgba(255,53,122,.25);
+  }
+  .btn-google{
+    background:rgba(255,255,255,.08);
+    color:#fff;
+    border:1px solid rgba(255,255,255,.2);
+  }
+  .btn-secondary{
+    background:rgba(255,255,255,.06);
+    color:#fff;
+    border:1px solid rgba(255,255,255,.15);
+  }
+  .btn-primary{background:linear-gradient(45deg,#ff357a,#fff172);color:#111;}
+  .btn-success{background:linear-gradient(45deg,#0f766e,#22c55e);color:#fff;}
+  .btn-info{background:linear-gradient(45deg,#2563eb,#7c3aed);color:#fff;}
+
+  .links{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .links.single{justify-content:center;}
+  .muted{color:var(--muted);}
+  .link-btn{
+    background:none;
+    border:none;
+    color:var(--muted);
+    cursor:pointer;
+    font-size:.95rem;
+    padding:4px 0;
+  }
+  .link-btn:hover{color:#fff;text-decoration:underline;}
+
+  .error-message{
+    color:var(--danger);
+    margin:0;
+    min-height:18px;
+    font-weight:700;
+    text-align:center;
+  }
+  .hidden{display:none !important;}
+
+  .password-strength-bar{
+    width:100%;
+    height:6px;
+    border-radius:999px;
+    background:rgba(255,255,255,.12);
+    overflow:hidden;
+  }
+  #strengthIndicator{
+    height:100%;
+    width:0%;
+    background:#ef4444;
+    transition:width .3s ease, background .3s ease;
+  }
+  .strength-text{
+    color:var(--muted);
+    font-size:.9rem;
+    min-height:18px;
+    text-align:right;
+  }
+  .password-criteria{
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.16);
+    border-radius:16px;
+    padding:12px;
+    text-align:right;
+    color:var(--muted);
+  }
+  .password-criteria p{
+    margin:6px 0;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .password-criteria .icon{
+    color:var(--danger);
+    width:18px;
+    text-align:center;
+  }
+  .password-criteria p.criterion-met .icon{color:var(--success);}
+
+  .pill{
+    padding:6px 10px;
+    border-radius:999px;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.12);
+    color:#fff;
+    font-size:.9rem;
+    text-align:center;
+  }
+  .pill.success{
+    background:rgba(16,185,129,.16);
+    border-color:rgba(16,185,129,.35);
+  }
+  .pill.muted{
+    background:rgba(59,130,246,.14);
+    border-color:rgba(59,130,246,.25);
+    color:#dbeafe;
+  }
+
+  .modal{
+    background:rgba(0,0,0,.65);
+  }
+  .modal-content{
+    background:rgba(15,15,15,.92);
+    border:1px solid rgba(255,255,255,.12);
+    color:#fff;
+  }
+  .modal-content p{color:var(--muted);}
+  .btn-login{
+    background:linear-gradient(45deg,#ff357a,#fff172);
+    color:#111;
+    border-radius:40px;
+    font-weight:700;
+  }
+
+  @media (max-width:640px){
+    body{padding:16px 12px;}
+    .ring{width:min(360px, 90vw);height:min(360px, 90vw);}
+    .login{width:90%;padding:22px 18px;}
+  }
+  @media (max-width:480px){
+    .ring{width:min(300px, 88vw);height:min(300px, 88vw);}
+    .login{padding:18px 16px;gap:12px;}
+  }
+
+  /* Reset phone field to match other inputs */
+  .phone-field .iti{
+    position:relative !important;
+    display:block !important;
+    width:100% !important;
+  }
+  .phone-field .iti__flag-container{
+    position:static !important;
+    top:auto !important;
+    right:auto !important;
+    left:auto !important;
+    transform:none !important;
+    margin:0 8px 0 0 !important;
+    padding:0 !important;
+    height:32px !important;
+    display:flex !important;
+    align-items:center !important;
+  }
+  .phone-field .iti__selected-flag{
+    background:transparent !important;
+    padding:0 8px !important;
+    display:flex !important;
+    align-items:center !important;
+    height:32px !important;
+  }
+  .phone-field .iti__tel-input,
+  .phone-field .iti input[type="tel"]{
+    width:100% !important;
+    padding:12px 56px 12px 18px !important; /* space for flag/dial code on the right */
+    border:2px solid #fff !important;
+    border-radius:40px !important;
+    background:transparent !important;
+    color:#fff !important;
+    direction:rtl !important;
+    text-align:right !important;
+    box-shadow:none !important;
+  }
+  .phone-field .iti__tel-input::placeholder{
+    color:rgba(255,255,255,.75) !important;
+  }
+
+  /* Register form specific: keep flag/code on right, text aligned like other inputs */
+  #registerForm .phone-field .iti{
+    position:relative !important;
+    display:flex !important;
+    flex-direction:row !important;
+    align-items:center !important;
+    border:2px solid #fff !important;
+    border-radius:40px !important;
+    padding:0 18px !important;
+    background:transparent !important;
+  }
+  #registerForm .phone-field .iti__flag-container{
+    position:static !important;
+    top:auto !important;
+    right:auto !important;
+    left:auto !important;
+    transform:none !important;
+    margin:0 4px 0 0 !important;
+    padding:0 !important;
+    height:32px !important;
+    display:flex !important;
+    align-items:center !important;
+  }
+  #registerForm .phone-field .iti__selected-flag{
+    background:transparent !important;
+    padding:0 6px !important;
+    display:flex !important;
+    align-items:center !important;
+    height:32px !important;
+  }
+  #registerForm .phone-field .iti__tel-input{
+    width:100% !important;
+    padding:12px 12px 12px 2px !important;
+    direction:ltr !important;
+    text-align:left !important;
+    border:none !important;
+    background:transparent !important;
+  }
+
+  /* Final phone alignment override: flag/code on far right, text starts after it */
+  .phone-field .iti{
+    position:relative !important;
+    display:flex !important;
+    flex-direction:row !important; /* flag/code on the left */
+    align-items:center !important;
+    border:2px solid #fff !important;
+    border-radius:40px !important;
+    padding:0 12px 0 4px !important;
+    background:transparent !important;
+  }
+  .phone-field .iti__flag-container{
+    position:static !important;
+    top:auto !important;
+    right:auto !important;
+    left:auto !important;
+    transform:none !important;
+    margin:0 4px 0 0 !important;
+    padding:0 !important;
+    display:flex !important;
+    align-items:center !important;
+    height:32px !important;
+  }
+  .phone-field .iti__selected-flag{
+    background:transparent !important;
+    padding:0 8px !important;
+    display:flex !important;
+    align-items:center !important;
+    height:32px !important;
+  }
+  .phone-field .iti__selected-dial-code{
+    display:flex !important;
+    align-items:center !important;
+    line-height:1 !important;
+  }
+  .phone-field .iti__tel-input,
+  .phone-field .iti input[type="tel"]{
+    direction:ltr !important;
+    text-align:left !important;
+    padding:12px 12px 12px 2px !important; /* minimal space after dial code */
+    border-radius:40px !important;
+    border:none !important;
+    background:transparent !important;
+  }
+  html[dir="rtl"] .phone-field .iti__tel-input,
+  html[dir="rtl"] .phone-field .iti input[type="tel"]{
+    padding:12px 18px 12px 6px !important;
+  }
+</style>
+
+</head>
+<body>
+  <div id="preloader"><div class="loader"></div></div>
+
+<div class="center-wrap">
+  <div class="ring-shell">
+    <div class="ring">
+      <i style="--clr:#00ff0a;"></i>
+      <i style="--clr:#ff0057;"></i>
+      <i style="--clr:#fffd44;"></i>
+      <div class="login">
+        <h2>تسجيل الدخول</h2>
+
+        <div class="login-box" id="loginForm">
+          <button class="btn btn-google" id="googleLogin"><i class="fa-brands fa-google"></i> تسجيل دخول بواسطة Google</button>
+          <div class="inputBx">
+            <input id="emailInput" placeholder="أدخل بريدك الإلكتروني" type="email"/>
+          </div>
+          <div class="inputBx">
+            <input id="passwordInput" placeholder="أدخل كلمة المرور" type="password"/>
+          </div>
+          <div class="inputBx">
+            <button class="btn btn-submit" id="submitLogin" onclick="window.__manualLogin && window.__manualLogin(event)"><i class="fa-solid fa-arrow-right-to-bracket"></i> دخول</button>
+          </div>
+          <div class="links">
+            <button type="button" id="showReset" class="link-btn">نسيت كلمة المرور؟</button>
+            <button type="button" id="toggleRegister" class="link-btn">إنشاء حساب</button>
+          </div>
+          <p class="error-message" id="loginError"></p>
+        </div>
+
+        <div class="login-box hidden" id="resetForm">
+          <h3>استعادة كلمة المرور</h3>
+          <div class="inputBx">
+            <input id="resetEmail" placeholder="أدخل بريدك الإلكتروني" type="email"/>
+          </div>
+          <div class="inputBx">
+            <button class="btn btn-submit" id="resetSubmitBtn" onclick="sendResetLink()"><i class="fa-solid fa-paper-plane"></i> إرسال رابط الاستعادة</button>
+          </div>
+          <div class="links single">
+            <button type="button" class="link-btn" onclick="switchForm('login')">العودة لتسجيل الدخول</button>
+          </div>
+          <p class="error-message" id="resetMessage"></p>
+        </div>
+
+        <div class="login-box hidden" id="registerForm">
+          <h3>إنشاء حساب</h3>
+          <button class="btn btn-google" id="googleLoginRegister"><i class="fa-brands fa-google"></i> تسجيل بواسطة Google</button>
+          <div class="inputBx">
+            <input id="usernameInput" placeholder="اسم المستخدم" type="text"/>
+          </div>
+          <div class="inputBx">
+            <input id="registerEmail" placeholder="البريد الإلكتروني" type="email"/>
+          </div>
+
+        <div class="inputBx phone-field">
+          <input id="phoneInput" type="tel" placeholder="رقم الهاتف"/>
+        </div>
+
+          <div class="inputBx">
+            <input id="registerPassword" onkeyup="validatePassword()" placeholder="كلمة المرور" type="text"/>
+          </div>
+
+          <div class="password-strength-bar"><div id="strengthIndicator"></div></div>
+          <div id="strengthText" class="strength-text"></div>
+
+          <div class="password-criteria" id="passwordCriteria" style="direction: rtl;">
+            <p id="minLength"><i class="fa-solid fa-xmark icon"></i> 6 حروف على الأقل (إجباري)</p>
+            <p id="hasNumber"><i class="fa-solid fa-xmark icon"></i> رقم</p>
+            <p id="hasUpper"><i class="fa-solid fa-xmark icon"></i> حرف كبير</p>
+            <p id="hasLower"><i class="fa-solid fa-xmark icon"></i> حرف صغير</p>
+            <p id="hasSymbol"><i class="fa-solid fa-xmark icon"></i> رمز</p>
+            <p class="muted">يجب أن تحتوي على 3 حقول اختيارية من هذه المتطلبات على الأقل.</p>
+          </div>
+
+          <div class="inputBx">
+            <button class="btn btn-submit" onclick="register()"><i class="fa-solid fa-user-plus"></i> تسجيل</button>
+          </div>
+          <div class="links single">
+            <button type="button" class="link-btn" onclick="switchForm('login')">العودة لتسجيل الدخول</button>
+          </div>
+          <p class="error-message" id="registerError"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modals (kept from original) -->
+<div class="modal hidden" id="emailVerificationModal">
+  <div class="modal-content">
+    <img alt="تأكيد البريد" src="https://i.ibb.co/Fkftn6tJ/2025-07-09-162704-2.png" style="max-width: 100%; margin-bottom: 15px;"/>
+    <p>يرجى تأكيد ملكية البريد الإلكتروني عبر الرسالة الواردة في الإيميل.</p>
+    <button class="btn-login" onclick="closeModal()">تم</button>
+  </div>
+</div>
+
+<div class="modal hidden" id="resetSuccessModal">
+  <div class="modal-content">
+    <img alt="تأكيد البريد" src="https://i.ibb.co/Fkftn6tJ/2025-07-09-162704-2.png" style="max-width: 100%; margin-bottom: 15px;"/>
+    <p>تم إرسال رابط الاستعادة إلى بريدك الإلكتروني.</p>
+    <button class="btn-login" onclick="closeModal()">تم</button>
+  </div>
+</div>
+
+<div class="modal hidden" id="completeProfileModal">
+  <div class="modal-content">
+    <p>يرجى اختيار اسم مستخدم لإكمال التسجيل:</p>
+    <input id="googleUsernameInput" placeholder="اسم المستخدم" style="width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #ccc;" type="text"/>
+    <div id="googleUsernameError" style="color: red; margin-bottom: 10px;"></div>
+    <button class="btn-login" onclick="submitGoogleUsername()">إكمال</button>
+  </div>
+</div>
+
+<div class="modal hidden" id="googlePhoneModal">
+  <div class="modal-content">
+    <p style="margin-bottom: 15px;">يرجى إدخال رقم هاتفك لإكمال التسجيل:</p>
+    <div class="input-group">
+      <input id="googlePhoneInput" type="tel" placeholder="رقم الهاتف" />
+      <i class="fa-solid fa-phone"></i>
+    </div>
+    <div id="phoneSaveError" style="color: red; font-size: 0.9rem; margin-bottom: 10px;"></div>
+    <button class="btn-login" id="savePhoneBtn">
+      <i class="fa-solid fa-check"></i> حفظ رقم الهاتف والمتابعة
+    </button>
+  </div>
+</div>
+
+<!-- إضافة مودال جديد قبل نهاية body -->
+<div class="modal hidden" id="unverifiedEmailModal">
+  <div class="modal-content">
+    <i class="fa-solid fa-triangle-exclamation" style="font-size: 3rem; color: var(--primary-2); margin-bottom: 1rem;"></i>
+    <h3 style="margin: 0 0 1rem;">تنبيه: البريد الإلكتروني غير مؤكد</h3>
+    <p style="color: #fff; margin-bottom: 1rem;">
+      لم يتم تأكيد بريدك الإلكتروني بعد. في حال كان البريد غير صحيح، قد تفقد إمكانية:
+    </p>
+    <ul style="text-align: right; color: #fff; margin-bottom: 1.5rem;">
+      <li>استعادة كلمة المرور</li>
+      <li>استلام إشعارات مهمة</li>
+      <li>حماية حسابك من الاختراق</li>
+    </ul>
+    <p style="color: var(--danger); font-weight: bold; margin-bottom: 1.5rem;">
+      أتحمل كامل المسؤولية عن صحة البريد الإلكتروني المسجل
+    </p>
+    <div style="display: flex; gap: 10px;">
+      <button class="btn btn-primary" onclick="confirmUnverifiedLogin()">
+        <i class="fa-solid fa-check"></i> موافق، أكمل الدخول
+      </button>
+      <button class="btn btn-secondary" id="resendVerificationBtn" onclick="sendVerificationNow()">
+        <i class="fa-solid fa-paper-plane"></i> تأكيد البريد الآن
+      </button>
+    </div>
+    <p class="error-message" id="verificationMessage" style="margin-top: 12px; text-align: center;"></p>
+  </div>
+</div>
+
+<div id="pageLoader" class="hidden">
+  <div class="loader-overlay">
+    <div class="half-circle-spinner">
+      <div class="circle circle-1"></div>
+      <div class="circle circle-2"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase + Scripts: kept as in original file -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    
+    <script>
+  (function(){
+    function applyCardState(card, state){
+      var finalState = (state == null) ? 'on' : state;
+      var titleEl = card.querySelector ? card.querySelector('h2') : null;
+      var img = card.querySelector ? card.querySelector('img') : null;
+      try{ card.classList.remove('loading'); }catch(_){ }
+      if (finalState === 'off'){
+        if (img){ try{ img.setAttribute('loading','eager'); img.setAttribute('decoding','sync'); img.setAttribute('fetchpriority','high'); }catch(_){ } }
+        try{ card.classList.add('maintenance'); card.classList.remove('pending-state'); }catch(_){ }
+        try{ card.removeAttribute('href'); }catch(_){ }
+        if (titleEl){ try{ titleEl.textContent = '🚧 مغلق للصيانة'; }catch(_){ } }
+      } else {
+        try{
+          if (card.dataset && card.dataset.originalHref){ card.setAttribute('href', card.dataset.originalHref); }
+          card.classList.remove('maintenance','pending-state');
+          if (titleEl && card.dataset && card.dataset.originalTitle){ titleEl.textContent = card.dataset.originalTitle; }
+        }catch(_){ }
+      }
+    }
+    function prepCard(card){
+      try{
+        if (!card.dataset.originalHref){ var href = card.getAttribute('href'); if (href) card.dataset.originalHref = href; }
+        var t = card.querySelector && card.querySelector('h2');
+        if (t && !card.dataset.originalTitle){ card.dataset.originalTitle = t.textContent || ''; }
+      }catch(_){ }
+    }
+    function getPageNameFromCard(card){
+      try{
+        var href = (card.dataset && card.dataset.originalHref) || card.getAttribute('href') || '';
+        href = href.split('?')[0].split('#')[0];
+        return href.replace(/\.html$/,'');
+      }catch(_){ return ''; }
+    }
+    var STATES_TTL_MS = 5*60*1000;
+    var STATES_CACHE_KEY = 'statesCache';
+    function saveStatesCache(map){ try{ localStorage.setItem(STATES_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), map: map||{} })); }catch(_){ } }
+    function readStatesCache(ignoreTTL){
+      try{
+        var raw = localStorage.getItem(STATES_CACHE_KEY);
+        if(!raw) return null;
+        var obj; try{ obj = JSON.parse(raw); }catch(_){ obj=null; }
+        if (obj && typeof obj === 'object'){
+          if(!ignoreTTL){ var now = Date.now(); if(obj.savedAt && (now-obj.savedAt)>STATES_TTL_MS){ /* expired */ } }
+          if (obj.map && typeof obj.map === 'object') return obj.map;
+          if (typeof obj.stateJson === 'string'){ try{ var m=JSON.parse(obj.stateJson); if(m && typeof m==='object') return m; }catch(_){ } }
+          var vals = Object.values(obj); if (vals.length && vals.every(function(v){return v==='on'||v==='off';})) return obj;
+        }
+        try{ var m2 = JSON.parse(raw); if (m2 && typeof m2==='object') return m2; }catch(_){ }
+        return null;
+      }catch(_){ return null; }
+    }
+    function parseStatesDoc(data){
+      var map = {};
+      try{
+        if (typeof data.stateJson === 'string') { map = JSON.parse(data.stateJson)||{}; }
+        else if (data.map && typeof data.map==='object'){ map = data.map; }
+        else { map = data||{}; }
+      }catch(_){ map = {}; }
+      return map;
+    }
+    async function loadStatesMap(){
+      try{
+        if (typeof firebase==='undefined' || !firebase.firestore) return null;
+        var ref = firebase.firestore().collection('config').doc('states');
+        var snap = await ref.get({ source:'server' }).catch(function(){ return ref.get(); });
+        if (!snap || !snap.exists) return null;
+        var map = parseStatesDoc(snap.data()||{});
+        saveStatesCache(map);
+        return map;
+      }catch(_){ return null; }
+    }
+    function applyStatesToPage(){
+      try{
+        var cards = Array.prototype.slice.call(document.querySelectorAll('a.card, .card[href]'));
+        if (!cards.length) return;
+        cards.forEach(prepCard);
+        if (window.__SKIP_FIREBASE__){ try{ cards.forEach(function(card){ try{ card.removeAttribute('href'); card.classList.add('pending-state'); }catch(_){ } }); }catch(_){ } var cached = readStatesCache(true);
+          if (cached){ cards.forEach(function(card){ var name=getPageNameFromCard(card); var s=(name && cached.hasOwnProperty(name))? cached[name] : 'on'; applyCardState(card,s); }); }
+          return;
+        }
+        loadStatesMap().then(function(map){ if(!map){ map = readStatesCache(false)||{}; } cards.forEach(function(card){ var name=getPageNameFromCard(card); var s=(name && map && map.hasOwnProperty(name))? map[name] : 'on'; applyCardState(card,s); }); });
+      }catch(_){ }
+    }
+    if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', applyStatesToPage); else try{ applyStatesToPage(); }catch(_){ }
+  })();
+  </script>
+
+<script type="module">
+  // تعريف المتغيرات العامة لتخزين بيانات آخر محاولة تسجيل دخول
+  let lastLoginEmail = "";
+  let lastLoginPassword = "";
+  let activeModalId = null;
+  let verificationTimer = null;
+  let resetBusy = false;
+
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getAuth,
+    signInWithCustomToken,
+    sendEmailVerification,
+    sendPasswordResetEmail,
+    signOut,
+    GoogleAuthProvider,
+    signInWithPopup,
+    onAuthStateChanged,
+    getIdToken,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    updateProfile
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import {
+    getFirestore,
+    doc,
+    getDoc,           // نحتاجه للتحقق من وجود الحقول
+    setDoc
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  try { console.info("manual auth module init"); } catch (_) {}
+
+  /* 🔧 إعداد مشروعك */
+  const firebaseConfig = {
+          apiKey:"AIzaSyBD4zpvsUdygm7KxRYXPDHbotwvf9Y7pOQ",
+          authDomain:"js4accweb.firebaseapp.com",
+          projectId:"js4accweb",
+          storageBucket:"js4accweb.firebasestorage.app",
+          messagingSenderId:"635891162580",
+          appId:"1:635891162580:web:1ee495e5b51f96ab16ca41",
+          measurementId:"G-0Y3LMPBEWJ"
+        };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const DEVICE_ID_STORAGE_KEY = "session:device:id";
+  function ensureDeviceId(){
+    return "";
+  }
+  function getDeviceId(){
+    return "";
+  }
+  try {
+    if (!window.getDeviceFingerprint) window.getDeviceFingerprint = getDeviceId;
+  } catch (_) {}
+
+  /***** تخزين sessionKey محليًا لاستخدامه بالطلبات (localStorage) *****/
+  const saveSessionLocal   = (obj = {}) => {
+    const payload = { ...obj };
+    localStorage.setItem("sessionKeyInfo", JSON.stringify(payload));
+  };
+  const getSessionLocal    = () => JSON.parse(localStorage.getItem("sessionKeyInfo") || "null");
+  const POST_LOGIN_STORAGE_KEY = "postLoginPayload";
+  const savePostLoginPayload = (payload = {}) => {
+    try {
+      localStorage.setItem(POST_LOGIN_STORAGE_KEY, JSON.stringify({ ...payload, ts: Date.now() }));
+    } catch (_) {}
+  };
+
+  /***** مراجع عناصر الواجهة *****/
+  const emailInput    = document.getElementById('emailInput');
+  const passwordInput = document.getElementById('passwordInput');
+  const submitLogin   = document.getElementById('submitLogin');
+  const loginError    = document.getElementById('loginError');
+
+  const loginForm     = document.getElementById("loginForm");
+  const resetForm     = document.getElementById("resetForm");
+  const registerForm  = document.getElementById("registerForm");
+  const resetEmailInput = document.getElementById("resetEmail");
+  const resetMessageEl  = document.getElementById("resetMessage");
+  const resetStatusEl   = document.getElementById("resetStatus");
+  const resetSubmitBtn  = document.getElementById("resetSubmitBtn");
+  const verificationMessage = document.getElementById("verificationMessage");
+  const resendVerificationBtn = document.getElementById("resendVerificationBtn");
+  const registerPasswordInput = document.getElementById("registerPassword");
+  const strengthIndicator = document.getElementById("strengthIndicator");
+  const strengthText = document.getElementById("strengthText");
+  const passwordCriteriaEls = {
+    minLength: document.getElementById("minLength"),
+    hasNumber: document.getElementById("hasNumber"),
+    hasUpper: document.getElementById("hasUpper"),
+    hasLower: document.getElementById("hasLower"),
+    hasSymbol: document.getElementById("hasSymbol")
+  };
+  if (loginForm) {
+    loginForm.addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      if (submitLogin) submitLogin.click();
+    });
+  }
+  if (registerForm) {
+    registerForm.addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      if (typeof window.register === "function") window.register();
+    });
+  }
+
+  const showResetBtn = document.getElementById("showReset");
+  if (showResetBtn) showResetBtn.onclick = () => switchForm("reset");
+  document.addEventListener('DOMContentLoaded',()=>switchForm('login'));
+  const toggleRegisterBtn = document.getElementById("toggleRegister");
+  if (toggleRegisterBtn) toggleRegisterBtn.onclick = () => switchForm("register");
+  if (registerPasswordInput) {
+    registerPasswordInput.addEventListener('input', validatePassword);
+    validatePassword();
+  }
+
+  /* ===== أدوات فحص الاتصال وإدارة الأزرار ===== */
+  const NETWORK_CHECK_URL = "https://www.gstatic.com/generate_204";
+  const NETWORK_TIMEOUT_MS = 4500;
+
+  const sleep = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  async function pingNetwork(timeoutMs = NETWORK_TIMEOUT_MS) {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      return { ok: false, code: "network/offline" };
+    }
+    const fetchOptions = { mode: "no-cors", cache: "no-store" };
+    let controller;
+    let timer;
+    if (typeof AbortController !== "undefined") {
+      controller = new AbortController();
+      fetchOptions.signal = controller.signal;
+      timer = setTimeout(() => controller.abort(), timeoutMs);
+    }
+    try {
+      await fetch(NETWORK_CHECK_URL, fetchOptions);
+      return { ok: true };
+    } catch (error) {
+      if (error && error.name === "AbortError") {
+        return { ok: false, code: "network/timeout" };
+      }
+      return { ok: false, code: "network/ping-blocked" };
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
+  window.switchForm = function (form) {
+    loginForm.classList.add("hidden");
+    resetForm.classList.add("hidden");
+    registerForm.classList.add("hidden");
+    if (form === "login") loginForm.classList.remove("hidden");
+    else if (form === "reset") {
+      resetForm.classList.remove("hidden");
+      // Prefill email if available
+      const fallbackEmail = (emailInput?.value || '').trim() || (lastLoginEmail || '').trim();
+      if (resetEmailInput && fallbackEmail) resetEmailInput.value = fallbackEmail;
+      if (resetStatusEl) { resetStatusEl.textContent = "جاهز للإرسال"; resetStatusEl.className = "pill muted"; }
+      if (resetMessageEl) { resetMessageEl.textContent = ""; }
+    }
+    else if (form === "register") registerForm.classList.remove("hidden");
+  }
+
+
+
+  async function ensureNetworkHealthy(targetEl, timeoutMs) {
+    const status = await pingNetwork(timeoutMs);
+    if (status.ok) return true;
+    if (targetEl) {
+      targetEl.style.color = "var(--danger, #ef4444)";
+      targetEl.textContent = translateFirebaseError(status.code || "network/fetch-failed");
+    }
+    try { console.error("network check failed", status); } catch (_) {}
+    return false;
+  }
+
+  function setButtonBusy(btn, busy = false) {
+    if (!btn) return;
+    btn.disabled = !!busy;
+    btn.classList.toggle("is-loading", !!busy);
+    if (busy) btn.setAttribute("aria-busy", "true");
+    else btn.removeAttribute("aria-busy");
+  }
+
+  async function withNetworkRetry(task, retries = 1) {
+    let attempt = 0;
+    let lastError;
+    while (attempt <= retries) {
+      try {
+        return await task();
+      } catch (error) {
+        lastError = error;
+        if (!error || error.code !== "auth/network-request-failed" || attempt === retries) {
+          break;
+        }
+        await sleep(1100 * (attempt + 1));
+      }
+      attempt++;
+    }
+    throw lastError;
+  }
+
+  /* ===== خادم المانوال للمصادقة ===== */
+  const MANUAL_ROUTER_DEFAULT = "https://js4acc.laithqarqaz1.workers.dev/";
+
+  function getManualRouterBase() {
+    try {
+      const stored = localStorage.getItem("MANWAL_ROUTER_BASE");
+      if (stored) {
+        const candidate = stored.trim();
+        const normalized = /^https?:\/\//i.test(candidate) ? candidate : `https://${candidate}`;
+        let url = new URL(normalized);
+        // إن كانت الصفحة https والمخزن http، ارفع إلى https لتجنب حجب Mixed Content
+        try {
+          if (location.protocol === "https:" && url.protocol === "http:") {
+            url = new URL(url.toString().replace(/^http:/i, "https:"));
+          }
+        } catch (_) {}
+        return url.toString();
+      }
+    } catch (_) {}
+    return MANUAL_ROUTER_DEFAULT;
+  }
+
+  function buildManualAuthUrl() {
+    const base = getManualRouterBase();
+    try {
+      const url = new URL(base);
+      if (!url.searchParams.has("game")) url.searchParams.set("game", "auth");
+      return url.toString();
+    } catch (_) {
+      return MANUAL_ROUTER_DEFAULT + "?game=auth";
+    }
+  }
+
+  async function callManualAuth(action = "login", payload = {}, targetErrorEl) {
+    const manualUrl = buildManualAuthUrl();
+    if (!manualUrl || typeof manualUrl !== "string") {
+      const err = new Error("manual_url_invalid");
+      err.code = "network/url-invalid";
+      if (targetErrorEl) {
+        targetErrorEl.style.color = "var(--danger, #ef4444)";
+        targetErrorEl.textContent = "رابط الخادم غير صالح، تحقق من MANWAL_ROUTER_BASE.";
+      }
+      throw err;
+    }
+    const body = { action, ...payload };
+    try {
+      try { console.info("manualAuth ->", { action, manualUrl }); } catch (_) {}
+      const controller = (typeof AbortController !== "undefined") ? new AbortController() : null;
+      const timer = controller ? setTimeout(() => controller.abort(), 15000) : null;
+      const res = await fetch(manualUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller ? controller.signal : undefined
+      });
+      if (timer) clearTimeout(timer);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.success === false) {
+        const err = new Error(data?.error || "تعذر إتمام الطلب.");
+        err.code = data?.code || `auth/http-${res.status}`;
+        if (targetErrorEl) {
+          targetErrorEl.style.color = "var(--danger, #ef4444)";
+          targetErrorEl.textContent = translateFirebaseError(err.code);
+        }
+        throw err;
+      }
+      return data;
+    } catch (err) {
+      if (!err.code) err.code = "network/fetch-failed";
+      try {
+        console.error("manual auth call failed", { action, manualUrl, err });
+      } catch (_) {}
+      if (targetErrorEl) {
+        targetErrorEl.style.color = "var(--danger, #ef4444)";
+        targetErrorEl.textContent = "تعذر الاتصال بالخادم، تحقق من عنوان المانوال أو الشبكة.";
+        if (manualUrl) {
+          targetErrorEl.textContent += ` (${manualUrl})`;
+        }
+      }
+      // اربط رسالة مرئية على الشاشة إن لم يوجد target
+      try {
+        const fallbackEl = document.getElementById("loginError") || document.getElementById("registerError");
+        if (fallbackEl && fallbackEl !== targetErrorEl) {
+          fallbackEl.style.color = "var(--danger, #ef4444)";
+          fallbackEl.textContent = "تعذر الاتصال بالخادم، تحقق من عنوان المانوال أو الشبكة.";
+          if (manualUrl) {
+            fallbackEl.textContent += ` (${manualUrl})`;
+          }
+        }
+      } catch (_) {}
+      // أعد رمي الخطأ ليتم التقاطه
+      throw err;
+    }
+  }
+
+  // مسار تشخيص سريع لعرض الرابط الحالي في الأعلى
+  (function exposeManualUrl(){
+    try {
+      const el = document.getElementById("loginError");
+      if (el && !el.dataset.manualInit) {
+        el.dataset.manualInit = "1";
+        const url = buildManualAuthUrl();
+        if (url) {
+          try { console.info("manualAuth URL:", url); } catch (_) {}
+        }
+      }
+    } catch (_) {}
+  })();
+
+  /* ===== تسجيل الدخول بواسطة Google ===== */
+  const googleProvider = new GoogleAuthProvider();
+  try { googleProvider.setCustomParameters({ prompt: 'select_account' }); } catch (_) {}
+
+  const GOOGLE_USERNAME_MODAL = 'completeProfileModal';
+  const GOOGLE_PHONE_MODAL = 'googlePhoneModal';
+  const googleUsernameInput = document.getElementById('googleUsernameInput');
+  const googleUsernameError = document.getElementById('googleUsernameError');
+  const googlePhoneInput = document.getElementById('googlePhoneInput');
+  const phoneSaveError = document.getElementById('phoneSaveError');
+
+  const googleButtons = [
+    document.getElementById('googleLogin'),
+    document.getElementById('googleLoginRegister')
+  ].filter(Boolean);
+
+  const googleFlowState = {
+    entry: 'login',
+    user: null,
+    profile: { username: '', phone: '' }
+  };
+
+  async function syncGoogleSession(targetErrorEl) {
+    const user = googleFlowState.user;
+    if (!user) throw new Error("google_user_missing");
+    const idToken = await getIdToken(user, true);
+    try {
+      await setDoc(doc(db, 'users', user.uid), {
+        username: googleFlowState.profile.username || user.displayName || '',
+        phone: googleFlowState.profile.phone || '',
+        email: user.email || '',
+        provider: 'google'
+      }, { merge: true });
+    } catch (_) {}
+    return { result: { emailVerified: user.emailVerified, sessionKey: '' }, idToken };
+  }
+
+  let googleBusy = false;
+
+  googleButtons.forEach((btn) => {
+    if (!btn) return;
+    btn.addEventListener('click', (event) => {
+      event.preventDefault();
+      handleGoogleSignIn(
+        btn.id === 'googleLoginRegister' ? 'register' : 'login',
+        btn
+      );
+    });
+  });
+
+  const savePhoneBtn = document.getElementById('savePhoneBtn');
+  if (savePhoneBtn) {
+    savePhoneBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      submitGooglePhone();
+    });
+  }
+
+  function resetGoogleFlow() {
+    googleFlowState.entry = 'login';
+    googleFlowState.user = null;
+    googleFlowState.profile = { username: '', phone: '' };
+  }
+
+  function normalizeGoogleUsername(displayName, email) {
+    const raw = (displayName || (email ? email.split('@')[0] : '') || '').trim();
+    if (!raw) return '';
+    return raw
+      .replace(/[^\p{L}\p{N}_\s-]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 24);
+  }
+
+  async function handleGoogleSignIn(entryPoint = 'login', triggerBtn = null) {
+    if (googleBusy) return;
+    googleBusy = true;
+    loginError.textContent = '';
+    if (triggerBtn) setButtonBusy(triggerBtn, true);
+    try { closeModal(GOOGLE_USERNAME_MODAL); } catch (_) {}
+    try { closeModal(GOOGLE_PHONE_MODAL); } catch (_) {}
+
+    try {
+      const networkReady = await ensureNetworkHealthy(loginError);
+      if (!networkReady) return;
+      googleFlowState.entry = entryPoint;
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      googleFlowState.user = user;
+
+      let existingData = {};
+      try {
+        const snap = await getDoc(doc(db, 'users', user.uid));
+        existingData = snap.exists() ? (snap.data() || {}) : {};
+      } catch (_) {}
+
+      googleFlowState.profile = {
+        username: existingData.username || '',
+        phone: existingData.phone || ''
+      };
+
+      if (!googleFlowState.profile.username) {
+        if (googleUsernameInput) {
+          googleUsernameInput.value = normalizeGoogleUsername(user.displayName, user.email);
+        }
+        if (googleUsernameError) googleUsernameError.textContent = '';
+        showModal(GOOGLE_USERNAME_MODAL);
+        setTimeout(() => { try { googleUsernameInput && googleUsernameInput.focus(); } catch (_) {} }, 50);
+        return;
+      }
+
+      if (!googleFlowState.profile.phone) {
+        if (phoneSaveError) phoneSaveError.textContent = '';
+        showModal(GOOGLE_PHONE_MODAL);
+        setTimeout(() => { try { googlePhoneInput && googlePhoneInput.focus(); } catch (_) {} }, 60);
+        return;
+      }
+
+      await finalizeGoogleLogin();
+    } catch (err) {
+      if (err && (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request')) {
+        loginError.textContent = "تم إغلاق نافذة Google قبل إكمال تسجيل الدخول.";
+      } else {
+        loginError.textContent = translateFirebaseError(err?.code);
+      }
+    } finally {
+      googleBusy = false;
+      if (triggerBtn) setButtonBusy(triggerBtn, false);
+    }
+  }
+
+  async function finalizeGoogleLogin() {
+    if (!googleFlowState.user) return;
+    try { closeModal(GOOGLE_USERNAME_MODAL); } catch (_) {}
+    try { closeModal(GOOGLE_PHONE_MODAL); } catch (_) {}
+    try {
+      const allowed = await assertNotBanned(googleFlowState.user.uid, loginError);
+      if (!allowed) { resetGoogleFlow(); return; }
+      const { result, idToken } = await syncGoogleSession(loginError);
+      const sessionKey = result.sessionKey || "";
+      const isVerified = result.emailVerified === true || googleFlowState.user.emailVerified;
+      if (!isVerified) {
+        document.getElementById('unverifiedEmailModal').classList.remove('hidden');
+        return;
+      }
+      savePostLoginPayload({
+        uid: googleFlowState.user.uid,
+        email: googleFlowState.user.email || '',
+        token: idToken,
+        sessionKey
+      });
+      resetGoogleFlow();
+      window.location.href = "index.html";
+    } catch (error) {
+      loginError.textContent = translateFirebaseError(error?.code);
+    }
+  }
+
+  async function submitGoogleUsername() {
+    if (!googleFlowState.user || !googleUsernameInput) return;
+    const value = (googleUsernameInput.value || '').trim();
+    if (value.length < 3) {
+      if (googleUsernameError) googleUsernameError.textContent = "يرجى إدخال اسم مستخدم لا يقل عن 3 أحرف.";
+      return;
+    }
+    if (googleUsernameError) googleUsernameError.textContent = '';
+    googleFlowState.profile.username = value;
+    closeModal(GOOGLE_USERNAME_MODAL);
+    if (!googleFlowState.profile.phone) {
+      if (phoneSaveError) phoneSaveError.textContent = '';
+      showModal(GOOGLE_PHONE_MODAL);
+    } else {
+      await finalizeGoogleLogin();
+    }
+  }
+
+  async function submitGooglePhone() {
+    if (!googleFlowState.user || !googlePhoneInput) return;
+    let phoneValue = '';
+    try {
+      phoneValue = (window.googlePhoneIti && typeof window.googlePhoneIti.getNumber === 'function')
+        ? window.googlePhoneIti.getNumber()
+        : googlePhoneInput.value;
+    } catch (_) {
+      phoneValue = googlePhoneInput.value;
+    }
+    phoneValue = (phoneValue || '').trim();
+    if (!phoneValue || phoneValue.replace(/\D/g, '').length < 6) {
+      if (phoneSaveError) phoneSaveError.textContent = "يرجى إدخال رقم هاتف صالح.";
+      return;
+    }
+    if (phoneSaveError) phoneSaveError.textContent = '';
+    googleFlowState.profile.phone = phoneValue;
+    await finalizeGoogleLogin();
+  }
+
+  // منع الحسابات المحظورة من إكمال الدخول قبل الانتقال للرئيسية
+  async function assertNotBanned(uid, targetErrorEl) {
+    try {
+      const snap = await getDoc(doc(db, "users", uid));
+      const data = snap.exists() ? (snap.data() || {}) : {};
+      if (data.isBanned === true) {
+        if (targetErrorEl) {
+          targetErrorEl.style.color = "var(--danger, #ef4444)";
+          targetErrorEl.textContent = "🚫 لا يمكن الدخول لهذا الحساب.";
+        }
+        try { await signOut(auth); } catch (_) {}
+        try { localStorage.removeItem("sessionKeyInfo"); } catch (_) {}
+        return false;
+      }
+    } catch (_) {
+      if (targetErrorEl) {
+        targetErrorEl.style.color = "var(--danger, #ef4444)";
+        targetErrorEl.textContent = "تعذر التحقق من حالة الحساب. حاول لاحقًا.";
+      }
+      return false;
+    }
+    return true;
+  }
+
+  /***** الدخول بالبريد/كلمة مرور *****/
+  async function performManualLogin(event) {
+    if (event && typeof event.preventDefault === "function") event.preventDefault();
+    if (!submitLogin) return;
+    try { console.info("performManualLogin start"); } catch (_) {}
+    try {
+      const url = buildManualAuthUrl();
+      console.info("manualAuth URL (login):", url);
+    } catch (_) {}
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
+    loginError.textContent = "";
+
+    if (!email || !password) {
+      loginError.textContent = "يرجى إدخال البريد الإلكتروني وكلمة المرور.";
+      return;
+    }
+
+    lastLoginEmail = email;
+    lastLoginPassword = password;
+    setButtonBusy(submitLogin, true);
+
+    try {
+      const networkReady = await ensureNetworkHealthy(loginError);
+      if (!networkReady) return;
+
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      const user = cred.user;
+      const allowed = await assertNotBanned(user.uid, loginError);
+      if (!allowed) { await signOut(auth).catch(() => {}); return; }
+      if (!user.emailVerified) {
+        document.getElementById('unverifiedEmailModal').classList.remove('hidden');
+        return;
+      }
+      const idToken = await getIdToken(user, true);
+      savePostLoginPayload({
+        uid: user.uid,
+        email: user.email,
+        token: idToken,
+        sessionKey: ''
+      });
+      window.location.href = "index.html";
+    } catch (err) {
+      try { console.error("performManualLogin error", err); } catch (_) {}
+      loginError.textContent = translateFirebaseError(err.code || err.message || "");
+    } finally {
+      setButtonBusy(submitLogin, false);
+    }
+  }
+
+  if (submitLogin) {
+    try { submitLogin.type = "button"; } catch (_) {}
+    submitLogin.addEventListener('click', performManualLogin);
+  }
+  try { window.__manualLogin = performManualLogin; } catch (_) {}
+
+  // تعديل دالة تأكيد الدخول مع بريد غير موثق
+  window.confirmUnverifiedLogin = async function() {
+    const user = auth.currentUser;
+    if (!user) {
+      loginError.textContent = "يرجى تسجيل الدخول أولًا لإكمال العملية.";
+      return;
+    }
+
+    try {
+      const allowed = await assertNotBanned(user.uid, loginError);
+      if (!allowed) return;
+      const sessionInfo = getSessionLocal() || {};
+      const sessionKey = sessionInfo.sessionKey || "";
+      if (!sessionKey) {
+        loginError.textContent = "رمز الجلسة غير متوفر. أعد تسجيل الدخول.";
+        return;
+      }
+      const idToken = await getIdToken(user, true);
+
+      savePostLoginPayload({
+        uid: user.uid,
+        email: user.email,
+        token: idToken,
+        sessionKey
+      });
+      window.location.href = "index.html";
+    } catch (err) {
+      loginError.textContent = translateFirebaseError(err.code);
+    }
+  }
+
+  async function sendResetLink() {
+    if (!resetEmailInput || !resetMessageEl) return;
+    const email = resetEmailInput.value.trim();
+    resetMessageEl.style.color = "var(--danger, #ef4444)";
+    resetMessageEl.textContent = "";
+
+    if (!email) {
+      resetMessageEl.textContent = "يرجى إدخال بريدك الإلكتروني.";
+      if (resetStatusEl) { resetStatusEl.textContent = "أدخل بريدًا صحيحًا"; resetStatusEl.className = "pill"; }
+      return;
+    }
+    if (resetBusy) return;
+    resetBusy = true;
+
+    try {
+      setButtonBusy(resetSubmitBtn, true);
+      if (resetStatusEl) { resetStatusEl.textContent = "جارٍ الإرسال..."; resetStatusEl.className = "pill muted"; }
+      const networkReady = await ensureNetworkHealthy(resetMessageEl);
+      if (!networkReady) return;
+      await withNetworkRetry(() => sendPasswordResetEmail(auth, email), 1);
+      resetMessageEl.style.color = "var(--success, #22c55e)";
+      resetMessageEl.textContent = "تم إرسال رابط الاستعادة إلى بريدك الإلكتروني.";
+      if (resetStatusEl) { resetStatusEl.textContent = "تم الإرسال"; resetStatusEl.className = "pill success"; }
+      showModal("resetSuccessModal");
+    } catch (error) {
+      resetMessageEl.textContent = translateFirebaseError(error?.code);
+      if (resetStatusEl) { resetStatusEl.textContent = "تعذر الإرسال"; resetStatusEl.className = "pill"; }
+    } finally {
+      resetBusy = false;
+      setButtonBusy(resetSubmitBtn, false);
+    }
+  }
+
+  async function sendVerificationNow() {
+    if (verificationMessage) {
+      verificationMessage.style.color = "var(--danger, #ef4444)";
+      verificationMessage.textContent = "";
+    }
+
+    const user = auth.currentUser;
+
+    if (!user) {
+      if (verificationMessage) {
+        verificationMessage.textContent = "يرجى تسجيل الدخول أولًا لإعادة إرسال رابط التأكيد.";
+      }
+      return;
+    }
+
+    try {
+      if (resendVerificationBtn) {
+        resendVerificationBtn.disabled = true;
+        resendVerificationBtn.classList.add("disabled");
+      }
+      const networkReady = await ensureNetworkHealthy(verificationMessage);
+      if (!networkReady) return;
+      await withNetworkRetry(() => sendEmailVerification(user), 1);
+      if (verificationMessage) {
+        verificationMessage.style.color = "var(--success, #22c55e)";
+        verificationMessage.textContent = "تم إرسال رسالة التأكيد، تحقق من بريدك الوارد أو الرسائل غير المرغوبة.";
+      }
+    } catch (error) {
+      if (verificationMessage) {
+        verificationMessage.textContent = translateFirebaseError(error?.code);
+      }
+    } finally {
+      clearTimeout(verificationTimer);
+      verificationTimer = setTimeout(() => {
+        if (resendVerificationBtn) {
+          resendVerificationBtn.disabled = false;
+          resendVerificationBtn.classList.remove("disabled");
+        }
+        if (verificationMessage && verificationMessage.style.color === "var(--success, #22c55e)") {
+          verificationMessage.style.color = "";
+        }
+      }, 1500);
+    }
+  }
+
+  // دالة التسجيل
+  async function register() {
+    const username = document.getElementById("usernameInput").value.trim();
+    const email    = document.getElementById("registerEmail").value.trim();
+    const password = document.getElementById("registerPassword").value.trim();
+    const msg      = document.getElementById("registerError");
+    msg.textContent = "";
+    msg.style.color = "";
+
+    if (!username || !email || !password) {
+      msg.style.color = "var(--danger, #ef4444)";
+      msg.textContent = "يرجى إدخال جميع الحقول.";
+      return;
+    }
+
+    const phone   = window.iti?.getNumber?.() || "";
+
+    try {
+      const networkReady = await ensureNetworkHealthy(msg);
+      if (!networkReady) return;
+
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      const user = cred.user;
+      try { await updateProfile(user, { displayName: username }); } catch (_) {}
+      try {
+        await setDoc(doc(db, 'users', user.uid), {
+          username,
+          phone,
+          email,
+          provider: 'password',
+          createdAt: Date.now()
+        }, { merge: true });
+      } catch (_) {}
+      try { await sendEmailVerification(user); } catch (_) {}
+
+      const allowed = await assertNotBanned(user.uid, msg);
+      if (!allowed) {
+        await signOut(auth).catch(() => {});
+        return;
+      }
+
+      const idToken = await getIdToken(user, true);
+      savePostLoginPayload({
+        uid: user.uid,
+        email: user.email,
+        token: idToken,
+        sessionKey: ''
+      });
+      msg.style.color = "var(--success, #22c55e)";
+      msg.textContent = "تم إنشاء الحساب بنجاح، سيتم تحويلك الآن.";
+      window.location.href = "index.html";
+    } catch (err) {
+      msg.style.color = "var(--danger, #ef4444)";
+      msg.textContent = translateFirebaseError(err.code) || "تعذر إكمال العملية، حاول مرة أخرى.";
+    }
+  }
+
+  function setCriterionState(element, satisfied) {
+    if (!element) return;
+    element.classList.toggle("criterion-met", satisfied);
+    const icon = element.querySelector(".icon");
+    if (icon) {
+      icon.classList.toggle("fa-check", satisfied);
+      icon.classList.toggle("fa-xmark", !satisfied);
+      icon.style.color = satisfied ? "var(--success, #22c55e)" : "var(--danger, #ef4444)";
+    }
+    element.style.color = satisfied ? "#16a34a" : "";
+  }
+
+  function validatePassword() {
+    if (!registerPasswordInput) return;
+    const value = registerPasswordInput.value || "";
+    const hasMin = value.length >= 6;
+    const hasNumber = /\d/.test(value);
+    const hasUpper = /[A-Z]/.test(value);
+    const hasLower = /[a-z]/.test(value);
+    const hasSymbol = /[^A-Za-z0-9]/.test(value);
+    const optionalCount = [hasNumber, hasUpper, hasLower, hasSymbol].filter(Boolean).length;
+
+    setCriterionState(passwordCriteriaEls.minLength, hasMin);
+    setCriterionState(passwordCriteriaEls.hasNumber, hasNumber);
+    setCriterionState(passwordCriteriaEls.hasUpper, hasUpper);
+    setCriterionState(passwordCriteriaEls.hasLower, hasLower);
+    setCriterionState(passwordCriteriaEls.hasSymbol, hasSymbol);
+
+    if (!strengthIndicator || !strengthText) return;
+    if (!value) {
+      strengthIndicator.style.width = "0%";
+      strengthIndicator.style.backgroundColor = "#e5e7eb";
+      strengthText.textContent = "";
+      return;
+    }
+
+    const score = (hasMin ? 1 : 0) + optionalCount; // 0 - 5
+    const percent = Math.min(100, Math.max(20, Math.round((score / 5) * 100)));
+
+    let barColor = "#ef4444";
+    let label = "ضعيفة";
+    if (percent >= 80) { barColor = "#22c55e"; label = "قوية"; }
+    else if (percent >= 60) { barColor = "#f59e0b"; label = "متوسطة"; }
+    else if (percent >= 40) { barColor = "#f97316"; label = "ضعيفة"; }
+
+    strengthIndicator.style.width = percent + "%";
+    strengthIndicator.style.backgroundColor = barColor;
+
+    if (!hasMin) {
+      strengthText.style.color = "var(--danger, #ef4444)";
+      strengthText.textContent = "كلمة المرور يجب ألا تقل عن 6 أحرف.";
+    } else if (optionalCount < 3) {
+      const remaining = 3 - optionalCount;
+      strengthText.style.color = "#f59e0b";
+      strengthText.textContent = `أضف ${remaining} متطلبات اختيارية (أرقام/حروف/رموز) لزيادة الأمان.`;
+    } else {
+      strengthText.style.color = barColor;
+      strengthText.textContent = `قوة كلمة المرور: ${label}`;
+    }
+  }
+
+  const firebaseErrorMessages = {
+    "auth/invalid-email": "صيغة البريد الإلكتروني غير صحيحة.",
+    "auth/missing-email": "يرجى إدخال البريد الإلكتروني.",
+    "auth/missing-credentials": "يرجى إدخال البريد وكلمة المرور.",
+    "auth/missing-fields": "يرجى إدخال جميع الحقول المطلوبة.",
+    "auth/user-not-found": "لا يوجد حساب مرتبط بهذا البريد.",
+    "auth/wrong-password": "كلمة المرور غير صحيحة.",
+    "auth/invalid-credential": "بيانات تسجيل الدخول غير صحيحة، تأكد من البريد وكلمة المرور.",
+    "auth/invalid-login-credentials": "بيانات تسجيل الدخول غير صحيحة، تأكد من البريد وكلمة المرور.",
+    "auth/invalid-credentials": "بيانات تسجيل الدخول غير صحيحة، تأكد من البريد وكلمة المرور.",
+    "auth/invalid_credentials": "بيانات تسجيل الدخول غير صحيحة، تأكد من البريد وكلمة المرور.",
+    "auth/too-many-requests": "تم حظر المحاولات مؤقتًا بسبب العديد من الطلبات. حاول لاحقًا.",
+    "auth/email-already-in-use": "هذا البريد مستخدم بالفعل.",
+    "auth/weak-password": "كلمة المرور ضعيفة، يرجى استخدام كلمة أقوى.",
+    "auth/network-request-failed": "فشل الاتصال بالخادم، تحقق من الشبكة.",
+    "auth/operation-not-allowed": "تم تعطيل هذا النوع من التسجيل في الوقت الحالي.",
+    "auth/requires-recent-login": "يرجى تسجيل الدخول من جديد لإكمال العملية.",
+    "auth/banned": "🚫 تم حظر حسابك.",
+    "network/url-invalid": "رابط خادم المانوال غير صالح.",
+    "network/fetch-failed": "تعذر الاتصال بالخادم، تحقق من عنوان المانوال أو الشبكة.",
+    "network/blocked": "يبدو أن المتصفح يمنع الاتصال (Mixed Content/VPN). استخدم HTTPS لخادم المانوال.",
+    "network/offline": "لا يوجد اتصال بالإنترنت حاليًا. فعّل البيانات أو اتصل بشبكة Wi-Fi أخرى ثم أعد المحاولة.",
+    "network/timeout": "الاتصال بطيء أو غير مستقر، تعذر الوصول إلى الخادم. أعد المحاولة بعد لحظات أو غيّر الشبكة.",
+    "network/ping-blocked": "يبدو أن جدار الحماية أو خدمة VPN تمنع الاتصال بخوادم زعيم. عطّل الحجب مؤقتًا ثم أعد المحاولة."
+  };
+
+  function translateFirebaseError(code) {
+    const normalized = typeof code === "string" ? code : "";
+    const key = normalized.replace(/_/g, "-");
+    if (!normalized) return "حدث خطأ غير متوقع، حاول مرة أخرى.";
+    if (firebaseErrorMessages[key]) return firebaseErrorMessages[key];
+    if (key.includes("too-many-requests")) return firebaseErrorMessages["auth/too-many-requests"];
+    if (key.startsWith("auth/http-") || key.startsWith("network/")) return firebaseErrorMessages["network/fetch-failed"];
+    if (key.startsWith("auth/")) {
+      return "تعذر إتمام الطلب (" + key.replace("auth/", "").replace(/-/g, " ") + ").";
+    }
+    if (key.startsWith("network/")) return firebaseErrorMessages["network/timeout"];
+    return "حدث خطأ غير متوقع، حاول مرة أخرى.";
+  }
+
+  function updateBodyModalState() {
+    try {
+      const hasOpenModal = document.querySelector('.modal:not(.hidden)');
+      const bodyEl = document.body || document.documentElement;
+      if (!bodyEl) return;
+      if (hasOpenModal) bodyEl.classList.add('modal-open');
+      else bodyEl.classList.remove('modal-open');
+    } catch (_) {}
+  }
+
+  function showModal(modalId = "emailVerificationModal") {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    modal.classList.remove("hidden");
+    activeModalId = modalId;
+    updateBodyModalState();
+  }
+
+  function closeModal(modalId) {
+    const targetId = modalId || activeModalId;
+    if (!targetId) return;
+    const modal = document.getElementById(targetId);
+    if (!modal) return;
+    modal.classList.add("hidden");
+    if (activeModalId === targetId) activeModalId = null;
+    updateBodyModalState();
+  }
+
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!target) return;
+    if (target.classList && target.classList.contains("modal") && !target.classList.contains("hidden")) {
+      closeModal(target.id);
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeModal();
+  });
+
+  // تأكد من ربط الدوال بالسياق العام بعد تعريفها
+  window.submitGoogleUsername = submitGoogleUsername;
+  window.submitGooglePhone = submitGooglePhone;
+  window.sendResetLink = sendResetLink;
+  window.sendVerificationNow = sendVerificationNow;
+  window.validatePassword = validatePassword;
+  window.register = register;
+  window.showModal = showModal;
+  window.closeModal = closeModal;
+</script>
+
+<!-- مكاتب أرقام الهاتف -->
+<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/intlTelInput.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/utils.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const phoneInput = document.querySelector("#phoneInput");
+    if (phoneInput) {
+      window.iti = window.intlTelInput(phoneInput, {
+        initialCountry: "sy",
+        separateDialCode: true,
+        preferredCountries: ["sa","ae","eg","sy","jo","kw","qa","bh","om","ma","dz","tn","ly","iq","ye","sd","ps","lb"],
+        utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/utils.js",
+      });
+    }
+    const googlePhoneInput = document.querySelector("#googlePhoneInput");
+    if (googlePhoneInput) {
+      window.googlePhoneIti = window.intlTelInput(googlePhoneInput, {
+        initialCountry: "sy",
+        separateDialCode: true,
+        preferredCountries: ["sa","ae","eg","sy","jo","kw","qa","bh","om","ma","dz","tn","ly","iq","ye","sd","ps","lb"],
+        utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/utils.js",
+      });
+    }
+
+    function enforcePhoneStyles(inputEl){
+      if (!inputEl) return;
+      inputEl.style.direction = "ltr";
+      inputEl.style.textAlign = "left";
+      inputEl.style.paddingInlineStart = "2px";
+      inputEl.style.paddingInlineEnd = "18px";
+      inputEl.style.borderRadius = "40px";
+    }
+    enforcePhoneStyles(phoneInput);
+    enforcePhoneStyles(googlePhoneInput);
+  });
+</script>
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // تأكد أن window.register موجود
+    if (typeof window.register !== "function") {
+      window.register = async function() {
+        // انسخ محتوى دالة التسجيل من سكريبت type="module" هنا إذا لم يكن معرفاً
+        // ...لكن في حالتك هو معرف بالفعل في window من سكريبت type="module"
+      };
+    }
+    // اربط الزر بشكل صريح
+    var btn = document.querySelector('#registerForm .btn-primary[onclick]');
+    if (btn) {
+      try { btn.type = "button"; } catch (_) {}
+      btn.onclick = function(e) {
+        e.preventDefault();
+        window.register();
+      };
+    }
+  });
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+

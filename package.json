@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "jsdom": "^22.1.0",
+    "playwright-chromium": "^1.47.2"
+  }
+}

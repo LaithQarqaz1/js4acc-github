@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>عرض حساب للبيع</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="header.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="loader.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/css/intlTelInput.min.css">
+  <style>
+    body{background:#05070f;color:#e6edff;font-family:'Cairo',sans-serif;margin:0;padding:0;}
+    main.container{width:min(960px,94vw);margin:90px auto 40px;display:flex;flex-direction:column;gap:16px;}
+    .card{background:rgba(8,10,20,0.9);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:18px;box-shadow:0 16px 40px rgba(0,0,0,0.35);}
+    .card h1{margin:0 0 8px;font-size:1.4rem;}
+    .card p.lead{margin:0 0 14px;color:#9aa6c8;}
+    form.grid{display:flex;flex-direction:column;gap:14px;}
+    form.grid > *{border-bottom:1px solid rgba(255,255,255,0.14);padding:10px 0;margin:0;}
+    form.grid > *:last-child{border-bottom:none;padding-bottom:0;}
+    .full{width:100%;}
+    .field{display:flex;flex-direction:column;gap:6px;}
+    .field label{font-weight:700;font-size:0.95rem;}
+    .field input,.field select,.field textarea{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);color:#e6edff;border-radius:12px;padding:10px 12px;font-family:'Cairo',sans-serif;}
+    textarea{resize:vertical;min-height:110px;}
+    .phone-field{position:relative;z-index:5;overflow:visible;}
+    .phone-field .iti{width:100%;position:relative;z-index:2;}
+    .phone-field input{
+      width:100%;
+      padding-inline-start:150px !important; /* space on the right (RTL start) for flag/code */
+      padding-inline-end:12px !important;
+      padding-right:150px !important;
+      padding-left:12px !important;
+      background:rgba(255,255,255,0.04);
+      border:1px solid rgba(255,255,255,0.12);
+      border-radius:12px;
+      color:#e6edff;
+      height:48px;
+      text-align:right;
+      direction:rtl;
+    }
+    .phone-field .iti__tel-input{
+      width:100% !important;
+      padding-inline-start:150px !important;
+      padding-inline-end:12px !important;
+      padding-right:150px !important;
+      padding-left:12px !important;
+      text-align:right;
+      direction:rtl;
+    }
+    .phone-field .iti__selected-flag{
+      inset-inline-end:4px;
+      inset-inline-start:auto;
+      border-radius:10px;
+      background:rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.12);
+      padding-inline:10px;
+      margin-inline:0;
+      height:40px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .phone-field .iti__flag-container{
+      inset-inline-end:0;
+      inset-inline-start:auto;
+      width:96px;
+      height:48px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:2;
+    }
+    .phone-field .iti__country-list{
+      background:#0c1020;
+      color:#fff;
+      z-index:20000;
+    }
+    .phone-field .iti__country-list,
+    .phone-field .iti__dropdown-content{
+      z-index:20000;
+      left:auto !important;
+      right:0 !important;
+    }
+    .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:6px;}
+    button.btn{border:none;border-radius:12px;padding:12px 16px;font-weight:800;cursor:pointer;transition:transform .15s ease,box-shadow .2s ease;}
+    button.btn.primary{background:linear-gradient(135deg,#2f74e4,#3f86ff);color:#fff;box-shadow:0 12px 24px rgba(63,134,255,0.28);}
+    button.btn.primary:disabled{opacity:0.65;cursor:not-allowed;box-shadow:none;transform:none;}
+    .muted{color:#9aa6c8;}
+    .tiny{font-size:12px;}
+    .status{font-size:0.95rem;}
+    .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#0f1628;color:#e6edff;padding:12px 16px;border-radius:12px;box-shadow:0 10px 24px rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;}
+    .toast.show{opacity:1;transform:translate(-50%,0);}
+    .status.success{color:#4ade80;}
+    .status.error{color:#f87171;}
+    .progress{width:100%;height:8px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;margin-top:6px;display:none;}
+    .progress .bar{height:100%;width:0%;background:linear-gradient(135deg,#2f74e4,#3f86ff);transition:width .18s ease;}
+    #videoProgressText{margin-top:4px;}
+    .dropzone{
+      position:relative;
+      border:1px dashed rgba(255,255,255,0.25);
+      border-radius:14px;
+      padding:20px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      background:rgba(255,255,255,0.02);
+      transition:border-color .2s ease, background .2s ease, transform .2s ease;
+      cursor:pointer;
+      text-align:center;
+    }
+    .dropzone input[type="file"]{
+      position:absolute;
+      inset:0;
+      opacity:0;
+      cursor:pointer;
+    }
+    .dropzone .icon{
+      width:60px;height:60px;
+      color:#1f8dff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .dropzone .text{display:flex;flex-direction:column;gap:4px;}
+    .dropzone .text strong{font-size:1rem;}
+    .dropzone.hover{border-color:#4da1ff;background:rgba(77,161,255,0.08);}
+    .dropzone.uploading{
+      background:linear-gradient(135deg,rgba(77,161,255,0.15),rgba(77,161,255,0.05));
+      animation:pulse 1.2s ease-in-out infinite;
+    }
+    .dropzone.uploading .icon svg{animation:float 1s ease-in-out infinite;}
+    @keyframes pulse{
+      0%{box-shadow:0 0 0 0 rgba(77,161,255,0.3);}
+      70%{box-shadow:0 0 0 10px rgba(77,161,255,0);}
+      100%{box-shadow:0 0 0 0 rgba(77,161,255,0);}
+    }
+    @keyframes float{
+      0%,100%{transform:translateY(0);}
+      50%{transform:translateY(-4px);}
+    }
+    /* دعم الثيم الداكن لقسم متواجدون لمساعدتك على هذه الصفحة */
+    html[data-theme="dark"] .support-section,
+    body.dark-mode .support-section{
+      background:linear-gradient(140deg,#0b1020 0%,#05070f 60%);
+      border-top:1px solid rgba(255,255,255,0.08);
+      color:#e6edff;
+    }
+    html[data-theme="dark"] .support-title,
+    body.dark-mode .support-title{color:#e6edff;}
+    html[data-theme="dark"] .support-icons .support-icon,
+    body.dark-mode .support-icons .support-icon{
+      background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.12);
+      box-shadow:0 12px 28px rgba(0,0,0,0.5);
+    }
+    html[data-theme="dark"] .support-rights,
+    body.dark-mode .support-rights{color:#9aa6c8;}
+    html[data-theme="dark"] .support-rights a,
+    body.dark-mode .support-rights a{color:#3f86ff;}
+    @media (max-width:640px){main.container{margin-top:70px;}.actions{flex-direction:column;align-items:stretch;}button.btn{width:100%;}}
+  </style>
+</head>
+<body class="dark-mode">
+  <div id="preloader"><div class="loader"></div></div>
+  <div id="headerContainer"></div>
+  <div id="sidebar"></div>
+  <main class="container">
+    <section class="card">
+      <h1>عرض حساب للبيع</h1>
+      <form id="reviewRequestForm" class="grid">
+        <div class="field">
+          <label for="nameInput">الاسم</label>
+          <input id="nameInput" type="text" placeholder="اسمك الثلاثي" required>
+        </div>
+        <div class="field">
+          <label for="emailInput">البريد الإلكتروني</label>
+          <input id="emailInput" type="email" placeholder="example@email.com" required>
+        </div>
+        <div class="field">
+          <label for="contactInput">وسيلة التواصل</label>
+          <div class="phone-field">
+            <input id="contactInput" type="tel" inputmode="tel" placeholder="رقم الهاتف / واتساب" required>
+          </div>
+        </div>
+        <div class="field">
+          <label for="titleInput">عنوان الحساب</label>
+          <input id="titleInput" type="text" placeholder="مثال: حساب ملكي لفل 90" required>
+        </div>
+        <div class="field">
+          <label for="priceInput">السعر (بالدولار)</label>
+          <input id="priceInput" type="number" step="0.01" min="0.01" placeholder="120.00" required>
+        </div>
+        <div class="field full">
+          <label for="descInput">وصف الحساب</label>
+          <textarea id="descInput" placeholder="تفاصيل الحساب والمميزات" required></textarea>
+        </div>
+        <div class="field full">
+          <label>صور الحساب</label>
+          <label id="imageDropZone" class="dropzone" for="imageFileInput">
+            <div class="icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M7.75 18h-1.5A3.75 3.75 0 0 1 2.5 14.25c0-1.78 1.3-3.28 3.02-3.6a4.5 4.5 0 0 1 8.83-1.1 3.75 3.75 0 0 1 5.15 3.38A3.75 3.75 0 0 1 15.75 18h-1.5" />
+                <g transform="translate(-0.9 0)">
+                  <g transform="translate(12 12) scale(0.82) translate(-12 -12)">
+                    <path d="M9 16.5 12 13.5 15 16.5" />
+                    <path d="M12 13.5v6" />
+                  </g>
+                </g>
+              </svg>
+            </div>
+            <div class="text">
+              <strong>انقر أو أفلت الصور هنا</strong>
+              <span class="muted tiny">الرفع يبدأ تلقائياً، يسمح بأكثر من صورة.</span>
+            </div>
+            <input id="imageFileInput" type="file" accept="image/*" multiple>
+          </label>
+          <div id="imageGalleryPreview" class="thumbs" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+        </div>
+        <div class="field full">
+          <label for="videoFileInput">فيديو الحساب (اختياري)</label>
+          <label id="videoDropZone" class="dropzone" for="videoFileInput">
+            <div class="icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M7.75 18h-1.5A3.75 3.75 0 0 1 2.5 14.25c0-1.78 1.3-3.28 3.02-3.6a4.5 4.5 0 0 1 8.83-1.1 3.75 3.75 0 0 1 5.15 3.38A3.75 3.75 0 0 1 15.75 18h-1.5" />
+                <g transform="translate(-0.9 0)">
+                  <g transform="translate(12 12) scale(0.82) translate(-12 -12)">
+                    <path d="M9 16.5 12 13.5 15 16.5" />
+                    <path d="M12 13.5v6" />
+                  </g>
+                </g>
+              </svg>
+            </div>
+            <div class="text">
+              <strong>انقر أو أفلت الفيديو هنا</strong>
+              <span class="muted tiny">يُسمح بفيديو واحد، الرفع يبدأ تلقائياً.</span>
+            </div>
+            <input id="videoFileInput" type="file" accept="video/*">
+          </label>
+          <div id="videoStatus" class="muted tiny"></div>
+          <div class="progress" id="videoProgress"><div class="bar" id="videoProgressBar"></div></div>
+          <div class="muted tiny" id="videoProgressText" style="display:none;"></div>
+        </div>
+        <div class="actions full">
+          <button class="btn primary" type="submit" id="submitBtn">إرسال للمراجعة</button>
+          <span id="statusMessage" class="muted status"></span>
+        </div>
+      </form>
+    </section>
+  </main>
+  <div id="toast" class="toast" aria-live="polite"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/intlTelInput.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/utils.js"></script>
+  <script src="header.js" defer></script>
+  <script src="loader.js" defer></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBD4zpvsUdygm7KxRYXPDHbotwvf9Y7pOQ",
+      authDomain: "js4accweb.firebaseapp.com",
+      projectId: "js4accweb",
+      storageBucket: "js4accweb.appspot.com",
+      messagingSenderId: "635891162580",
+      appId: "1:635891162580:web:1ee495e5b51f96ab16ca41",
+      measurementId: "G-0Y3LMPBEWJ"
+    };
+    let appInstance = null;
+    try {
+      appInstance = (firebase.apps && firebase.apps.length)
+        ? firebase.app()
+        : firebase.initializeApp(firebaseConfig);
+    } catch (_) {
+      try { appInstance = firebase.app(); } catch {}
+    }
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+    let currentUser = null;
+
+    const form = document.getElementById('reviewRequestForm');
+    const nameInput = document.getElementById('nameInput');
+    const emailInput = document.getElementById('emailInput');
+    const contactInput = document.getElementById('contactInput');
+    const titleInput = document.getElementById('titleInput');
+    const priceInput = document.getElementById('priceInput');
+    const descInput = document.getElementById('descInput');
+    const videoFileInput = document.getElementById('videoFileInput');
+    const videoStatus = document.getElementById('videoStatus');
+    const videoProgress = document.getElementById('videoProgress');
+    const videoProgressBar = document.getElementById('videoProgressBar');
+    const videoProgressText = document.getElementById('videoProgressText');
+    const imageFileInput = document.getElementById('imageFileInput');
+    const imageDropZone = document.getElementById('imageDropZone');
+    const videoDropZone = document.getElementById('videoDropZone');
+    const imageUploadBtn = null; // زر الرفع غير موجود
+    const imageGalleryPreview = document.getElementById('imageGalleryPreview');
+    const statusEl = document.getElementById('statusMessage');
+    const submitBtn = document.getElementById('submitBtn');
+    const toastEl = document.getElementById('toast');
+
+    const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
+    const IMGBB_API_KEY = '2b029ac6f8b085f387494cc99a7e5da7';
+    const storage = firebase.storage();
+    const uploadedImages = [];
+    let uploadedVideoUrl = '';
+    let isImageUploading = false;
+    let isVideoUploading = false;
+    let toastTimer = null;
+
+    function setStatus(text, kind = ''){
+      if (!statusEl) return;
+      statusEl.textContent = text || '';
+      statusEl.className = 'status ' + (kind || '');
+    }
+    function setVideoStatus(text){ if (videoStatus) videoStatus.textContent = text || ''; }
+    function showToast(message){
+      if (!toastEl) return;
+      toastEl.textContent = message || '';
+      toastEl.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(()=>{ toastEl.classList.remove('show'); }, 2000);
+    }
+    function setVideoProgress(pct, active = true){
+      if (!videoProgress || !videoProgressBar) return;
+      const safePct = Math.min(100, Math.max(0, pct || 0));
+      videoProgress.style.display = active ? 'block' : 'none';
+      videoProgressBar.style.width = `${safePct}%`;
+      if (videoProgressText){
+        videoProgressText.style.display = active ? 'block' : 'none';
+        const label = safePct >= 100 ? 'تم الرفع: ' : 'جارٍ الرفع: ';
+        videoProgressText.textContent = active ? `${label}${safePct.toFixed(0)}%` : '';
+      }
+    }
+    function resetVideoProgress(){
+      setVideoProgress(0, false);
+    }
+    function setUploadEnabled(enabled, msg){
+      if (videoFileInput) videoFileInput.disabled = !enabled;
+      if (videoDropZone) {
+        videoDropZone.classList.toggle('disabled', !enabled);
+        videoDropZone.style.opacity = enabled ? '1' : '0.6';
+      }
+      if (!enabled) {
+        setVideoStatus(msg || 'سجّل الدخول لرفع الفيديو.');
+      } else {
+        setVideoStatus('');
+      }
+    }
+
+    function applyPhonePadding(px){
+      if (!contactInput) return;
+      contactInput.style.paddingInlineStart = `${px}px`;
+      contactInput.style.paddingRight = `${px}px`;
+    }
+
+    firebase.auth().onAuthStateChanged((user)=>{
+      currentUser = user;
+      if (user) {
+        if (user.displayName && !nameInput.value) nameInput.value = user.displayName;
+        if (user.email && !emailInput.value) emailInput.value = user.email;
+        prefillProfileFromDB(user);
+        setUploadEnabled(true);
+      } else {
+        setUploadEnabled(false, 'سجّل الدخول بحسابك قبل رفع الفيديو.');
+      }
+    });
+    let contactIti = null;
+    function initPhoneField(){
+      if (!contactInput || !window.intlTelInput) return;
+      try{
+        contactIti = window.intlTelInput(contactInput, {
+          preferredCountries: ['sa','ae','qa','om','eg','sy','jo','kw','bh','iq','tr','ma'],
+          initialCountry: 'sa',
+          utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/utils.js',
+          separateDialCode: true,
+          autoPlaceholder: 'polite'
+        });
+        applyPhonePadding(150);
+      }catch(e){ console.warn('intlTelInput init failed', e); }
+    }
+    initPhoneField();
+
+
+
+    async function prefillProfileFromDB(user){
+      if (!user || !db) return;
+      try{
+        const snap = await db.collection('users').doc(user.uid).get();
+        if (!snap.exists) return;
+        const data = snap.data() || {};
+        const name = data.name || data.fullName || data.displayName;
+        const email = data.email || data.mail;
+        const contactCode = data.contactCode || data.phoneCode;
+        const contactNumber = data.contactNumber || data.phone || data.whatsapp;
+        if (name && !nameInput.value) nameInput.value = name;
+        if (email && !emailInput.value) emailInput.value = email;
+        if (contactInput && contactNumber){
+          const combined = contactCode ? `${contactCode} ${contactNumber}` : contactNumber;
+          if (contactIti && contactIti.setNumber) { contactIti.setNumber(combined); }
+          else { contactInput.value = combined; }
+        }
+      } catch(e){
+        console.warn('prefillProfileFromDB failed', e);
+      }
+    }
+
+    async function uploadImage(file){
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await fetch(`${IMGBB_UPLOAD_URL}?key=${IMGBB_API_KEY}`, { method: 'POST', body: formData });
+      const data = await res.json().catch(()=>null);
+      const imageUrl = data && data.data ? data.data.url : null;
+      if (!res.ok || !(data && data.success) || !imageUrl) {
+        throw new Error('فشل رفع الصورة');
+      }
+      return imageUrl;
+    }
+
+    function renderImages(){
+      if (!imageGalleryPreview) return;
+      if (!uploadedImages.length){
+        imageGalleryPreview.innerHTML = '<p class="muted tiny">لا توجد صور مرفوعة بعد.</p>';
+        return;
+      }
+      imageGalleryPreview.innerHTML = uploadedImages.map(url => `<img src="${url}" style="width:80px;height:80px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,0.12);">`).join('');
+    }
+    renderImages();
+
+    function setDropState(el, state){
+      if (!el) return;
+      el.classList.toggle('hover', state === 'hover');
+      el.classList.toggle('uploading', state === 'uploading');
+    }
+
+    function collectFilesFromEvent(evt){
+      if (!evt || !evt.dataTransfer || !evt.dataTransfer.files) return [];
+      return Array.from(evt.dataTransfer.files);
+    }
+
+    async function uploadSelectedImages(filesOverride){
+      if (isImageUploading) { setStatus('يتم رفع الصور حالياً، يرجى الانتظار', 'error'); return; }
+      const files = filesOverride && filesOverride.length
+        ? Array.from(filesOverride)
+        : (imageFileInput && imageFileInput.files ? Array.from(imageFileInput.files) : []);
+      if (!files.length) return;
+      isImageUploading = true;
+      setDropState(imageDropZone, 'uploading');
+      submitBtn.disabled = true;
+      try {
+        setStatus('جاري رفع الصور...', 'success');
+        for (const f of files){
+          const url = await uploadImage(f);
+          uploadedImages.push(url);
+        }
+        renderImages();
+        setStatus('تم رفع الصور', 'success');
+        showToast('تم رفع الصور');
+        imageFileInput.value = '';
+      } catch (err){
+        setStatus((err && err.message) ? err.message : 'فشل رفع الصور', 'error');
+      } finally {
+        isImageUploading = false;
+        setDropState(imageDropZone, null);
+        submitBtn.disabled = false;
+      }
+    }
+    if (imageFileInput){
+      imageFileInput.addEventListener('change', (e)=> uploadSelectedImages(e.target.files));
+    }
+
+    async function uploadVideo(file, onProgress){
+      if (!file) throw new Error('اختر فيديو أولاً');
+      const MAX_MB = 150;
+      if (file.size > MAX_MB * 1024 * 1024) throw new Error('حجم الفيديو يتجاوز الحد المسموح (150MB)');
+      if (!storage) throw new Error('خدمة التخزين غير متوفرة');
+      if (!currentUser) throw new Error('سجّل الدخول لرفع الفيديو (المستخدم غير مسجّل)');
+      const uid = (currentUser && currentUser.uid) ? currentUser.uid : 'guest';
+      const safeName = file.name || `video-${Date.now()}`;
+      const path = `review-videos/${uid}/${Date.now()}-${safeName}`;
+      return new Promise((resolve, reject)=>{
+        const ref = storage.ref().child(path);
+        const task = ref.put(file);
+        task.on('state_changed', (snap)=>{
+          if (snap && snap.totalBytes && typeof onProgress === 'function') {
+            const pct = (snap.bytesTransferred / snap.totalBytes) * 100;
+            onProgress(pct || 1);
+          }
+        }, (err)=>{
+          reject(new Error(err?.message || 'فشل رفع الفيديو'));
+        }, async ()=>{
+          try{
+            const url = await ref.getDownloadURL();
+            if (typeof onProgress === 'function') onProgress(100);
+            resolve(url);
+          }catch(e){ reject(new Error('تم الرفع لكن لم يتم جلب رابط الفيديو')); }
+        });
+      });
+    }
+
+    async function uploadSelectedVideo(filesOverride){
+      if (isVideoUploading) { setStatus('يتم رفع فيديو حالياً، انتظر الاكتمال', 'error'); return; }
+      const file = filesOverride && filesOverride.length
+        ? filesOverride[0]
+        : (videoFileInput && videoFileInput.files ? videoFileInput.files[0] : null);
+      if (!file) return;
+      isVideoUploading = true;
+      submitBtn.disabled = true;
+      setVideoStatus('جاري رفع الفيديو...');
+      setVideoProgress(0, true);
+      setDropState(videoDropZone, 'uploading');
+      try{
+        const url = await uploadVideo(file, pct => setVideoProgress(pct, true));
+        uploadedVideoUrl = url;
+        setVideoStatus('تم رفع الفيديو بنجاح');
+        setStatus('تم رفع الفيديو', 'success');
+        showToast('تم رفع الفيديو بنجاح');
+        setVideoProgress(100, true);
+        videoFileInput.value = '';
+      }catch(err){
+        console.error('video upload failed', err);
+        const code = err && err.code ? ` (${err.code})` : '';
+        const msg = (err && err.message) ? err.message : 'فشل رفع الفيديو';
+        setStatus(msg, 'error');
+        setVideoStatus('تعذر رفع الفيديو' + code);
+        resetVideoProgress();
+      }finally{
+        isVideoUploading = false;
+        setDropState(videoDropZone, null);
+        submitBtn.disabled = false;
+      }
+    }
+    if (videoFileInput){
+      videoFileInput.addEventListener('change', (e)=> uploadSelectedVideo(e.target.files));
+    }
+
+    function bindDropZone(zoneEl, onFiles){
+      if (!zoneEl || typeof onFiles !== 'function') return;
+      zoneEl.addEventListener('dragover', (e)=>{ e.preventDefault(); setDropState(zoneEl, 'hover'); });
+      zoneEl.addEventListener('dragleave', ()=>setDropState(zoneEl, null));
+      zoneEl.addEventListener('drop', (e)=>{
+        e.preventDefault();
+        const files = collectFilesFromEvent(e);
+        setDropState(zoneEl, null);
+        onFiles(files);
+      });
+    }
+    bindDropZone(imageDropZone, uploadSelectedImages);
+    bindDropZone(videoDropZone, uploadSelectedVideo);
+
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      if (isImageUploading || isVideoUploading){
+        setStatus('انتظر انتهاء الرفع التلقائي للصور/الفيديو', 'error');
+        return;
+      }
+      const name = (nameInput.value || '').trim();
+      const email = (emailInput.value || '').trim();
+      let contactNumber = (contactInput.value || '').trim();
+      let contactCode = '';
+      if (contactIti && contactIti.getSelectedCountryData){
+        const data = contactIti.getSelectedCountryData();
+        if (data && data.dialCode) contactCode = '+' + data.dialCode;
+      }
+      if (!contactCode && contactNumber.startsWith('+')){
+        const match = contactNumber.match(/^(\+\d{1,4})\s*(.*)$/);
+        if (match){ contactCode = match[1]; contactNumber = match[2] || ''; }
+      }
+      const contact = contactCode && contactNumber ? `${contactCode} ${contactNumber}` : contactNumber;
+      const title = (titleInput.value || '').trim();
+      const price = Number(priceInput.value || 0);
+      const description = (descInput.value || '').trim();
+
+      if (!name || !email || !contactCode || !contactNumber || !title || !description || !price || price <= 0) {
+        setStatus('يرجى تعبئة جميع الحقول المطلوبة برقم هاتف مع رمز دولة وسعر صحيح', 'error'); return;
+      }
+      if (!uploadedImages.length){
+        setStatus('يجب رفع صورة واحدة على الأقل', 'error'); return;
+      }
+      // الفيديو اختياري لكن إن تم اختياره يجب رفعه من هنا
+      submitBtn.disabled = true;
+      setStatus('...يتم الإرسال');
+      const publicPayload = {
+        type: 'account',
+        ownerId: currentUser ? currentUser.uid : '',
+        gameId: null,
+        gamePending: true,
+        category: 'other',
+        status: 'pending',
+        title,
+        price,
+        priceUSD: price,
+        description,
+        images: [...uploadedImages],
+        image: uploadedImages[0] || '',
+        video: uploadedVideoUrl || null,
+        createdAt: Date.now(),
+      };
+      if (currentUser) {
+        publicPayload.userId = currentUser.uid;
+      }
+      const privatePayload = {
+        ownerId: currentUser ? currentUser.uid : '',
+        name,
+        email,
+        contact,
+        contactCode,
+        contactNumber,
+        createdAt: Date.now(),
+      };
+      try {
+        const docRef = await db.collection('accounts').add(publicPayload);
+        await db.collection('accountPrivate').doc(docRef.id).set({
+          ...privatePayload,
+          accountId: docRef.id,
+        });
+        setStatus('تم إرسال الطلب وسيتم مراجعته قريبًا', 'success');
+        showToast('تم إرسال الطلب');
+        form.reset();
+        uploadedImages.splice(0, uploadedImages.length);
+        renderImages();
+        uploadedVideoUrl = '';
+        setVideoStatus('');
+        resetVideoProgress();
+        if (currentUser) {
+          if (currentUser.displayName) nameInput.value = currentUser.displayName;
+          if (currentUser.email) emailInput.value = currentUser.email;
+        }
+      } catch (err) {
+        setStatus('تعذر إرسال الطلب، حاول مرة أخرى', 'error');
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
