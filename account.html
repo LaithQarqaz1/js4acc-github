@@ -75,6 +75,7 @@
       <div>
         <h2 id="title"></h2>
         <div class="price" id="price"></div>
+        <div class="muted tiny" id="priceNote" style="display:none;"></div>
         <p class="muted" id="desc"></p>
       </div>
     </section>
@@ -88,6 +89,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script>window.ADMIN_ROUTER_BASE = 'https://js4acc.laithqarqaz1.workers.dev/';</script>
   <script src="header.js" defer></script>
   <script>
     const firebaseConfig = {
@@ -109,6 +111,7 @@
     const gallery = document.getElementById('gallery');
     const titleEl = document.getElementById('title');
     const priceEl = document.getElementById('price');
+    const priceNoteEl = document.getElementById('priceNote');
     const descEl = document.getElementById('desc');
     const downloadBtn = document.getElementById('downloadBtn');
     const copyLinkBtn = document.getElementById('copyLinkBtn');
@@ -121,7 +124,9 @@
     let accountOwnerId = '';
     let accountPrice = 0;
     let currentUser = null;
-    firebase.auth().onAuthStateChanged((u) => { currentUser = u; });
+    let buyerLevel = 'customer';
+    const feesConfig = getDefaultFees();
+    firebase.auth().onAuthStateChanged((u) => { currentUser = u; loadUserLevel().then(refreshPrice); });
 
     const fullOverlay = document.createElement('div');
     fullOverlay.id = 'fullOverlay';
@@ -137,9 +142,47 @@
       if (img){ img.src = src; fullOverlay.style.display = 'flex'; }
     }
 
+    function getDefaultFees(){
+      return { buyerMarkup: { customer: 0, trader: 0, vip: 0 }, sellerFee: 0 };
+    }
+    function normalizeLevel(value){
+      const v = (value || '').toString().trim().toLowerCase();
+      if (!v) return 'customer';
+      if (v.includes('vip')) return 'vip';
+      if (v.includes('تج') || v.includes('trader')) return 'trader';
+      if (v.includes('زب') || v.includes('عميل') || v.includes('customer')) return 'customer';
+      return 'customer';
+    }
+    async function loadUserLevel(){
+      try{
+        if (!currentUser || !db) { buyerLevel = 'customer'; return; }
+        const snap = await db.collection('users').doc(currentUser.uid).get();
+        if (snap && snap.exists){
+          const data = snap.data() || {};
+          buyerLevel = normalizeLevel(data.level || data.type || data.role);
+        }
+      }catch(_){ buyerLevel = 'customer'; }
+    }
+    async function loadFeesConfig(){
+      if (!ADMIN_ROUTER_BASE) return;
+      try{
+        const res = await fetch(`${ADMIN_ROUTER_BASE}/accounts`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ action:'fees:get' })
+        });
+        const data = await res.json().catch(()=>({}));
+        if (res.ok && data?.fees){
+          feesConfig.buyerMarkup.customer = Number(data.fees?.buyerMarkup?.customer) || 0;
+          feesConfig.buyerMarkup.trader = Number(data.fees?.buyerMarkup?.trader) || 0;
+          feesConfig.buyerMarkup.vip = Number(data.fees?.buyerMarkup?.vip) || 0;
+          feesConfig.sellerFee = Number(data.fees?.sellerFee) || 0;
+        }
+      }catch(_){ /* ignore */ }
+    }
+
     const basePriceRef = { value: null };
     function formatPrice(val){
-      basePriceRef.value = val;
       const num = Number(val);
       if (!Number.isFinite(num)) return 'غير محدد';
       if (typeof window.formatCurrencyFromJOD === 'function'){
@@ -147,12 +190,28 @@
       }
       return num.toFixed(2) + ' $';
     }
+    function applyPriceMarkup(base){
+      const pct = Number(feesConfig?.buyerMarkup?.[buyerLevel]) || 0;
+      const final = Math.max(0, Math.round(Number(base || 0) * (1 + pct/100) * 100) / 100);
+      return { pct, final };
+    }
     function refreshPrice(){
       if (basePriceRef.value == null) return;
-      priceEl.textContent = formatPrice(basePriceRef.value);
+      const applied = applyPriceMarkup(basePriceRef.value);
+      priceEl.textContent = formatPrice(applied.final);
+      if (priceNoteEl){
+        if (applied.pct){
+          const lvl = buyerLevel === 'vip' ? 'VIP' : (buyerLevel === 'trader' ? 'تجار' : 'زبائن');
+          priceNoteEl.style.display = 'block';
+          priceNoteEl.textContent = `السعر يشمل زيادة ${applied.pct}% (${lvl})`;
+        } else {
+          priceNoteEl.style.display = 'none';
+          priceNoteEl.textContent = '';
+        }
+      }
       try {
         if (priceEl) {
-          priceEl.dataset.priceUsd = Number(basePriceRef.value);
+          priceEl.dataset.priceUsd = Number(applied.final);
           priceEl.dataset.priceBase = 'USD';
         }
       } catch {}
@@ -206,13 +265,13 @@
         if (!snap.exists){ titleEl.textContent = 'الحساب غير موجود'; return; }
         const data = snap.data() || {};
         titleEl.textContent = data.title || 'حساب';
-        priceEl.textContent = data.price != null ? formatPrice(data.price) : '';
-        try {
-          if (priceEl && data.price != null) {
-            priceEl.dataset.priceUsd = Number(data.price);
-            priceEl.dataset.priceBase = 'USD';
-          }
-        } catch {}
+        if (data.price != null) {
+          basePriceRef.value = data.price;
+          refreshPrice();
+        } else {
+          priceEl.textContent = '';
+          if (priceNoteEl){ priceNoteEl.style.display = 'none'; priceNoteEl.textContent = ''; }
+        }
         descEl.textContent = data.description || 'لا يوجد وصف.';
         accountOwnerId = data.ownerId || '';
         accountPrice = Number(data.price || data.priceUSD || 0);
@@ -313,6 +372,8 @@
     window.addEventListener('currency:change', refreshPrice);
     window.addEventListener('currency:rates:change', refreshPrice);
 
+    loadFeesConfig().then(refreshPrice);
+    loadUserLevel().then(refreshPrice);
     loadAccount();
   </script>
 </body>

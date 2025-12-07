@@ -944,8 +944,8 @@ header.appendChild(hamburger);
 
 // Logo
 const logo = document.createElement('img');
-logo.src = 'store.gif';
-logo.alt = 'متجر زعيم';
+logo.src = 'emp.png';
+logo.alt = 'متجر js';
 logo.className = 'header-logo';
 logo.setAttribute('fetchpriority','high');
 logo.loading = 'eager';
@@ -1270,6 +1270,13 @@ walletLi.innerHTML = '<i class="fas fa-wallet"></i><a href="#">محفظتي</a>'
 walletLi.onclick = () => navigateHomeHash('#/wallet','wallet');
 walletLi.style.display = 'none';
 ul.appendChild(walletLi);
+// سحب الأموال
+const withdrawLi = document.createElement('li');
+withdrawLi.id = 'withdrawBtn';
+withdrawLi.innerHTML = '<i class="fa-solid fa-money-bill-transfer"></i><a href="#">سحب الأموال</a>';
+withdrawLi.onclick = () => navigateTo('sahb.html');
+withdrawLi.style.display = 'none';
+ul.appendChild(withdrawLi);
 // تحويل الرصيد
 const transferLi = document.createElement('li');
 transferLi.id = 'transferBtn';
@@ -1380,6 +1387,7 @@ try {
     const loginBtn = document.getElementById('loginSidebarBtn');
     const depositBtn = document.getElementById('depositBtn');
     const walletBtn = document.getElementById('walletBtn');
+    const withdrawBtn = document.getElementById('withdrawBtn');
     const transferBtn = document.getElementById('transferBtn');
     const settingsBtn = document.getElementById('settingsBtn');
     const logoutBtn = document.getElementById('logoutBtn');
@@ -1391,6 +1399,7 @@ try {
       if (loginBtn) loginBtn.style.display = 'none';
       if (depositBtn) depositBtn.style.display = 'flex';
       if (walletBtn) walletBtn.style.display = 'flex';
+      if (withdrawBtn) withdrawBtn.style.display = 'flex';
       if (transferBtn) transferBtn.style.display = 'flex';
       if (settingsBtn) settingsBtn.style.display = 'flex';
       if (logoutBtn) logoutBtn.style.display = 'flex';
@@ -1413,6 +1422,7 @@ try {
       if (loginBtn) loginBtn.style.display = 'flex';
       if (depositBtn) depositBtn.style.display = 'none';
       if (walletBtn) walletBtn.style.display = 'none';
+      if (withdrawBtn) withdrawBtn.style.display = 'none';
       if (transferBtn) transferBtn.style.display = 'none';
       if (settingsBtn) settingsBtn.style.display = 'none';
       if (logoutBtn) logoutBtn.style.display = 'none';

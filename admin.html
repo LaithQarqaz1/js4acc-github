@@ -11,6 +11,10 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="loader.css">
   <style>
+    .admin-tabs{display:flex;flex-wrap:wrap;gap:10px;margin:20px auto 12px;justify-content:center;}
+    .admin-tab-btn{padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:#e6edff;font-weight:700;cursor:pointer;transition:.2s;min-width:120px;text-align:center;}
+    .admin-tab-btn.active{background:linear-gradient(135deg,#2f74e4,#3f86ff);border-color:transparent;color:#fff;box-shadow:0 10px 24px rgba(47,116,228,0.35);}
+    .admin-tab-btn:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(0,0,0,0.28);}
     .account-group-admin{margin:0 0 18px;padding:16px;border:1px solid rgba(255,255,255,0.08);border-radius:18px;background:linear-gradient(145deg,rgba(255,255,255,0.05),rgba(255,255,255,0.01));box-shadow:0 16px 40px rgba(0,0,0,0.35)}
     .account-group-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
     .account-grid-admin{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
@@ -108,8 +112,46 @@
   <div id="headerContainer"></div>
   <div id="sidebar"></div>
 
-  <main class="container">
-    <section id="admin-panel" class="panel">
+  <section id="admin-auth" class="panel" style="max-width:640px;margin:20px auto;display:none;">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">تسجيل دخول الأدمن</p>
+        <h2>هذا القسم متاح للأدمن فقط</h2>
+      </div>
+    </div>
+    <form id="adminAuthForm" class="grid two">
+      <div class="field">
+        <label for="adminAuthEmail">البريد الإلكتروني</label>
+        <input id="adminAuthEmail" type="email" placeholder="admin@example.com" required>
+      </div>
+      <div class="field">
+        <label for="adminAuthPassword">كلمة المرور</label>
+        <input id="adminAuthPassword" type="password" placeholder="••••••••" required>
+      </div>
+      <div class="field submit full">
+        <button class="btn primary" type="submit">تسجيل الدخول كأدمن</button>
+        <p class="tiny muted" id="adminAuthStatus">يجب استخدام حساب أدمن مخوّل للوصول.</p>
+      </div>
+    </form>
+  </section>
+
+  <div class="admin-tabs" id="adminTabNav" style="display:none;">
+    <button class="admin-tab-btn" data-admin-tab="review">المراجعة</button>
+    <button class="admin-tab-btn" data-admin-tab="manage">إدارة الإعلانات</button>
+    <button class="admin-tab-btn" data-admin-tab="add">إضافة حساب</button>
+    <button class="admin-tab-btn" data-admin-tab="categories">الأقسام</button>
+    <button class="admin-tab-btn" data-admin-tab="methods">طرق الدفع</button>
+    <button class="admin-tab-btn" data-admin-tab="withdraw-methods">طرق السحب</button>
+    <button class="admin-tab-btn" data-admin-tab="currencies">العملات</button>
+    <button class="admin-tab-btn" data-admin-tab="fees">الرسوم</button>
+    <button class="admin-tab-btn" data-admin-tab="levels">ترقية رتبة</button>
+    <button class="admin-tab-btn" data-admin-tab="purchases">المشتريات</button>
+    <button class="admin-tab-btn" data-admin-tab="topups">طلبات الايداع</button>
+    <button class="admin-tab-btn" data-admin-tab="withdraw">طلبات السحب</button>
+  </div>
+
+  <main id="adminMain" class="container">
+    <section id="admin-panel" class="panel admin-section" data-admin-section="review">
       <div class="panel-header">
         <div>
           <p class="eyebrow">المراجعة</p>
@@ -125,7 +167,7 @@
       <div id="adminList" class="cards"></div>
     </section>
 
-    <section id="admin-manage" class="panel">
+    <section id="admin-manage" class="panel admin-section" data-admin-section="manage">
       <div class="panel-header">
         <div>
           <p class="eyebrow">إدارة الإعلانات</p>
@@ -144,7 +186,7 @@
       <div id="adminManageList" class="manage-grid"></div>
     </section>
 
-    <section id="admin-categories" class="panel">
+    <section id="admin-categories" class="panel admin-section" data-admin-section="categories">
       <div class="panel-header">
         <div>
           <p class="eyebrow">الأقسام</p>
@@ -164,7 +206,7 @@
       <div id="categoryAdminList" class="category-list"></div>
     </section>
 
-    <section id="admin-add-accounts" class="panel">
+    <section id="admin-add-accounts" class="panel admin-section" data-admin-section="add">
       <div class="panel-header">
         <div>
           <p class="eyebrow">إضافة حساب</p>
@@ -212,7 +254,7 @@
       </form>
     </section>
 
-    <section id="admin-methods" class="panel">
+    <section id="admin-methods" class="panel admin-section" data-admin-section="methods">
       <div class="panel-header">
         <div>
           <p class="eyebrow">طرق الدفع</p>
@@ -249,7 +291,52 @@
       <div id="methodAdminList" class="cards"></div>
     </section>
 
-    <section id="admin-currencies" class="panel">
+    <section id="admin-withdraw-methods" class="panel admin-section" data-admin-section="withdraw-methods">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">طرق السحب</p>
+          <h2>إضافة/حذف طرق السحب</h2>
+        </div>
+      </div>
+      <p class="muted">أدخل دولة السحب، اسم الطريقة، العملة، وسعر الصرف (1 USD → العملة أو 1 JOD → العملة).</p>
+      <form id="withdrawMethodForm" class="grid three">
+        <div class="field">
+          <label for="withdrawCountryIdInput">رمز الدولة</label>
+          <input id="withdrawCountryIdInput" type="text" placeholder="مثال: SA / UAE" required>
+        </div>
+        <div class="field">
+          <label for="withdrawCountryNameInput">اسم الدولة</label>
+          <input id="withdrawCountryNameInput" type="text" placeholder="السعودية / الإمارات" required>
+        </div>
+        <div class="field">
+          <label for="withdrawMethodNameInput">اسم الطريقة</label>
+          <input id="withdrawMethodNameInput" type="text" placeholder="تحويل بنكي / STC Pay" required>
+        </div>
+        <div class="field">
+          <label for="withdrawCurrencyInput">العملة</label>
+          <input id="withdrawCurrencyInput" type="text" placeholder="USD / SAR / AED" maxlength="6" required>
+        </div>
+        <div class="field">
+          <label for="withdrawRateUsdInput">سعر 1 USD</label>
+          <input id="withdrawRateUsdInput" type="number" step="0.0001" placeholder="مثال: 3.75">
+        </div>
+        <div class="field">
+          <label for="withdrawRateJodInput">سعر 1 JOD (اختياري)</label>
+          <input id="withdrawRateJodInput" type="number" step="0.0001" placeholder="للتوافق مع جوردان">
+        </div>
+        <div class="field full">
+          <label for="withdrawMethodNoteInput">ملاحظات</label>
+          <input id="withdrawMethodNoteInput" type="text" placeholder="تعليمات إضافية أو وصف الحساب المستلم">
+        </div>
+        <div class="field submit full">
+          <button class="btn primary" type="submit">حفظ طريقة السحب</button>
+          <p class="tiny muted">تظهر الطريقة فوراً للمستخدمين.</p>
+        </div>
+      </form>
+      <div id="withdrawMethodsList" class="cards"></div>
+    </section>
+
+    <section id="admin-currencies" class="panel admin-section" data-admin-section="currencies">
       <div class="panel-header">
         <div>
           <p class="eyebrow">العملات</p>
@@ -278,7 +365,66 @@
       <div id="currencyAdminList" class="cards"></div>
     </section>
 
-    <section id="admin-purchases" class="panel">
+    <section id="admin-fees" class="panel admin-section" data-admin-section="fees">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">الرسوم</p>
+          <h2>ضبط نسب الأسعار والعمولة</h2>
+        </div>
+      </div>
+      <p class="muted">زيادات نسبية تطبق على المشتري حسب المستوى، مع عمولة تخصم من البائع عند تحرير الأرباح.</p>
+      <form id="feesForm" class="grid two">
+        <div class="field">
+          <label for="feeCustomerInput">زيادة الزبائن (%)</label>
+          <input id="feeCustomerInput" type="number" min="0" max="100" step="0.1" placeholder="0">
+        </div>
+        <div class="field">
+          <label for="feeTraderInput">زيادة التجار (%)</label>
+          <input id="feeTraderInput" type="number" min="0" max="100" step="0.1" placeholder="0">
+        </div>
+        <div class="field">
+          <label for="feeVipInput">زيادة VIP (%)</label>
+          <input id="feeVipInput" type="number" min="0" max="100" step="0.1" placeholder="0">
+        </div>
+        <div class="field">
+          <label for="feeSellerInput">عمولة البائع عند الصرف (%)</label>
+          <input id="feeSellerInput" type="number" min="0" max="100" step="0.1" placeholder="0">
+        </div>
+        <div class="field submit full">
+          <button class="btn primary" type="submit">حفظ النسب</button>
+          <p class="tiny muted">يتم تطبيق التغييرات فوراً على الأسعار المعروضة وعمولات البيع.</p>
+        </div>
+      </form>
+    </section>
+
+    <section id="admin-levels" class="panel admin-section" data-admin-section="levels">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">الرتب</p>
+          <h2>ترقية/تخفيض رتبة مستخدم عبر WebUID</h2>
+        </div>
+      </div>
+      <form id="levelForm" class="grid two">
+        <div class="field">
+          <label for="levelWebuidInput">WebUID</label>
+          <input id="levelWebuidInput" type="text" placeholder="مثال: abc123..." required>
+        </div>
+        <div class="field">
+          <label for="levelSelect">الرتبة</label>
+          <select id="levelSelect" required>
+            <option value="customer">زبون</option>
+            <option value="trader">تاجر</option>
+            <option value="vip">VIP</option>
+          </select>
+        </div>
+        <div class="field submit full">
+          <button class="btn primary" type="submit">حفظ الرتبة</button>
+          <p class="tiny muted">يتم تحديث الرتبة فوراً.</p>
+        </div>
+      </form>
+    </section>
+
+    <section id="admin-purchases" class="panel admin-section" data-admin-section="purchases">
       <div class="panel-header">
         <div>
           <p class="eyebrow">طلبات شراء الحسابات</p>
@@ -288,7 +434,7 @@
       <div id="adminPurchasesList" class="cards"></div>
     </section>
 
-    <section id="admin-topups" class="panel">
+    <section id="admin-topups" class="panel admin-section" data-admin-section="topups">
       <div class="panel-header">
         <div>
           <p class="eyebrow">طلبات الشحن</p>
@@ -297,12 +443,23 @@
       </div>
       <div id="adminTopupsList" class="cards"></div>
     </section>
+
+    <section id="admin-withdraw" class="panel admin-section" data-admin-section="withdraw">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">السحب</p>
+          <h2>طلبات السحب النقدي</h2>
+        </div>
+      </div>
+      <div id="adminWithdrawList" class="cards"></div>
+    </section>
   </main>
 
   <div id="toast" class="toast hidden"></div>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
+  <script>window.ADMIN_ROUTER_BASE = 'https://js4acc.laithqarqaz1.workers.dev/';</script>
   <script src="loader.js" defer></script>
   <script src="header.js"></script>
   <script src="app.js"></script>

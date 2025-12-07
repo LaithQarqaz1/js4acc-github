@@ -90,6 +90,7 @@
     button.btn.primary:disabled{opacity:0.65;cursor:not-allowed;box-shadow:none;transform:none;}
     .muted{color:#9aa6c8;}
     .tiny{font-size:12px;}
+    .price-preview{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px 12px;margin-top:6px;color:#e6edff;display:grid;gap:8px;}
     .status{font-size:0.95rem;}
     .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#0f1628;color:#e6edff;padding:12px 16px;border-radius:12px;box-shadow:0 10px 24px rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;}
     .toast.show{opacity:1;transform:translate(-50%,0);}
@@ -189,12 +190,22 @@
         </div>
         <div class="field">
           <label for="titleInput">عنوان الحساب</label>
-          <input id="titleInput" type="text" placeholder="مثال: حساب ملكي لفل 90" required>
+      <input id="titleInput" type="text" placeholder="مثال: حساب ملكي لفل 90" required>
+    </div>
+    <div class="field">
+      <label for="priceInput">السعر</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <input id="priceInput" type="text" inputmode="decimal" step="0.01" min="0.01" placeholder="أدخل السعر" style="flex:1 1 220px;" required>
+      </div>
+      <div id="pricePreview" class="price-preview tiny" style="display:grid;gap:6px;margin-top:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span>سعر المشتري بعد نسبة المتجر</span><strong id="buyerPriceTxt">—</strong>
         </div>
-        <div class="field">
-          <label for="priceInput">السعر (بالدولار)</label>
-          <input id="priceInput" type="number" step="0.01" min="0.01" placeholder="120.00" required>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span>صافي البائع بعد عمولته</span><strong id="sellerPriceTxt">—</strong>
         </div>
+      </div>
+    </div>
         <div class="field full">
           <label for="descInput">وصف الحساب</label>
           <textarea id="descInput" placeholder="تفاصيل الحساب والمميزات" required></textarea>
@@ -262,6 +273,7 @@
   <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/utils.js"></script>
   <script src="header.js" defer></script>
   <script src="loader.js" defer></script>
+  <script>window.ADMIN_ROUTER_BASE = 'https://js4acc.laithqarqaz1.workers.dev/';</script>
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyBD4zpvsUdygm7KxRYXPDHbotwvf9Y7pOQ",
@@ -299,11 +311,22 @@
     const imageFileInput = document.getElementById('imageFileInput');
     const imageDropZone = document.getElementById('imageDropZone');
     const videoDropZone = document.getElementById('videoDropZone');
-    const imageUploadBtn = null; // زر الرفع غير موجود
     const imageGalleryPreview = document.getElementById('imageGalleryPreview');
     const statusEl = document.getElementById('statusMessage');
     const submitBtn = document.getElementById('submitBtn');
     const toastEl = document.getElementById('toast');
+    const pricePreview = document.getElementById('pricePreview');
+    let buyerPriceTxt = document.getElementById('buyerPriceTxt');
+    let sellerPriceTxt = document.getElementById('sellerPriceTxt');
+    const legacyRateHint = document.getElementById('rateHint');
+    if (legacyRateHint) legacyRateHint.remove();
+    // إزالة أي حقل قديم للعرض السعري
+    ['priceConverted','pricePreviewOld','priceConvertedWrap','pricePreviewLegacy'].forEach((id)=>{
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    });
+    document.querySelectorAll('.price-preview-old,.price-preview-single').forEach((el)=> el.remove());
+    let lastParsedPrice = 0;
 
     const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
     const IMGBB_API_KEY = '2b029ac6f8b085f387494cc99a7e5da7';
@@ -313,6 +336,9 @@
     let isImageUploading = false;
     let isVideoUploading = false;
     let toastTimer = null;
+    let feesConfig = { buyerMarkup: { customer: 0 }, sellerFee: 0 };
+    let currencyRates = { USD: { code:'USD', symbol:'$', rate:1 } };
+    let currentCurrency = 'USD';
 
     function setStatus(text, kind = ''){
       if (!statusEl) return;
@@ -354,6 +380,130 @@
       }
     }
 
+    function applyPriceMarkup(baseUSD){
+      const pct = Number(feesConfig?.buyerMarkup?.customer) || 0;
+      const final = Math.max(0, Math.round(Number(baseUSD || 0) * (1 + pct/100) * 100) / 100);
+      return { pct, final }; // final in USD
+    }
+
+    function getCurrencyMap(){
+      const map = {};
+      Object.keys(currencyRates || {}).forEach((k)=>{ map[k.toUpperCase()] = currencyRates[k]; });
+      return map;
+    }
+    function getRate(code){
+      const map = getCurrencyMap();
+      const entry = map[code?.toUpperCase()] || map.USD;
+      const rate = Number(entry?.rate) || 0;
+      return rate > 0 ? rate : 1;
+    }
+    function formatCurrency(val, code){
+      const map = getCurrencyMap();
+      const entry = map[code?.toUpperCase()] || {};
+      const symbol = entry.symbol || code || '';
+      const num = Number(val);
+      if (!Number.isFinite(num)) return 'غير محدد';
+      const fixed = Math.round(num * 100) / 100;
+      return `${fixed.toFixed(2)} ${symbol}`;
+    }
+
+    function parsePriceValue(inputEl){
+      if (!inputEl) return 0;
+      const rawOriginal = (inputEl.value || '').toString();
+      if (!rawOriginal.trim()) return 0;
+      // تحويل الأرقام العربية/الفارسية وإزالة أي رموز غير رقمية
+      const normalizedDigits = rawOriginal.replace(/[\u0660-\u0669\u06F0-\u06F9]/g, (d) => {
+        const code = d.charCodeAt(0);
+        if (code >= 0x0660 && code <= 0x0669) return String(code - 0x0660);
+        if (code >= 0x06F0 && code <= 0x06F9) return String(code - 0x06F0);
+        return d;
+      });
+      // استبدال الفاصلة العربية/الإنجليزية بنقطة عشرية، وإزالة فواصل الآلاف
+      const normalizedDecimal = normalizedDigits.replace(/[٫٬،]/g, '.').replace(/,/g, '');
+      // احتفظ بأول علامة سالب وأول نقطة فقط
+      let cleaned = '';
+      let hasDot = false;
+      for (let i = 0; i < normalizedDecimal.length; i++) {
+        const ch = normalizedDecimal[i];
+        if (ch === '-' && i === 0) { cleaned += ch; continue; }
+        if (ch === '.') {
+          if (hasDot) continue;
+          hasDot = true;
+          cleaned += '.';
+          continue;
+        }
+        if (/[0-9]/.test(ch)) cleaned += ch;
+      }
+      const num = Number.parseFloat(cleaned);
+      return Number.isFinite(num) ? num : 0;
+    }
+
+    function hasDigits(str){
+      return /[0-9\u0660-\u0669\u06F0-\u06F9]/.test(str || '');
+    }
+
+    const ensurePricePreviewStructure = () => {
+      if (!pricePreview) return;
+      const hasBuyer = pricePreview.querySelector('#buyerPriceTxt');
+      const hasSeller = pricePreview.querySelector('#sellerPriceTxt');
+      if (hasBuyer && hasSeller) {
+        buyerPriceTxt = hasBuyer;
+        sellerPriceTxt = hasSeller;
+        pricePreview.style.display = 'grid';
+        return;
+      }
+      pricePreview.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span>سعر المشتري بعد نسبة المتجر</span><strong id="buyerPriceTxt">—</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span>صافي البائع بعد عمولته</span><strong id="sellerPriceTxt">—</strong>
+        </div>
+      `;
+      buyerPriceTxt = pricePreview.querySelector('#buyerPriceTxt');
+      sellerPriceTxt = pricePreview.querySelector('#sellerPriceTxt');
+      pricePreview.style.display = 'grid';
+    };
+    // راقب أي تعديل خارجي وأعد بناء الهيكل فقط
+    if (pricePreview) {
+      const obs = new MutationObserver(() => {
+        ensurePricePreviewStructure();
+      });
+      obs.observe(pricePreview, { childList: true, subtree: false });
+    }
+
+    function renderPricePreview(){
+      ensurePricePreviewStructure();
+      const price = parsePriceValue(priceInput);
+      const currencyCode = (currentCurrency || 'USD').toUpperCase();
+      let rate = getRate(currencyCode); // 1 USD = rate currency
+      if (!rate || rate <= 0) rate = 1;
+      if (!pricePreview) return;
+      // اعتمد على آخر قيمة صحيحة إذا كان هناك أرقام لكن التحويل لم ينجح
+      if (price > 0) {
+        lastParsedPrice = price;
+      } else {
+        const raw = (priceInput && priceInput.value) ? priceInput.value.toString() : '';
+        if (hasDigits(raw) && lastParsedPrice > 0) price = lastParsedPrice;
+      }
+      // نحسب بالدولار ثم نعرض فقط بالعملة المختارة
+      const baseUSD = price / rate;
+      const applied = applyPriceMarkup(baseUSD);
+      const finalCurrency = applied.final * rate;
+      const sellerPct = Number(feesConfig?.sellerFee) || 0;
+      const sellerNetCurrency = (baseUSD * (1 - sellerPct/100)) * rate;
+
+      const buyerText = price > 0
+        ? `${formatCurrency(finalCurrency, currencyCode)}${applied.pct ? ` (+${applied.pct}% عمولة المتجر)` : ''}`
+        : '—';
+      const sellerText = price > 0
+        ? `${formatCurrency(sellerNetCurrency, currencyCode)}${sellerPct ? ` (${sellerPct}% خصم)` : ''}`
+        : '—';
+
+      if (buyerPriceTxt) buyerPriceTxt.textContent = buyerText;
+      if (sellerPriceTxt) sellerPriceTxt.textContent = sellerText;
+    }
+
     function applyPhonePadding(px){
       if (!contactInput) return;
       contactInput.style.paddingInlineStart = `${px}px`;
@@ -370,6 +520,7 @@
       } else {
         setUploadEnabled(false, 'سجّل الدخول بحسابك قبل رفع الفيديو.');
       }
+      renderPricePreview();
     });
     let contactIti = null;
     function initPhoneField(){
@@ -384,6 +535,86 @@
         });
         applyPhonePadding(150);
       }catch(e){ console.warn('intlTelInput init failed', e); }
+    }
+
+    async function loadFees(){
+      if (!window.ADMIN_ROUTER_BASE) { renderPricePreview(); return; }
+      try{
+        const res = await fetch(`${window.ADMIN_ROUTER_BASE}/accounts`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ action:'fees:get' })
+        });
+        const data = await res.json().catch(()=>({}));
+        if (res.ok && data?.fees){
+          feesConfig = {
+            buyerMarkup: {
+              customer: Number(data.fees?.buyerMarkup?.customer) || 0,
+              trader: Number(data.fees?.buyerMarkup?.trader) || 0,
+              vip: Number(data.fees?.buyerMarkup?.vip) || 0,
+            },
+            sellerFee: Number(data.fees?.sellerFee) || 0
+          };
+        }
+      }catch(_){
+        // حافظ على القيم الافتراضية إذا تعذر الجلب
+      }
+      renderPricePreview();
+    }
+
+    async function loadCurrencies(){
+      const applyRates = (map)=> {
+        map.USD = map.USD || { code:'USD', symbol:'$', rate:1 };
+        currencyRates = map;
+        try {
+          const saved = localStorage.getItem('currency:selected');
+          if (saved && map[saved.toUpperCase()]) currentCurrency = saved.toUpperCase();
+          else if (map.JOD) currentCurrency = 'JOD';
+          else currentCurrency = 'USD';
+        } catch(_){
+          currentCurrency = map.JOD ? 'JOD' : 'USD';
+        }
+        renderPricePreview();
+      };
+      // حاول من الراوتر أولاً
+      if (window.ADMIN_ROUTER_BASE) {
+        try{
+          const res = await fetch(`${window.ADMIN_ROUTER_BASE}/accounts`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ action:'public:snapshot' })
+          });
+          const data = await res.json().catch(()=>({}));
+          if (res.ok && Array.isArray(data?.currencies)) {
+            const map = {};
+            data.currencies.forEach((c)=>{
+              if (!c || !c.code) return;
+              map[c.code.toUpperCase()] = {
+                code: c.code.toUpperCase(),
+                symbol: c.symbol || c.code.toUpperCase(),
+                rate: Number(c.rate) || 0
+              };
+            });
+            applyRates(map);
+            return;
+          }
+        }catch(_){}
+      }
+      // fallback: حاول من الكاش المخزن في المتصفح (يضعه header.js عادة)
+      try{
+        const cached = localStorage.getItem('currency:rates:cache');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && parsed.map) {
+            const map = {};
+            Object.keys(parsed.map).forEach((k)=>{ map[k.toUpperCase()] = parsed.map[k]; });
+            applyRates(map);
+            return;
+          }
+        }
+      }catch(_){}
+      // fallback نهائي
+      applyRates({ USD: { code:'USD', symbol:'$', rate:1 } });
     }
     initPhoneField();
 
@@ -554,6 +785,24 @@
     bindDropZone(imageDropZone, uploadSelectedImages);
     bindDropZone(videoDropZone, uploadSelectedVideo);
 
+    const reRender = () => {
+      renderPricePreview();
+      requestAnimationFrame(renderPricePreview);
+      setTimeout(renderPricePreview, 0);
+    };
+    ['input','change','keyup','blur','paste','focus'].forEach((ev)=> priceInput.addEventListener(ev, reRender));
+    // استمع لتغيير العملة في الموقع
+    try {
+      window.addEventListener('currency:change', (e) => {
+        const code = (e.detail && e.detail.code) ? e.detail.code.toUpperCase() : null;
+        if (code) currentCurrency = code;
+        renderPricePreview();
+      });
+    } catch(_){}
+    loadCurrencies();
+    loadFees();
+    renderPricePreview();
+
     form.addEventListener('submit', async (e)=>{
       e.preventDefault();
       if (isImageUploading || isVideoUploading){
@@ -574,10 +823,13 @@
       }
       const contact = contactCode && contactNumber ? `${contactCode} ${contactNumber}` : contactNumber;
       const title = (titleInput.value || '').trim();
-      const price = Number(priceInput.value || 0);
+      const priceEntered = parsePriceValue(priceInput);
+      const currencyCode = (currentCurrency || 'USD').toUpperCase();
+      const rate = getRate(currencyCode);
+      const baseUSD = priceEntered / rate;
       const description = (descInput.value || '').trim();
 
-      if (!name || !email || !contactCode || !contactNumber || !title || !description || !price || price <= 0) {
+      if (!name || !email || !contactCode || !contactNumber || !title || !description || !priceEntered || priceEntered <= 0) {
         setStatus('يرجى تعبئة جميع الحقول المطلوبة برقم هاتف مع رمز دولة وسعر صحيح', 'error'); return;
       }
       if (!uploadedImages.length){
@@ -586,6 +838,8 @@
       // الفيديو اختياري لكن إن تم اختياره يجب رفعه من هنا
       submitBtn.disabled = true;
       setStatus('...يتم الإرسال');
+      const priceApplied = applyPriceMarkup(baseUSD);
+      const sellerFeePct = Number(feesConfig?.sellerFee) || 0;
       const publicPayload = {
         type: 'account',
         ownerId: currentUser ? currentUser.uid : '',
@@ -594,8 +848,13 @@
         category: 'other',
         status: 'pending',
         title,
-        price,
-        priceUSD: price,
+        price: baseUSD,
+        priceUSD: baseUSD,
+        basePriceUSD: baseUSD,
+        priceCurrency: priceEntered,
+        priceCurrencyCode: currencyCode,
+        buyerMarkupPct: priceApplied.pct,
+        sellerFeePct,
         description,
         images: [...uploadedImages],
         image: uploadedImages[0] || '',
@@ -628,6 +887,7 @@
         uploadedVideoUrl = '';
         setVideoStatus('');
         resetVideoProgress();
+        renderPricePreview();
         if (currentUser) {
           if (currentUser.displayName) nameInput.value = currentUser.displayName;
           if (currentUser.email) emailInput.value = currentUser.email;

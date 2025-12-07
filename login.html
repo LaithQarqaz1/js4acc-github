@@ -23,6 +23,7 @@
 <link href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/css/intlTelInput.min.css" rel="stylesheet"/>
 <link rel="stylesheet" href="loader.css">
 <script src="loader.js" defer></script>
+<script>window.ADMIN_ROUTER_BASE = 'https://js4acc.laithqarqaz1.workers.dev/';</script>
 <style>
   :root{
     --bg-start:#eff6ff;         /* blue-50 */
@@ -1839,7 +1840,6 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import {
     getAuth,
-    signInWithCustomToken,
     sendEmailVerification,
     sendPasswordResetEmail,
     signOut,
@@ -1861,15 +1861,15 @@
   try { console.info("manual auth module init"); } catch (_) {}
 
   /* 🔧 إعداد مشروعك */
-  const firebaseConfig = {
-          apiKey:"AIzaSyBD4zpvsUdygm7KxRYXPDHbotwvf9Y7pOQ",
-          authDomain:"js4accweb.firebaseapp.com",
-          projectId:"js4accweb",
-          storageBucket:"js4accweb.firebasestorage.app",
-          messagingSenderId:"635891162580",
-          appId:"1:635891162580:web:1ee495e5b51f96ab16ca41",
-          measurementId:"G-0Y3LMPBEWJ"
-        };
+const firebaseConfig = {
+  apiKey: "AIzaSyBD4zpvsUdygm7KxRYXPDHbotwvf9Y7pOQ",
+  authDomain: "js4accweb.firebaseapp.com",
+  projectId: "js4accweb",
+  storageBucket: "js4accweb.firebasestorage.app",
+  messagingSenderId: "635891162580",
+  appId: "1:635891162580:web:1ee495e5b51f96ab16ca41",
+  measurementId: "G-0Y3LMPBEWJ"
+};
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
@@ -2388,20 +2388,37 @@
       const networkReady = await ensureNetworkHealthy(loginError);
       if (!networkReady) return;
 
+      // تحقق من بيانات الاعتماد عبر Firebase مباشرة (المفتاح الصحيح للمشروع)
       const cred = await signInWithEmailAndPassword(auth, email, password);
       const user = cred.user;
+      const idToken = await getIdToken(user, true);
+
+      // مزامنة مع خادم المانوال لإنشاء/تحديث الوثيقة وتوليد sessionKey
+      const syncResult = await callManualAuth("sync", {
+        idToken,
+        email,
+        username: user.displayName || "",
+        phone: ""
+      }, loginError);
+      const sessionKey = syncResult.sessionKey || "";
+      const ttlSeconds = Number(syncResult.ttlSeconds) || 0;
+      if (sessionKey) saveSessionLocal({ uid: user.uid, sessionKey, ts: Date.now(), ttlSeconds });
+
       const allowed = await assertNotBanned(user.uid, loginError);
       if (!allowed) { await signOut(auth).catch(() => {}); return; }
-      if (!user.emailVerified) {
+
+      const isVerified = syncResult.emailVerified === true || user.emailVerified;
+
+      if (!isVerified) {
         document.getElementById('unverifiedEmailModal').classList.remove('hidden');
         return;
       }
-      const idToken = await getIdToken(user, true);
+
       savePostLoginPayload({
         uid: user.uid,
         email: user.email,
         token: idToken,
-        sessionKey: ''
+        sessionKey
       });
       window.location.href = "index.html";
     } catch (err) {
@@ -2548,19 +2565,24 @@
       const networkReady = await ensureNetworkHealthy(msg);
       if (!networkReady) return;
 
+      // أنشئ الحساب على Firebase مباشرة ثم زامن مع خادم المانوال
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       const user = cred.user;
       try { await updateProfile(user, { displayName: username }); } catch (_) {}
-      try {
-        await setDoc(doc(db, 'users', user.uid), {
-          username,
-          phone,
-          email,
-          provider: 'password',
-          createdAt: Date.now()
-        }, { merge: true });
-      } catch (_) {}
-      try { await sendEmailVerification(user); } catch (_) {}
+      const idToken = await getIdToken(user, true);
+
+      const syncResult = await callManualAuth("sync", {
+        idToken,
+        username,
+        phone,
+        email,
+        displayName: username
+      }, msg);
+      const sessionKey = syncResult.sessionKey || "";
+      const ttlSeconds = Number(syncResult.ttlSeconds) || 0;
+      if (sessionKey) {
+        saveSessionLocal({ uid: user.uid, sessionKey, ts: Date.now(), ttlSeconds });
+      }
 
       const allowed = await assertNotBanned(user.uid, msg);
       if (!allowed) {
@@ -2568,12 +2590,20 @@
         return;
       }
 
-      const idToken = await getIdToken(user, true);
+      const isVerified = syncResult.emailVerified === true || user.emailVerified;
+      if (!isVerified) {
+        try { await sendEmailVerification(user); } catch (_) {}
+        msg.style.color = "var(--success, #22c55e)";
+        msg.textContent = "تم إرسال رسالة تأكيد إلى بريدك الإلكتروني.";
+        showModal("emailVerificationModal");
+        return;
+      }
+
       savePostLoginPayload({
         uid: user.uid,
         email: user.email,
         token: idToken,
-        sessionKey: ''
+        sessionKey
       });
       msg.style.color = "var(--success, #22c55e)";
       msg.textContent = "تم إنشاء الحساب بنجاح، سيتم تحويلك الآن.";
@@ -2784,7 +2814,7 @@
       };
     }
     // اربط الزر بشكل صريح
-    var btn = document.querySelector('#registerForm .btn-primary[onclick]');
+    var btn = document.querySelector('#registerForm .btn-submit[onclick]');
     if (btn) {
       try { btn.type = "button"; } catch (_) {}
       btn.onclick = function(e) {

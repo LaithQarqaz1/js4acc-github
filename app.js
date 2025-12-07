@@ -18,12 +18,18 @@
     paymentMethods: [],
     currencies: [],
     topups: [],
+    withdrawRequests: [],
+    withdrawCountries: [],
     selectedGame: null,
     view: 'games',
     sort: 'latest',
     wallet: 0,
     categories: [],
+    fees: null,
+    userProfile: null,
+    adminTab: load('admin_tab', 'review'),
   };
+  state.fees = getDefaultFees();
   function formatPriceCurrency(val){
     const n = Number(val);
     if (!Number.isFinite(n)) return 'غير محدد';
@@ -45,11 +51,48 @@
     });
     return map;
   }
+
+  function getDefaultFees(){
+    return {
+      buyerMarkup: { customer: 0, trader: 0, vip: 0 },
+      sellerFee: 0
+    };
+  }
+
+  function normalizeBuyerLevel(value){
+    const v = (value || '').toString().trim().toLowerCase();
+    if (!v) return 'customer';
+    if (v.includes('vip')) return 'vip';
+    if (v.includes('تج') || v.includes('trader')) return 'trader';
+    if (v.includes('زب') || v.includes('عميل') || v.includes('customer')) return 'customer';
+    return 'customer';
+  }
+
+  function getBuyerLevel(){
+    const profile = state.userProfile || {};
+    return normalizeBuyerLevel(profile.level || profile.type || profile.role || profile.tier || '');
+  }
+
+  function applyBuyerMarkup(base){
+    const level = getBuyerLevel();
+    const fees = state.fees || getDefaultFees();
+    const pct = Number(fees?.buyerMarkup?.[level]) || 0;
+    const final = Math.max(0, Math.round(Number(base || 0) * (1 + pct / 100) * 100) / 100);
+    return { level, pct, final };
+  }
+
+  function getDisplayPrice(acc, opts = {}){
+    const base = Number(acc?.price) || 0;
+    if (opts.skipMarkup) return { base, final: base, pct: 0, level: null };
+    const applied = applyBuyerMarkup(base);
+    return { base, final: applied.final, pct: applied.pct, level: applied.level };
+  }
   const els = {
     userChip: document.getElementById('userChip'),
     logoutBtn: document.getElementById('logoutBtn'),
     loginBtn: document.getElementById('loginBtn'),
     registerBtn: document.getElementById('registerBtn'),
+    adminMain: document.getElementById('adminMain'),
     searchInput: document.getElementById('searchInput'),
     gameGrid: document.getElementById('gameGrid'),
     listingGrid: document.getElementById('listingGrid'),
@@ -91,6 +134,12 @@
     adminManageStatus: document.getElementById('adminManageStatus'),
     adminAddAccounts: document.getElementById('admin-add-accounts'),
     adminMethods: document.getElementById('admin-methods'),
+    adminAuthPanel: document.getElementById('admin-auth'),
+    adminAuthForm: document.getElementById('adminAuthForm'),
+    adminAuthEmail: document.getElementById('adminAuthEmail'),
+    adminAuthPassword: document.getElementById('adminAuthPassword'),
+    adminAuthStatus: document.getElementById('adminAuthStatus'),
+    adminTabNav: document.getElementById('adminTabNav'),
     addCurrencyForm: document.getElementById('addCurrencyForm'),
     currencyCodeInput: document.getElementById('currencyCodeInput'),
     currencySymbolInput: document.getElementById('currencySymbolInput'),
@@ -103,6 +152,24 @@
     methodHolderInput: document.getElementById('methodHolderInput'),
     methodNoteInput: document.getElementById('methodNoteInput'),
     methodAdminList: document.getElementById('methodAdminList'),
+    withdrawMethodForm: document.getElementById('withdrawMethodForm'),
+    withdrawCountryIdInput: document.getElementById('withdrawCountryIdInput'),
+    withdrawCountryNameInput: document.getElementById('withdrawCountryNameInput'),
+    withdrawMethodNameInput: document.getElementById('withdrawMethodNameInput'),
+    withdrawCurrencyInput: document.getElementById('withdrawCurrencyInput'),
+    withdrawRateUsdInput: document.getElementById('withdrawRateUsdInput'),
+    withdrawRateJodInput: document.getElementById('withdrawRateJodInput'),
+    withdrawMethodNoteInput: document.getElementById('withdrawMethodNoteInput'),
+    withdrawMethodsList: document.getElementById('withdrawMethodsList'),
+    adminFees: document.getElementById('admin-fees'),
+    feesForm: document.getElementById('feesForm'),
+    feeCustomerInput: document.getElementById('feeCustomerInput'),
+    feeTraderInput: document.getElementById('feeTraderInput'),
+    feeVipInput: document.getElementById('feeVipInput'),
+    feeSellerInput: document.getElementById('feeSellerInput'),
+    levelForm: document.getElementById('levelForm'),
+    levelWebuidInput: document.getElementById('levelWebuidInput'),
+    levelSelect: document.getElementById('levelSelect'),
     walletPanel: document.getElementById('walletPanel'),
     walletBalance: document.getElementById('walletBalance'),
     walletForm: document.getElementById('walletForm'),
@@ -113,6 +180,7 @@
     walletRefInput: document.getElementById('walletRefInput'),
     walletHistory: document.getElementById('walletHistory'),
     adminTopupsList: document.getElementById('adminTopupsList'),
+    adminWithdrawList: document.getElementById('adminWithdrawList'),
     adminPurchasesList: document.getElementById('adminPurchasesList'),
     loader: document.getElementById('loader'),
     toast: document.getElementById('toast'),
@@ -121,6 +189,10 @@
   const isAuthPage = () => {
     const path = window.location.pathname.toLowerCase();
     return path.includes('login') || path.includes('auth');
+  };
+  const isAdminPage = () => {
+    const path = window.location.pathname.toLowerCase();
+    return path.includes('admin');
   };
   let db = null;
 
@@ -193,7 +265,7 @@ const firebaseConfig = {
     return state.firebaseUser;
   }
 
-  const ADMIN_ROUTER_BASE = (window.ADMIN_ROUTER_BASE || window.ROUTER_BASE || window.BACKEND_BASE || '').toString().replace(/\/+$/, '');
+  const ADMIN_ROUTER_BASE = (window.ADMIN_ROUTER_BASE || window.ROUTER_BASE || window.BACKEND_BASE || 'https://js4acc.laithqarqaz1.workers.dev/').toString().replace(/\/+$/, '');
 
   async function getIdTokenSafe() {
     const user = getCurrentUser();
@@ -325,6 +397,26 @@ const firebaseConfig = {
     }
   }
 
+  function injectReviewCTA() {
+    if (isAdminPage() || isAuthPage()) return;
+    if (document.getElementById('reviewCtaBtn')) return;
+    const btn = document.createElement('a');
+    btn.id = 'reviewCtaBtn';
+    btn.href = 'review-request.html';
+    btn.textContent = 'طلب مراجعة أدمن';
+    btn.className = 'btn primary';
+    btn.style.position = 'fixed';
+    btn.style.left = '16px';
+    btn.style.bottom = '16px';
+    btn.style.zIndex = '1200';
+    btn.style.boxShadow = '0 12px 28px rgba(0,0,0,0.3)';
+    btn.style.padding = '12px 16px';
+    btn.style.borderRadius = '12px';
+    btn.style.textDecoration = 'none';
+    btn.style.fontWeight = '800';
+    document.body.appendChild(btn);
+  }
+
   function getCategoryList() {
     return state.categories || [];
   }
@@ -385,6 +477,41 @@ const firebaseConfig = {
     renderWalletHistory();
   }
 
+  async function loadFeesConfig() {
+    if (!ADMIN_ROUTER_BASE) {
+      state.fees = state.fees || getDefaultFees();
+      renderFeesForm();
+      return;
+    }
+    try {
+      const res = await fetch(`${ADMIN_ROUTER_BASE}/accounts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'fees:get' })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.error || data.message || 'تعذر جلب الرسوم');
+      }
+      const fees = data.fees || {};
+      state.fees = {
+        buyerMarkup: {
+          customer: Number(fees?.buyerMarkup?.customer) || 0,
+          trader: Number(fees?.buyerMarkup?.trader) || 0,
+          vip: Number(fees?.buyerMarkup?.vip) || 0,
+        },
+        sellerFee: Number(fees?.sellerFee) || 0,
+      };
+    } catch (err) {
+      console.warn('fees config load failed', err);
+      state.fees = state.fees || getDefaultFees();
+    }
+    renderFeesForm();
+    renderListings();
+    renderAdminQueue();
+    renderAdminManageList();
+  }
+
   function renderWallet() {
     if (!els.walletBalance) return;
     const user = getCurrentUser();
@@ -429,6 +556,40 @@ const firebaseConfig = {
       method.note ? method.note : '',
     ].filter(Boolean).join(' • ');
     els.walletMethodInfo.textContent = details;
+  }
+
+  function setAdminAuthStatus(text, isError = false) {
+    if (!els.adminAuthStatus) return;
+    els.adminAuthStatus.textContent = text || '';
+    els.adminAuthStatus.style.color = isError ? '#f87171' : 'var(--muted,#9aa6c8)';
+  }
+
+  function handleAdminAuthLogin(e) {
+    e.preventDefault();
+    if (!els.adminAuthEmail || !els.adminAuthPassword) return;
+    const email = els.adminAuthEmail.value.trim().toLowerCase();
+    const password = els.adminAuthPassword.value;
+    if (!email || !password) {
+      setAdminAuthStatus('أدخل البريد وكلمة المرور للأدمن', true);
+      return;
+    }
+    setAdminAuthStatus('جارٍ تسجيل الدخول...');
+    firebase.auth().signInWithEmailAndPassword(email, password).then(async (cred) => {
+      try {
+        const token = await cred.user.getIdTokenResult();
+        const isAdmin = !!token.claims?.admin || evaluateAdmin(cred.user);
+        if (!isAdmin) {
+          await firebase.auth().signOut();
+          setAdminAuthStatus('هذا الحساب ليس أدمن. استخدم حساب الأدمن فقط.', true);
+          return;
+        }
+        setAdminAuthStatus('تم تسجيل الدخول كأدمن');
+      } catch (err) {
+        setAdminAuthStatus(err?.message || 'تعذر التحقق من الصلاحيات', true);
+      }
+    }).catch((err) => {
+      setAdminAuthStatus(err?.message || 'بيانات الدخول غير صحيحة', true);
+    });
   }
 
   function renderWalletHistory() {
@@ -707,21 +868,13 @@ const firebaseConfig = {
       const topup = state.topups.find((t) => t.id === id);
       if (!topup) return;
       const newStatus = action === 'topup-approve' ? 'approved' : 'rejected';
-
-      const applyWallet = action === 'topup-approve'
-        ? db.collection('wallets').doc(topup.ownerId).set({
-            balance: firebase.firestore.FieldValue.increment(topup.amount || 0),
-            updatedAt: Date.now(),
-          }, { merge: true })
-        : Promise.resolve();
-
-      Promise.all([
-        db.collection('topups').doc(id).update({ status: newStatus, reviewedAt: Date.now(), reviewedBy: getCurrentUser()?.email || '' }),
-        applyWallet,
-      ]).then(() => {
+      try {
+        await sendAdminRequest({ action: 'topup:status', topupId: id, status: newStatus });
         notify(action === 'topup-approve' ? 'تمت إضافة الرصيد' : 'تم رفض الطلب');
         loadFirebaseData();
-      }).catch(() => notify('تعذر تحديث الطلب'));
+      } catch (err) {
+        notify(err?.message || 'تعذر تحديث الطلب');
+      }
     }
   }
 
@@ -791,8 +944,8 @@ const firebaseConfig = {
       notify('صلاحية الادمن فقط');
       return;
     }
-    if (!db) {
-      notify('فعّل اتصال Firebase أولًا');
+    if (!ADMIN_ROUTER_BASE) {
+      notify('اضبط ADMIN_ROUTER_BASE للعمليات الإدارية');
       return;
     }
     const country = els.methodCountryInput.value.trim();
@@ -804,35 +957,32 @@ const firebaseConfig = {
       notify('أكمل الحقول المطلوبة');
       return;
     }
-    db.collection('paymentMethods').add({
+    sendAdminRequest({
+      action: 'method:add',
       country,
       name,
       accountNumber,
       accountName,
       note,
-      type: 'wallet',
-      createdAt: Date.now(),
+      type: 'wallet'
     }).then(() => {
       notify('تمت إضافة الطريقة');
       els.addMethodForm.reset();
       loadFirebaseData();
-    }).catch(() => notify('تعذر الإضافة'));
+    }).catch((err) => notify(err?.message || 'تعذر الإضافة'));
   }
 
   function handleMethodAdminClick(e) {
     const btn = e.target.closest('button[data-method-id]');
     if (!btn) return;
     const id = btn.dataset.methodId;
-    if (!db || !state.isAdmin) {
+    if (!state.isAdmin) {
       notify('صلاحية الادمن مطلوبة');
       return;
     }
-    db.collection('paymentMethods').doc(id).delete()
-      .then(() => {
-        notify('تم حذف الطريقة');
-        loadFirebaseData();
-      })
-      .catch(() => notify('تعذر الحذف'));
+    sendAdminRequest({ action: 'method:delete', id })
+      .then(() => { notify('تم حذف الطريقة'); loadFirebaseData(); })
+      .catch((err) => notify(err?.message || 'تعذر الحذف'));
   }
 
   function renderSession() {
@@ -848,8 +998,11 @@ const firebaseConfig = {
     if (els.adminPanel) els.adminPanel.classList.toggle('hidden', !state.isAdmin);
     if (els.adminManage) els.adminManage.classList.toggle('hidden', !state.isAdmin);
     if (els.adminAddAccounts) els.adminAddAccounts.classList.toggle('hidden', !state.isAdmin);
-    if (els.adminAddAccounts) els.adminAddAccounts.classList.toggle('hidden', !state.isAdmin);
     if (els.adminCategories) els.adminCategories.classList.toggle('hidden', !state.isAdmin);
+    if (els.adminFees) els.adminFees.classList.toggle('hidden', !state.isAdmin);
+    if (els.adminAuthPanel) els.adminAuthPanel.style.display = (!state.isAdmin && isAdminPage()) ? 'block' : 'none';
+    if (els.adminMain) els.adminMain.classList.toggle('hidden', !state.isAdmin);
+    if (els.adminTabNav) els.adminTabNav.style.display = state.isAdmin ? 'flex' : 'none';
   }
 
   function renderGameOptions() {
@@ -906,6 +1059,11 @@ const firebaseConfig = {
     const categoryLabel = getCategoryMap()[acc.category] || '';
     const priv = getAccountPrivate(acc.id);
     const contactVal = priv?.contact || acc.contact || '';
+    const priceInfo = getDisplayPrice(acc, { skipMarkup: opts.skipMarkup || opts.admin });
+    const priceTag = formatPriceCurrency(priceInfo.final || 0);
+    const markupNote = (!opts.skipMarkup && !opts.admin && priceInfo.pct)
+      ? `<div class="muted tiny">+${priceInfo.pct}% (${priceInfo.level === 'trader' ? 'تجار' : priceInfo.level === 'vip' ? 'VIP' : 'زبائن'})</div>`
+      : '';
 
     const footer = (opts.showContact && contactVal)
       ? `<div class="muted tiny">تواصل: ${contactVal}</div>`
@@ -925,8 +1083,9 @@ const firebaseConfig = {
         <div class="card-body">
           <div class="actions" style="justify-content: space-between;">
             <span>${statusBadge(acc.status)}</span>
-            <span class="price-tag">${formatPriceCurrency(acc.price || 0)}</span>
+            <span class="price-tag">${priceTag}</span>
           </div>
+          ${markupNote}
           <h3>${acc.title}</h3>
           <div class="muted tiny">${game ? game.name : ''} ${created ? `• ${created}` : ''}</div>
           ${categoryLabel ? `<div class="muted tiny">القسم: ${categoryLabel}</div>` : ''}
@@ -966,7 +1125,7 @@ const firebaseConfig = {
 
     const visible = state.accounts.filter((a) => {
       if (a.gameId !== selected.id) return false;
-      if (user?.isAdmin) return true;
+      if (state.isAdmin || user?.isAdmin) return true;
       return a.status === 'approved';
     });
 
@@ -1021,6 +1180,8 @@ const firebaseConfig = {
         const priv = getAccountPrivate(acc.id);
         const contact = priv?.contact || '';
         const selectedCat = acc.category || '';
+        const buyerPriceInfo = getDisplayPrice(acc);
+        const buyerPriceTag = buyerPriceInfo?.final ? formatPriceCurrency(buyerPriceInfo.final) : '';
         let catOptions = getCategoryList().map((c) => {
           const key = c.id || c.key || c.slug;
           const lbl = c.label || c.name || key;
@@ -1048,7 +1209,10 @@ const firebaseConfig = {
             </div>
             <div class="body">
               <div class="row">
-                <span class="price-tag">${formatPriceCurrency(acc.price || 0)}</span>
+                <div style="display:flex;flex-direction:column;gap:2px;">
+                  <span class="price-tag">${formatPriceCurrency(acc.price || 0)}</span>
+                  ${buyerPriceTag ? `<span class="muted tiny">سعر المشتري: ${buyerPriceTag}</span>` : ''}
+                </div>
                 ${statusBadge(acc.status)}
               </div>
               <h3>${acc.title}</h3>
@@ -1171,11 +1335,16 @@ const firebaseConfig = {
         <div class="card-body">
           <div class="actions" style="justify-content: space-between;">
             <span class="badge ${p.status || 'pending'}">${p.status || 'pending'}</span>
-            <span class="price-tag">${formatPriceCurrency(p.price || 0)}</span>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+              <span class="price-tag">${formatPriceCurrency(p.chargedPrice || p.price || 0)}</span>
+              ${p.price && p.chargedPrice && p.chargedPrice !== p.price ? `<span class="muted tiny">أساس: ${formatPriceCurrency(p.price || 0)}</span>` : ''}
+              ${p.sellerNet ? `<span class="muted tiny">صافي البائع: ${formatPriceCurrency(p.sellerNet)}</span>` : ''}
+            </div>
           </div>
           <h3>${p.accountTitle || p.accountId || 'حساب'}</h3>
           <div class="muted tiny">المشتري: ${p.buyerId || '-'}</div>
           <div class="muted tiny">المالك: ${p.accountOwnerId || '-'}</div>
+          ${p.buyerLevel ? `<div class="muted tiny">المستوى: ${p.buyerLevel}${p.buyerMarkupPct ? ` • زيادة ${p.buyerMarkupPct}%` : ''}</div>` : ''}
           <div class="muted tiny">${p.createdAt ? new Date(p.createdAt).toLocaleString('ar-EG') : ''}</div>
         </div>
       </article>
@@ -1208,6 +1377,51 @@ const firebaseConfig = {
     `).join('');
   }
 
+  function renderAdminWithdraws() {
+    if (!els.adminWithdrawList) return;
+    const list = (state.withdrawRequests || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    if (!list.length) {
+      els.adminWithdrawList.innerHTML = '<p class="muted">لا توجد طلبات سحب.</p>';
+      return;
+    }
+    els.adminWithdrawList.innerHTML = list.map((w) => {
+      const status = (w.status || 'pending').toLowerCase();
+      const isPending = status === 'pending';
+      const usd = formatPriceCurrency(w.amountUSD ?? w.debitedUSD ?? 0);
+      const amountCurrency = Number(w.amountCurrency);
+      const currencyLabel = Number.isFinite(amountCurrency)
+        ? `${(Math.round(amountCurrency * 100) / 100).toFixed(2)} ${w.currency || ''}`
+        : '';
+      const created = w.createdAt ? new Date(w.createdAt).toLocaleString('ar-EG') : '';
+      const code = w.id || w.code || '';
+      return `
+        <article class="card">
+          <div class="card-body">
+            <div class="actions" style="justify-content: space-between;">
+              <span class="badge ${status}">${status || 'pending'}</span>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+                <span class="price-tag">${usd}</span>
+                ${currencyLabel ? `<span class="muted tiny">${currencyLabel}</span>` : ''}
+              </div>
+            </div>
+            <h3>${w.methodName || 'طريقة سحب'}</h3>
+            <div class="muted tiny">${w.countryName || w.countryId || ''}</div>
+            <div class="muted tiny">المستخدم: ${w.userId || '-'}</div>
+            ${w.payoutTarget ? `<p class="muted tiny">رقم التحويل: ${w.payoutTarget}</p>` : ''}
+            ${w.payoutName ? `<p class="muted tiny">الاسم: ${w.payoutName}</p>` : ''}
+            <div class="muted tiny">${created}</div>
+            ${isPending ? `
+              <div class="actions">
+                <button class="btn primary small" data-action="withdraw-approve" data-id="${code}">تنفيذ</button>
+                <button class="btn ghost small" data-action="withdraw-reject" data-id="${code}">رفض + رد الرصيد</button>
+              </div>
+            ` : ''}
+          </div>
+        </article>
+      `;
+    }).join('');
+  }
+
   function renderMethodAdminList() {
     if (!els.methodAdminList) return;
     if (!state.paymentMethods.length) {
@@ -1228,6 +1442,52 @@ const firebaseConfig = {
     `).join('');
   }
 
+  function renderWithdrawMethods() {
+    if (!els.withdrawMethodsList) return;
+    const countries = state.withdrawCountries || [];
+    if (!countries.length) {
+      els.withdrawMethodsList.innerHTML = '<p class="muted">لا توجد طرق سحب بعد.</p>';
+      return;
+    }
+    els.withdrawMethodsList.innerHTML = countries.map((c) => {
+      const methods = (c.methods || []).map((m) => {
+        const rateUsd = m.ratePerUSD || m.ratePerUsd || m.rate || null;
+        const rateJod = m.ratePerJOD || m.ratePerJod || null;
+        const rateLine = [
+          rateUsd ? `1 USD = ${rateUsd}` : '',
+          rateJod ? `1 JOD = ${rateJod}` : ''
+        ].filter(Boolean).join(' | ');
+        return `
+          <div class="card" style="margin:6px 0; padding:10px; border:1px solid rgba(255,255,255,0.08);">
+            <div class="actions" style="justify-content: space-between;">
+              <div>
+                <strong>${m.name || 'طريقة'}</strong>
+                <div class="muted tiny">${m.currencyCode || m.currency || ''}</div>
+                ${rateLine ? `<div class="muted tiny">${rateLine}</div>` : ''}
+                ${m.note ? `<div class="muted tiny">${m.note}</div>` : ''}
+              </div>
+              <button class="btn danger small" data-withdraw-country="${c.id}" data-withdraw-method="${m.id}">حذف</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      return `
+        <article class="card">
+          <div class="card-body">
+            <div class="actions" style="justify-content: space-between;">
+              <div>
+                <h3>${c.name || c.label || c.id || 'دولة'}</h3>
+                <div class="muted tiny">${c.id || ''}</div>
+              </div>
+              <button class="btn ghost small" data-withdraw-country-delete="${c.id}">حذف الدولة</button>
+            </div>
+            ${methods || '<p class="muted tiny">لا توجد طرق لهذه الدولة.</p>'}
+          </div>
+        </article>
+      `;
+    }).join('');
+  }
+
   function renderCurrencyAdminList() {
     if (!els.currencyAdminList) return;
     if (!state.currencies.length) {
@@ -1244,6 +1504,15 @@ const firebaseConfig = {
         </div>
       </article>
     `).join('');
+  }
+
+  function renderFeesForm() {
+    if (!els.feesForm) return;
+    const fees = state.fees || getDefaultFees();
+    if (els.feeCustomerInput) els.feeCustomerInput.value = fees?.buyerMarkup?.customer ?? 0;
+    if (els.feeTraderInput) els.feeTraderInput.value = fees?.buyerMarkup?.trader ?? 0;
+    if (els.feeVipInput) els.feeVipInput.value = fees?.buyerMarkup?.vip ?? 0;
+    if (els.feeSellerInput) els.feeSellerInput.value = fees?.sellerFee ?? 0;
   }
 
   function renderCategoryAdminList() {
@@ -1277,7 +1546,7 @@ const firebaseConfig = {
   function handleAddCurrency(e) {
     e.preventDefault();
     if (!state.isAdmin) { notify('صلاحية الادمن فقط'); return; }
-    if (!db) { notify('فعّل اتصال Firebase أولًا'); return; }
+    if (!ADMIN_ROUTER_BASE) { notify('اضبط ADMIN_ROUTER_BASE للعمليات الإدارية'); return; }
     const code = (els.currencyCodeInput?.value || '').trim().toUpperCase();
     const symbol = (els.currencySymbolInput?.value || '').trim();
     const rate = Number(els.currencyRateInput?.value || 0);
@@ -1285,21 +1554,16 @@ const firebaseConfig = {
       notify('أكمل بيانات العملة وقيمة صحيحة للسعر');
       return;
     }
-    const nextList = state.currencies.filter(c => c.code !== code).concat([{ code, symbol, rate }]);
-    const mergedMap = currenciesToMap(nextList);
-    const payload = {
-      rates: mergedMap,
-      ratesJson: JSON.stringify(mergedMap),
-      baseCode: 'USD'
-    };
-    db.collection('config').doc('currency').set(payload, { merge: false }).then(() => {
+    sendAdminRequest({ action: 'currency:add', code, symbol, rate }).then((res) => {
       notify('تم حفظ العملة');
       if (els.addCurrencyForm) els.addCurrencyForm.reset();
-      state.currencies = nextList;
+      const map = res?.rates || {};
+      state.currencies = Object.keys(map).map((c) => ({ code: c, symbol: map[c]?.symbol || '', rate: map[c]?.rate }));
+      const mergedMap = currenciesToMap(state.currencies);
       try { localStorage.removeItem('currency:rates:cache'); } catch {}
       try { if (typeof applyRatesMap === 'function') applyRatesMap(mergedMap, { base: 'USD' }); } catch {}
       renderCurrencyAdminList();
-    }).catch(() => notify('تعذر حفظ العملة'));
+    }).catch((err) => notify(err?.message || 'تعذر حفظ العملة'));
   }
 
   function handleCurrencyAdminClick(e){
@@ -1308,54 +1572,165 @@ const firebaseConfig = {
     const code = btn.dataset.currencyCode;
     if (!code) return;
     if (!confirm(`سيتم حذف العملة ${code} ولن تظهر في الخيارات.\nمتأكد من المتابعة؟`)) return;
-    const nextList = state.currencies.filter(c => c.code !== code);
-    const mergedMap = currenciesToMap(nextList);
-    const payload = {
-      rates: mergedMap,
-      ratesJson: JSON.stringify(mergedMap),
-      baseCode: 'USD'
-    };
-    db.collection('config').doc('currency').set(payload, { merge: false }).then(()=>{
-      state.currencies = nextList;
+    sendAdminRequest({ action: 'currency:delete', code }).then((res) => {
+      const map = res?.rates || {};
+      state.currencies = Object.keys(map).map((c) => ({ code: c, symbol: map[c]?.symbol || '', rate: map[c]?.rate }));
+      const mergedMap = currenciesToMap(state.currencies);
       try { localStorage.removeItem('currency:rates:cache'); } catch {}
       try { if (typeof applyRatesMap === 'function') applyRatesMap(mergedMap, { base: 'USD' }); } catch {}
       renderCurrencyAdminList();
       notify('تم حذف العملة');
-    }).catch(()=>notify('تعذر الحذف'));
+    }).catch((err)=>notify(err?.message || 'تعذر الحذف'));
+  }
+
+  function handleAddWithdrawMethod(e) {
+    e.preventDefault();
+    if (!state.isAdmin) { notify('صلاحية الادمن مطلوبة'); return; }
+    if (!ADMIN_ROUTER_BASE) { notify('اضبط ADMIN_ROUTER_BASE للعمليات الإدارية'); return; }
+    const countryId = (els.withdrawCountryIdInput?.value || '').trim();
+    const countryName = (els.withdrawCountryNameInput?.value || '').trim();
+    const methodName = (els.withdrawMethodNameInput?.value || '').trim();
+    const currencyCode = (els.withdrawCurrencyInput?.value || '').trim().toUpperCase();
+    const ratePerUSD = Number(els.withdrawRateUsdInput?.value || 0);
+    const ratePerJOD = Number(els.withdrawRateJodInput?.value || 0);
+    const note = (els.withdrawMethodNoteInput?.value || '').trim();
+    if (!countryId || !countryName || !methodName || !currencyCode) {
+      notify('أكمل بيانات الدولة والطريقة والعملة');
+      return;
+    }
+    const hasUsd = Number.isFinite(ratePerUSD) && ratePerUSD > 0;
+    const hasJod = Number.isFinite(ratePerJOD) && ratePerJOD > 0;
+    if (!hasUsd && !hasJod) {
+      notify('أدخل سعر صرف صحيح (USD أو JOD)');
+      return;
+    }
+    sendAdminRequest({
+      action: 'withdraw:method:add',
+      countryId,
+      countryName,
+      name: methodName,
+      currencyCode,
+      ratePerUSD,
+      ratePerJOD,
+      note
+    }).then(() => {
+      notify('تم حفظ طريقة السحب');
+      if (els.withdrawMethodForm) els.withdrawMethodForm.reset();
+      loadFirebaseData();
+    }).catch((err) => notify(err?.message || 'تعذر حفظ طريقة السحب'));
+  }
+
+  function handleWithdrawMethodClick(e) {
+    const methodBtn = e.target.closest('button[data-withdraw-method]');
+    if (methodBtn) {
+      const countryId = methodBtn.dataset.withdrawCountry;
+      const methodId = methodBtn.dataset.withdrawMethod;
+      if (!countryId || !methodId) return;
+      if (!confirm('سيتم حذف طريقة السحب. متابعة؟')) return;
+      sendAdminRequest({ action: 'withdraw:method:delete', countryId, methodId })
+        .then(() => { notify('تم حذف الطريقة'); loadFirebaseData(); })
+        .catch((err) => notify(err?.message || 'تعذر حذف الطريقة'));
+      return;
+    }
+    const countryBtn = e.target.closest('button[data-withdraw-country-delete]');
+    if (countryBtn) {
+      const countryId = countryBtn.dataset.withdrawCountryDelete;
+      if (!countryId) return;
+      if (!confirm('سيتم حذف الدولة وجميع طرقها. متأكد؟')) return;
+      sendAdminRequest({ action: 'withdraw:country:delete', countryId })
+        .then(() => { notify('تم حذف الدولة وطرقها'); loadFirebaseData(); })
+        .catch((err) => notify(err?.message || 'تعذر الحذف'));
+    }
+  }
+
+  function handleWithdrawAction(e) {
+    const btn = e.target.closest('button[data-action^="withdraw-"]');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    if (!id) return;
+    const status = btn.dataset.action === 'withdraw-approve' ? 'approved' : 'rejected';
+    sendAdminRequest({ action: 'withdraw:status', id, status })
+      .then((res) => {
+        const item = (state.withdrawRequests || []).find((w) => w.id === id || w.code === id);
+        if (item) item.status = status;
+        renderAdminWithdraws();
+        notify(status === 'approved' ? 'تم اعتماد السحب' : 'تم رفض الطلب وإرجاع الرصيد');
+        return res;
+      })
+      .catch((err) => notify(err?.message || 'تعذر تحديث حالة السحب'));
+  }
+
+  function handleSaveFees(e) {
+    e.preventDefault();
+    if (!state.isAdmin) { notify('صلاحية الادمن مطلوبة'); return; }
+    if (!ADMIN_ROUTER_BASE) { notify('اضبط ADMIN_ROUTER_BASE للعمليات الإدارية'); return; }
+    const clamp = (v) => {
+      const n = Number(v);
+      if (!Number.isFinite(n) || n < 0) return 0;
+      if (n > 100) return 100;
+      return Math.round(n * 100) / 100;
+    };
+    const buyerMarkup = {
+      customer: clamp(els.feeCustomerInput?.value || 0),
+      trader: clamp(els.feeTraderInput?.value || 0),
+      vip: clamp(els.feeVipInput?.value || 0),
+    };
+    const sellerFee = clamp(els.feeSellerInput?.value || 0);
+    sendAdminRequest({
+      action: 'fees:set',
+      buyerMarkup,
+      sellerFee,
+    }).then((res) => {
+      state.fees = res?.fees || { buyerMarkup, sellerFee };
+      renderFeesForm();
+      renderListings();
+      renderAdminQueue();
+      notify('تم حفظ نسب التسعير');
+    }).catch((err) => notify(err?.message || 'تعذر حفظ الرسوم'));
+  }
+
+  function handleLevelSubmit(e) {
+    e.preventDefault();
+    if (!state.isAdmin) { notify('صلاحية الأدمن مطلوبة'); return; }
+    if (!ADMIN_ROUTER_BASE) { notify('اضبط ADMIN_ROUTER_BASE للعمليات الإدارية'); return; }
+    const webuid = (els.levelWebuidInput?.value || '').trim();
+    const level = (els.levelSelect?.value || '').trim();
+    if (!webuid || !level) { notify('أدخل الـ WebUID والرتبة'); return; }
+    sendAdminRequest({ action: 'admin:setLevel', webuid, level })
+      .then(() => {
+        notify('تم تحديث الرتبة');
+        if (els.levelForm) els.levelForm.reset();
+      })
+      .catch((err) => notify(err?.message || 'تعذر تحديث الرتبة'));
   }
 
   function handleAddCategory(e) {
     e.preventDefault();
     if (!state.isAdmin) { notify('صلاحية الادمن فقط'); return; }
-    if (!db) { notify('فعّل اتصال Firebase أولًا'); return; }
+    if (!ADMIN_ROUTER_BASE) { notify('اضبط ADMIN_ROUTER_BASE للعمليات الإدارية'); return; }
     const name = (els.categoryNameInput?.value || '').trim();
     let key = slugify(name);
     if (!name) { notify('أدخل اسمًا واضحاً للقسم'); return; }
     if (!key) { key = `cat-${Date.now().toString(16)}`; }
     const exists = getCategoryList().some((c) => (c.id || c.key || c.slug) === key);
     if (exists) { notify('المفتاح مستخدم من قبل'); return; }
-    db.collection('categories').doc(key).set({
-      label: name,
-      name,
-      key,
-      createdAt: Date.now(),
-    }).then(() => {
+    sendAdminRequest({ action: 'category:add', name, key }).then(() => {
       notify('تمت إضافة القسم');
       if (els.addCategoryForm) els.addCategoryForm.reset();
       loadFirebaseData();
-    }).catch(() => notify('تعذر إضافة القسم'));
+    }).catch((err) => notify(err?.message || 'تعذر إضافة القسم'));
   }
 
   function handleCategoryAdminClick(e) {
     const btn = e.target.closest('button[data-category-id]');
     if (!btn) return;
-    if (!state.isAdmin || !db) { notify('صلاحية الادمن مطلوبة'); return; }
+    if (!state.isAdmin) { notify('صلاحية الادمن مطلوبة'); return; }
     const id = btn.dataset.categoryId;
     if (!id) return;
     if (!confirm('سيتم حذف القسم ولن يظهر في القوائم. متأكد؟')) return;
-    db.collection('categories').doc(id).delete()
+    sendAdminRequest({ action: 'category:delete', id })
       .then(() => { notify('تم حذف القسم'); loadFirebaseData(); })
-      .catch(() => notify('تعذر الحذف'));
+      .catch((err) => notify(err?.message || 'تعذر الحذف'));
   }
 
   function setSelectedGame(id) {
@@ -1372,9 +1747,29 @@ const firebaseConfig = {
     renderAll();
   }
 
+  function setAdminTab(tab) {
+    state.adminTab = tab;
+    save('admin_tab', tab);
+    renderAdminTabs();
+  }
+
+  function renderAdminTabs() {
+    if (!state.isAdmin) return;
+    const active = state.adminTab || 'review';
+    document.querySelectorAll('.admin-tab-btn').forEach((btn) => {
+      const key = btn.dataset.adminTab;
+      btn.classList.toggle('active', key === active);
+    });
+    document.querySelectorAll('.admin-section').forEach((section) => {
+      const key = section.dataset.adminSection;
+      section.style.display = key === active ? 'block' : 'none';
+    });
+  }
+
   function attachEvents() {
     if (els.loginForm) els.loginForm.addEventListener('submit', handleLoginSubmit);
     if (els.registerForm) els.registerForm.addEventListener('submit', handleRegisterSubmit);
+    if (els.adminAuthForm) els.adminAuthForm.addEventListener('submit', handleAdminAuthLogin);
     if (els.addAccountForm) els.addAccountForm.addEventListener('submit', handleAddAccount);
     if (els.adminList) els.adminList.addEventListener('click', handleAdminAction);
     if (els.adminManageList) els.adminManageList.addEventListener('click', handleAdminManageClick);
@@ -1383,8 +1778,22 @@ const firebaseConfig = {
     if (els.categoryAdminList) els.categoryAdminList.addEventListener('click', handleCategoryAdminClick);
     if (els.methodAdminList) els.methodAdminList.addEventListener('click', handleMethodAdminClick);
     if (els.addMethodForm) els.addMethodForm.addEventListener('submit', handleAddMethod);
+    if (els.withdrawMethodsList) els.withdrawMethodsList.addEventListener('click', handleWithdrawMethodClick);
+    if (els.withdrawMethodForm) els.withdrawMethodForm.addEventListener('submit', handleAddWithdrawMethod);
     if (els.addCurrencyForm) els.addCurrencyForm.addEventListener('submit', handleAddCurrency);
     if (els.currencyAdminList) els.currencyAdminList.addEventListener('click', handleCurrencyAdminClick);
+    if (els.feesForm) els.feesForm.addEventListener('submit', handleSaveFees);
+    if (els.levelForm) els.levelForm.addEventListener('submit', handleLevelSubmit);
+    if (els.adminWithdrawList) els.adminWithdrawList.addEventListener('click', handleWithdrawAction);
+    if (els.adminTabNav) {
+      els.adminTabNav.addEventListener('click', (e) => {
+        const btn = e.target.closest('.admin-tab-btn');
+        if (!btn) return;
+        const key = btn.dataset.adminTab;
+        if (!key) return;
+        setAdminTab(key);
+      });
+    }
     if (els.accountCategoryFilter) {
       els.accountCategoryFilter.addEventListener('change', () => renderAdminQueue());
     }
@@ -1492,7 +1901,12 @@ const firebaseConfig = {
     renderWallet();
     renderWalletHistory();
     renderMethodAdminList();
+    renderWithdrawMethods();
     renderCurrencyAdminList();
+    renderAdminTopups();
+    renderAdminWithdraws();
+    renderFeesForm();
+    renderAdminTabs();
   }
 
   async function initFirebase() {
@@ -1527,9 +1941,79 @@ const firebaseConfig = {
   }
 
   async function loadFirebaseData() {
+    const user = getCurrentUser();
+    // لوحة الأدمن عبر الراوتر الخلفي
+    if (state.isAdmin && ADMIN_ROUTER_BASE) {
+      try {
+        const snapshot = await sendAdminRequest({ action: 'admin:snapshot' });
+        state.games = snapshot.games || [];
+        state.accounts = snapshot.accounts || [];
+        state.accountPrivate = snapshot.accountPrivate || [];
+        state.paymentMethods = snapshot.paymentMethods || [];
+        state.topups = snapshot.topups || [];
+        state.categories = snapshot.categories || [];
+        state.purchases = snapshot.purchases || [];
+        state.currencies = snapshot.currencies || [];
+        state.withdrawRequests = snapshot.withdrawRequests || [];
+        state.withdrawCountries = snapshot.withdrawCountries || [];
+        const mergedMap = currenciesToMap(state.currencies);
+        try { if (typeof applyRatesMap === 'function') applyRatesMap(mergedMap, { base: 'USD' }); } catch {}
+        renderPaymentMethods();
+        renderCurrencyAdminList();
+        renderWithdrawMethods();
+        renderWalletHistory();
+        renderAdminTopups();
+        renderAdminWithdraws();
+        renderAdminPurchases();
+        renderCategoryAdminList();
+        await loadFeesConfig();
+        await loadWallet();
+        renderAll();
+        renderAdminTabs();
+        hideLoader();
+        return;
+      } catch (e) {
+        notify('تعذر جلب بيانات الأدمن');
+        hideLoader();
+        return;
+      }
+    }
+
+    // المستخدمون العاديون عبر الراوتر الخلفي (لتجاوز قيود القواعد)
+    if (!state.isAdmin && ADMIN_ROUTER_BASE) {
+      try {
+        const snapshot = await sendAdminRequest({ action: 'public:snapshot' });
+        state.games = snapshot.games || [];
+        state.accounts = snapshot.accounts || [];
+        state.paymentMethods = snapshot.paymentMethods || [];
+        state.topups = snapshot.topups || [];
+        state.categories = snapshot.categories || [];
+        state.currencies = snapshot.currencies || [];
+        state.withdrawCountries = snapshot.withdrawCountries || [];
+        state.withdrawRequests = snapshot.withdrawRequests || [];
+        const mergedMap = currenciesToMap(state.currencies);
+        try { if (typeof applyRatesMap === 'function') applyRatesMap(mergedMap, { base: 'USD' }); } catch {}
+        renderPaymentMethods();
+        renderCurrencyAdminList();
+        renderWalletHistory();
+        renderWithdrawMethods();
+        renderAdminTopups();
+        renderAdminWithdraws();
+        renderAdminPurchases();
+        renderCategoryAdminList();
+        await loadFeesConfig();
+        await loadWallet();
+        renderAll();
+        renderAdminTabs();
+        hideLoader();
+        return;
+      } catch (err) {
+        console.warn('public snapshot failed, fallback to Firebase', err);
+      }
+    }
+
     if (!db) return;
     try {
-      const user = getCurrentUser();
       const topupsPromise = user
         ? state.isAdmin
           ? db.collection('topups').get()
@@ -1543,8 +2027,11 @@ const firebaseConfig = {
         : (user
           ? db.collection('accountPurchases').where('buyerId', '==', user.uid).get()
           : Promise.resolve({ docs: [] }));
+      const profilePromise = user
+        ? db.collection('users').doc(user.uid).get()
+        : Promise.resolve(null);
 
-      let [gamesSnap, accountsSnap, methodsSnap, topupsSnap, currencyDoc, categoriesSnap, privatesSnap, purchasesSnap] = await Promise.all([
+      let [gamesSnap, accountsSnap, methodsSnap, topupsSnap, currencyDoc, categoriesSnap, privatesSnap, purchasesSnap, profileSnap] = await Promise.all([
         db.collection('games').get(),
         db.collection('accounts').get(),
         db.collection('paymentMethods').get(),
@@ -1553,6 +2040,7 @@ const firebaseConfig = {
         db.collection('categories').get(),
         privatePromise,
         purchasesPromise,
+        profilePromise,
       ]);
       state.games = gamesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       state.accounts = accountsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -1561,6 +2049,7 @@ const firebaseConfig = {
       state.paymentMethods = methodsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       state.topups = topupsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       state.categories = categoriesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      state.userProfile = profileSnap && profileSnap.exists ? { id: profileSnap.id, ...profileSnap.data() } : null;
       if (currencyDoc && currencyDoc.exists) {
         const data = currencyDoc.data() || {};
         const map = data.rates || data.ratesJson || {};
@@ -1579,6 +2068,7 @@ const firebaseConfig = {
       renderAdminTopups();
       renderAdminPurchases();
       renderCategoryAdminList();
+      await loadFeesConfig();
       renderAll();
       hideLoader();
     } catch (e) {
@@ -1590,6 +2080,11 @@ const firebaseConfig = {
   async function init() {
     seedDefaults();
     attachEvents();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', injectReviewCTA, { once: true });
+    } else {
+      injectReviewCTA();
+    }
     await initFirebase();
     initAuth();
     await loadFirebaseData();
