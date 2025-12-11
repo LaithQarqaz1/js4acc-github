@@ -2770,13 +2770,24 @@ const firebaseConfig = {
 <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/intlTelInput.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/utils.js"></script>
 <script>
+  function sortIntlCountriesAZ(){
+    try{
+      const data = window.intlTelInputGlobals && window.intlTelInputGlobals.getCountryData
+        ? window.intlTelInputGlobals.getCountryData()
+        : null;
+      if (data && Array.isArray(data)){
+        data.sort((a,b)=> (a?.name || '').localeCompare(b?.name || ''));
+      }
+    }catch(_){}
+  }
   document.addEventListener("DOMContentLoaded", function () {
+    sortIntlCountriesAZ();
     const phoneInput = document.querySelector("#phoneInput");
     if (phoneInput) {
       window.iti = window.intlTelInput(phoneInput, {
         initialCountry: "sy",
         separateDialCode: true,
-        preferredCountries: ["sa","ae","eg","sy","jo","kw","qa","bh","om","ma","dz","tn","ly","iq","ye","sd","ps","lb"],
+        preferredCountries: [],
         utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/utils.js",
       });
     }
@@ -2785,7 +2796,7 @@ const firebaseConfig = {
       window.googlePhoneIti = window.intlTelInput(googlePhoneInput, {
         initialCountry: "sy",
         separateDialCode: true,
-        preferredCountries: ["sa","ae","eg","sy","jo","kw","qa","bh","om","ma","dz","tn","ly","iq","ye","sd","ps","lb"],
+        preferredCountries: [],
         utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/utils.js",
       });
     }

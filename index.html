@@ -121,6 +121,7 @@
   <!-- لوحة ألوان موحدة -->
   <style>
     :root{
+      --font-main:'Cairo','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Segoe UI Symbol',sans-serif;
       --primary:#2f74e4;
       --primary-2:#3f86ff;
       --btn-bg:#2f74e4;
@@ -163,7 +164,7 @@
     .transfer-modal .confirm-row{border-color:var(--card-border);}
     .settings-page{--primary:#111827;--primary-2:#1f2937;}
     .transfer-page{--t-border:#e5e7eb;--t-glow:rgba(17,24,39,.08);--t-accent:#111827;--t-primary:#111827;}
-    body{background:var(--page-bg) !important;color:var(--text);}
+    body{background:var(--page-bg) !important;color:var(--text);font-family:var(--font-main,'Cairo','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Segoe UI Symbol',sans-serif);}
     /* إبقاء الشريط الجانبي باللون الأزرق الموحد في كل الصفحات */
     #sidebar{background:linear-gradient(135deg, #1f3550, #3A8BD1) !important;}
     #sidebar ul li:hover{background:rgba(255,255,255,0.2) !important;}
@@ -1535,17 +1536,46 @@
 .modal-content{background:var(--modal-bg);color:var(--modal-text);padding:30px;border-radius:10px;max-width:400px;width:100%;box-shadow:var(--modal-shadow);text-align:center}
 
 /* Base */
-body{font-family:'Cairo',sans-serif;margin:0;direction:rtl}
+body{font-family:'Cairo','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Segoe UI Symbol',sans-serif;margin:0;direction:rtl}
   html[data-theme="dark"]  body,
   html[data-theme="light"] body{background:var(--bg-app, var(--bg));color:var(--text)}
 
 /* Search */
-  /* تقليل الفراغ فوق شريط البحث */
-  .search-container{margin:10px auto 12px;max-width:1000px;display:flex;justify-content:center;gap:10px;padding:0}
-.search-container input[type="text"]{flex:1;padding:12px 15px;background:var(--input-bg);color:var(--input-text);border:2px solid var(--input-border);border-radius:25px;font-size:1rem;outline:none;transition:.3s}
-.search-container input[type="text"]:focus{box-shadow:0 0 6px var(--input-focus-glow);border-color:var(--input-border-focus)}
+  /* شريط البحث بنفس شكل شريط النص المتحرك */
+  .search-container{
+    margin:10px auto 10px;
+    max-width:1000px;
+    display:flex;
+    justify-content:center;
+    padding:0;
+    background:var(--input-bg);
+    border:2px solid var(--input-border);
+    border-radius:25px;
+    box-shadow:0 6px 14px rgba(0,0,0,.06);
+  }
+  html[data-theme="dark"] .search-container{
+    box-shadow:0 8px 20px rgba(0,0,0,.35);
+  }
+  .search-container input[type="text"]{
+    flex:1;
+    padding:12px 15px;
+    background:transparent;
+    color:var(--input-text);
+    border:none;
+    border-radius:25px;
+    font-size:1rem;
+    line-height:1.2;
+    outline:none;
+  }
+  .search-container:focus-within{
+    box-shadow:0 0 6px var(--input-focus-glow);
+    border-color:var(--input-border-focus);
+  }
 .search-container button{background:var(--btn-bg);border:none;padding:12px 20px;border-radius:25px;color:var(--btn-text);font-size:1rem;cursor:pointer;transition:.3s}
 .search-container button:hover{background:var(--btn-bg-hover)}
+.home-cta-row{margin:8px auto 14px;max-width:1000px;display:flex;gap:8px;justify-content:center;flex-wrap:nowrap;padding:0 6px}
+.home-cta-row a{flex:1 1 0;min-width:0;text-align:center;text-decoration:none;color:#fff;font-weight:700;font-size:0.95rem;border-radius:12px;padding:10px 14px;background-image:linear-gradient(135deg,#2563eb,#1e40af);box-shadow:0 10px 22px rgba(0,0,0,0.24);border:1px solid rgba(255,255,255,.06);white-space:nowrap}
+.home-cta-row a:hover{filter:brightness(1.05)}
 
 main{max-width:1200px;margin:20px auto;padding:0 15px}
 
@@ -1973,17 +2003,21 @@ button#logoutBtn:hover{background:#990000}
   <div class="notice-ticker" id="homeTicker" aria-label="إعلانات الموقع">
     <div class="ticker-track" role="marquee" aria-live="polite">
       <div class="ticker-copy">
-        <span>JS4ACC | شراء حسابات الألعاب والاشتراكات الرقمية بسرعة وأمان وبأفضل الأسعار</span>
+        <span>JS4ACC || بيع وشراء حسابات فري فاير كما لم يتم من قبل</span>
       </div>
     </div>
   </div>
-  
-
 
     <!-- البحث -->
   <div class="search-container">
     <input type="text" id="searchInput" placeholder="ابحث عن الحسابات أو القسم..." aria-label="بحث" />
   </div>
+
+  <div class="home-cta-row" id="quickFloatingActions" aria-label="إجراءات سريعة">
+    <a id="reviewCtaBtn" class="btn primary" href="review-request.html">عرض حساب</a>
+    <a id="withdrawCtaBtn" class="btn primary" href="sahb.html">سحب رصيد</a>
+  </div>
+
 
   <script>
     // حركة تبدأ من الحافة، تمر عبر الشريط، تخرج بالكامل، ثم تعاود من البداية
@@ -2847,7 +2881,7 @@ button#logoutBtn:hover{background:#990000}
           const title = acc.title || '';
           const desc = acc.description || '';
           const contact = acc.contact || '';
-          const catLabel = CATEGORY_LABELS[acc.category] || '';
+          const catLabel = CATEGORY_LABELS[acc.category] || acc.category || '';
           const hay = [title, desc, contact, catLabel].map(norm).join(' ');
           return query === '' || hay.includes(query);
         });
@@ -2869,7 +2903,7 @@ button#logoutBtn:hover{background:#990000}
         const orderedKeys = CATEGORY_ORDER.concat(Object.keys(grouped).filter(k => !CATEGORY_ORDER.includes(k)));
         const sections = orderedKeys.filter(k => grouped[k]).map(key => {
           const list = grouped[key];
-          const label = CATEGORY_LABELS[key] || 'حسابات أخرى';
+          const label = CATEGORY_LABELS[key] || (key === 'other' ? 'حسابات أخرى' : key || 'حسابات أخرى');
           const cards = list.map(acc => {
             const img = (Array.isArray(acc.images) && acc.images[0]) || acc.image || 'loading.png';
             const price = formatPrice(acc.price);
@@ -6316,11 +6350,11 @@ button#logoutBtn:hover{background:#990000}
     </div>
   </div>
 
-  <script>
-    (function(){
-      var modal = document.getElementById('wa-join-modal');
-      if(!modal) return;
-      var KEY = 'wa_join_session_seen';
+<script>
+  (function(){
+    var modal = document.getElementById('wa-join-modal');
+    if(!modal) return;
+    var KEY = 'wa_join_session_seen';
 
       function lockScroll(on){ try { document.body.style.overflow = on ? 'hidden' : ''; } catch(_){} }
       function open(){ modal.style.display = 'flex'; lockScroll(true); try { sessionStorage.setItem(KEY, '1'); } catch(_){} }

@@ -265,8 +265,9 @@
         if (!snap.exists){ titleEl.textContent = 'الحساب غير موجود'; return; }
         const data = snap.data() || {};
         titleEl.textContent = data.title || 'حساب';
-        if (data.price != null) {
-          basePriceRef.value = data.price;
+        const basePriceVal = (data.price != null) ? data.price : (data.priceUSD != null ? data.priceUSD : null);
+        if (basePriceVal != null) {
+          basePriceRef.value = basePriceVal;
           refreshPrice();
         } else {
           priceEl.textContent = '';

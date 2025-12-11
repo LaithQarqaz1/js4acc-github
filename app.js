@@ -20,6 +20,8 @@
     topups: [],
     withdrawRequests: [],
     withdrawCountries: [],
+    depositCountries: [],
+    walletTotals: { totalUSD: 0, count: 0 },
     selectedGame: null,
     view: 'games',
     sort: 'latest',
@@ -30,6 +32,24 @@
     adminTab: load('admin_tab', 'review'),
   };
   state.fees = getDefaultFees();
+
+  function flattenDepositMethods(depositCountries = []) {
+    const list = [];
+    depositCountries.forEach((c) => {
+      const countryId = c.id || c.code || c.slug || c.name || c.label || 'country';
+      const countryName = c.name || c.label || c.id || countryId;
+      (c.methods || []).forEach((m, idx) => {
+        const id = m.id || m.methodId || `${countryId}-${idx}`;
+        list.push({
+          ...m,
+          id,
+          country: countryName,
+          countryId,
+        });
+      });
+    });
+    return list;
+  }
   function formatPriceCurrency(val){
     const n = Number(val);
     if (!Number.isFinite(n)) return 'غير محدد';
@@ -156,11 +176,38 @@
     withdrawCountryIdInput: document.getElementById('withdrawCountryIdInput'),
     withdrawCountryNameInput: document.getElementById('withdrawCountryNameInput'),
     withdrawMethodNameInput: document.getElementById('withdrawMethodNameInput'),
+    withdrawMethodTypeInput: document.getElementById('withdrawMethodTypeInput'),
     withdrawCurrencyInput: document.getElementById('withdrawCurrencyInput'),
     withdrawRateUsdInput: document.getElementById('withdrawRateUsdInput'),
-    withdrawRateJodInput: document.getElementById('withdrawRateJodInput'),
+    withdrawBankInput: document.getElementById('withdrawBankInput'),
+    withdrawAccountNameInput: document.getElementById('withdrawAccountNameInput'),
+    withdrawAccountNumberInput: document.getElementById('withdrawAccountNumberInput'),
+    withdrawWalletInput: document.getElementById('withdrawWalletInput'),
     withdrawMethodNoteInput: document.getElementById('withdrawMethodNoteInput'),
     withdrawMethodsList: document.getElementById('withdrawMethodsList'),
+    depositMethodForm: document.getElementById('depositMethodForm'),
+    depositCountryIdInput: document.getElementById('depositCountryIdInput'),
+    depositCountryNameInput: document.getElementById('depositCountryNameInput'),
+    depositCountryImageInput: document.getElementById('depositCountryImageInput'),
+    depositCountryImageFileInput: document.getElementById('depositCountryImageFileInput'),
+    depositCountryDropZone: document.getElementById('depositCountryDropZone'),
+    depositMethodNameInput: document.getElementById('depositMethodNameInput'),
+    depositMethodTypeInput: document.getElementById('depositMethodTypeInput'),
+    depositCurrencyInput: document.getElementById('depositCurrencyInput'),
+    depositRateUsdInput: document.getElementById('depositRateUsdInput'),
+    depositBankInput: document.getElementById('depositBankInput'),
+    depositAccountNameInput: document.getElementById('depositAccountNameInput'),
+    depositAccountNumberInput: document.getElementById('depositAccountNumberInput'),
+    depositIbanInput: document.getElementById('depositIbanInput'),
+    depositWalletInput: document.getElementById('depositWalletInput'),
+    depositMethodNoteInput: document.getElementById('depositMethodNoteInput'),
+    depositLogoInput: document.getElementById('depositLogoInput'),
+    depositLogoFileInput: document.getElementById('depositLogoFileInput'),
+    depositLogoUploadBtn: document.getElementById('depositLogoUploadBtn'),
+    depositMethodsList: document.getElementById('depositMethodsList'),
+    walletTotalsPanel: document.getElementById('walletTotalsPanel'),
+    walletTotalValue: document.getElementById('walletTotalValue'),
+    walletTotalCount: document.getElementById('walletTotalCount'),
     adminFees: document.getElementById('admin-fees'),
     feesForm: document.getElementById('feesForm'),
     feeCustomerInput: document.getElementById('feeCustomerInput'),
@@ -399,22 +446,40 @@ const firebaseConfig = {
 
   function injectReviewCTA() {
     if (isAdminPage() || isAuthPage()) return;
-    if (document.getElementById('reviewCtaBtn')) return;
-    const btn = document.createElement('a');
-    btn.id = 'reviewCtaBtn';
-    btn.href = 'review-request.html';
-    btn.textContent = 'طلب مراجعة أدمن';
-    btn.className = 'btn primary';
-    btn.style.position = 'fixed';
-    btn.style.left = '16px';
-    btn.style.bottom = '16px';
-    btn.style.zIndex = '1200';
-    btn.style.boxShadow = '0 12px 28px rgba(0,0,0,0.3)';
-    btn.style.padding = '12px 16px';
-    btn.style.borderRadius = '12px';
-    btn.style.textDecoration = 'none';
-    btn.style.fontWeight = '800';
-    document.body.appendChild(btn);
+    if (document.getElementById('quickFloatingActions')) return;
+    const wrap = document.createElement('div');
+    wrap.id = 'quickFloatingActions';
+    wrap.style.position = 'fixed';
+    wrap.style.left = '16px';
+    wrap.style.bottom = '16px';
+    wrap.style.display = 'flex';
+    wrap.style.flexDirection = 'column';
+    wrap.style.gap = '10px';
+    wrap.style.zIndex = '1200';
+    wrap.style.alignItems = 'flex-start';
+
+    const actions = [
+      { id: 'reviewCtaBtn', href: 'review-request.html', text: 'عرض حساب' },
+      { id: 'withdrawCtaBtn', href: 'sahb.html', text: 'سحب رصيد' },
+    ];
+
+    actions.forEach(({ id, href, text }) => {
+      const btn = document.createElement('a');
+      btn.id = id;
+      btn.href = href;
+      btn.textContent = text;
+      btn.className = 'btn primary';
+      btn.style.boxShadow = '0 12px 28px rgba(0,0,0,0.3)';
+      btn.style.padding = '12px 16px';
+      btn.style.borderRadius = '12px';
+      btn.style.textDecoration = 'none';
+      btn.style.fontWeight = '800';
+      btn.style.backdropFilter = 'blur(4px)';
+      btn.style.backgroundImage = 'linear-gradient(135deg,#2563eb,#1e40af)';
+      wrap.appendChild(btn);
+    });
+
+    document.body.appendChild(wrap);
   }
 
   function getCategoryList() {
@@ -528,29 +593,71 @@ const firebaseConfig = {
 
   function renderPaymentMethods() {
     if (!els.walletCountrySelect || !els.walletMethodSelect) return;
-    const countries = Array.from(new Set(state.paymentMethods.map((m) => m.country || 'غير محدد')));
-    els.walletCountrySelect.innerHTML = countries.map((c) => `<option value="${c}">${c}</option>`).join('');
+    const countries = state.depositCountries || [];
+    if (!countries.length) {
+      els.walletCountrySelect.innerHTML = '<option value=\"\">لا توجد طرق إيداع</option>';
+      els.walletMethodSelect.innerHTML = '<option value=\"\">—</option>';
+      if (els.walletMethodInfo) els.walletMethodInfo.textContent = '';
+      return;
+    }
+    const selected = els.walletCountrySelect.value;
+    const options = countries.map((c) => {
+      const id = c.id || c.code || c.slug || c.name || c.label || '';
+      const name = c.name || c.label || id || 'دولة';
+      return `<option value="${id}">${name}</option>`;
+    }).join('');
+    els.walletCountrySelect.innerHTML = options;
+    if (!countries.some((c) => (c.id || c.code || c.slug || c.name || c.label || '') === selected)) {
+      const firstId = countries[0].id || countries[0].code || countries[0].slug || countries[0].name || countries[0].label || '';
+      els.walletCountrySelect.value = firstId;
+    } else {
+      els.walletCountrySelect.value = selected;
+    }
     renderMethodsForCountry();
   }
 
   function renderMethodsForCountry() {
     if (!els.walletCountrySelect || !els.walletMethodSelect) return;
-    const country = els.walletCountrySelect.value;
-    const methods = state.paymentMethods.filter((m) => (m.country || 'غير محدد') === country);
-    els.walletMethodSelect.innerHTML = methods.map((m) => `<option value="${m.id}">${m.name || m.type || 'طريقة'}</option>`).join('');
+    const countries = state.depositCountries || [];
+    const selectedCountryId = els.walletCountrySelect.value;
+    const country = countries.find((c) => (c.id || c.code || c.slug || c.name || c.label || '') === selectedCountryId) || countries[0];
+    const methods = (country && country.methods) ? country.methods : [];
+    if (!methods.length) {
+      els.walletMethodSelect.innerHTML = '<option value=\"\">لا توجد طرق لهذه الدولة</option>';
+      if (els.walletMethodInfo) els.walletMethodInfo.textContent = '';
+      return;
+    }
+    const options = methods.map((m, idx) => {
+      const id = m.id || m.methodId || `${selectedCountryId}-${idx}`;
+      const label = m.name || m.type || 'طريقة';
+      return `<option value="${id}">${label}</option>`;
+    }).join('');
+    const prev = els.walletMethodSelect.value;
+    els.walletMethodSelect.innerHTML = options;
+    const hasPrev = methods.some((m, idx) => (m.id || m.methodId || `${selectedCountryId}-${idx}`) === prev);
+    if (hasPrev) {
+      els.walletMethodSelect.value = prev;
+    } else if (methods.length) {
+      const firstId = methods[0].id || methods[0].methodId || `${selectedCountryId}-0`;
+      els.walletMethodSelect.value = firstId;
+    }
     renderMethodInfo();
   }
 
   function renderMethodInfo() {
     if (!els.walletMethodInfo) return;
+    const countryId = els.walletCountrySelect?.value || '';
+    const country = (state.depositCountries || []).find((c) => (c.id || c.code || c.slug || c.name || c.label || '') === countryId);
+    const methods = (country && country.methods) ? country.methods : [];
     const methodId = els.walletMethodSelect?.value;
-    const method = state.paymentMethods.find((m) => m.id === methodId);
+    const method = methods.find((m, idx) => (m.id || m.methodId || `${countryId}-${idx}`) === methodId);
     if (!method) {
       els.walletMethodInfo.textContent = '';
       return;
     }
     const details = [
-      method.bankName ? `البنك/المحفظة: ${method.bankName}` : '',
+      method.currency || method.currencyCode ? `العملة: ${method.currency || method.currencyCode}` : '',
+      method.bank || method.bankName ? `البنك/المحفظة: ${method.bank || method.bankName}` : '',
       method.accountName ? `الاسم: ${method.accountName}` : '',
       method.accountNumber ? `الرقم/المعرف: ${method.accountNumber}` : '',
       method.note ? method.note : '',
@@ -692,14 +799,21 @@ const firebaseConfig = {
       return;
     }
     const country = els.walletCountrySelect?.value || '';
+    const depositCountry = (state.depositCountries || []).find((c) => (c.id || c.code || c.slug || c.name || c.label || '') === country);
     const methodId = els.walletMethodSelect?.value || '';
-    const method = state.paymentMethods.find((m) => m.id === methodId);
+    const methods = depositCountry?.methods || [];
+    const method = methods.find((m, idx) => (m.id || m.methodId || `${country}-${idx}`) === methodId);
+    if (!method) {
+      notify('اختر طريقة إيداع');
+      return;
+    }
     const reference = els.walletRefInput?.value?.trim() || '';
     const methodName = method?.name || method?.type || 'تحويل';
+    const countryName = depositCountry?.name || depositCountry?.label || country || '';
     db.collection('topups').add({
       ownerId: user.uid,
       amount,
-      country,
+      country: countryName || country,
       methodId,
       methodName,
       reference,
@@ -983,6 +1097,81 @@ const firebaseConfig = {
     sendAdminRequest({ action: 'method:delete', id })
       .then(() => { notify('تم حذف الطريقة'); loadFirebaseData(); })
       .catch((err) => notify(err?.message || 'تعذر الحذف'));
+  }
+
+  function handleAddDepositMethod(e) {
+    e.preventDefault();
+    if (!state.isAdmin) {
+      notify('صلاحية الادمن فقط');
+      return;
+    }
+    if (!ADMIN_ROUTER_BASE) {
+      notify('اضبط ADMIN_ROUTER_BASE للعمليات الإدارية');
+      return;
+    }
+    const countryId = (els.depositCountryIdInput?.value || '').trim();
+    const countryName = (els.depositCountryNameInput?.value || '').trim();
+    const countryImage = (els.depositCountryImageInput?.value || '').trim();
+    const name = (els.depositMethodNameInput?.value || '').trim();
+    const methodType = (els.depositMethodTypeInput?.value || '').trim() || 'wallet';
+    const currencyCode = (els.depositCurrencyInput?.value || '').trim().toUpperCase();
+    const ratePerUSD = Number(els.depositRateUsdInput?.value || 0);
+    const hasRate = Number.isFinite(ratePerUSD) && ratePerUSD > 0;
+    const isBank = methodType === 'bank';
+    const isWallet = methodType === 'wallet';
+    if (!countryId || !countryName || !name || !currencyCode || !hasRate) {
+      notify('أكمل الدولة، الطريقة، العملة، وسعر الصرف (بالدولار)');
+      return;
+    }
+    if (isBank && (!els.depositBankInput?.value || !els.depositAccountNumberInput?.value)) {
+      notify('أدخل بيانات البنك ورقم الحساب');
+      return;
+    }
+    if (isWallet && !els.depositWalletInput?.value) {
+      notify('أدخل معرف المحفظة');
+      return;
+    }
+    const payload = {
+      action: 'deposit:method:add',
+      countryId,
+      countryName,
+      countryImage,
+      name,
+      methodType,
+      currencyCode,
+      ratePerUSD,
+      bank: (els.depositBankInput?.value || '').trim(),
+      accountName: (els.depositAccountNameInput?.value || '').trim(),
+      accountNumber: (els.depositAccountNumberInput?.value || '').trim(),
+      iban: (els.depositIbanInput?.value || '').trim(),
+      wallet: (els.depositWalletInput?.value || '').trim(),
+      note: (els.depositMethodNoteInput?.value || '').trim(),
+      logoUrl: (els.depositLogoInput?.value || '').trim(),
+    };
+    sendAdminRequest(payload).then(() => {
+      notify('تم حفظ طريقة الإيداع');
+      if (els.depositMethodForm) els.depositMethodForm.reset();
+      loadFirebaseData();
+    }).catch((err) => notify(err?.message || 'تعذر الحفظ'));
+  }
+
+  function handleDepositMethodClick(e) {
+    const methodBtn = e.target.closest('button[data-deposit-method]');
+    if (methodBtn) {
+      const countryId = methodBtn.dataset.depositCountry;
+      const methodId = methodBtn.dataset.depositMethod;
+      sendAdminRequest({ action: 'deposit:method:delete', countryId, methodId })
+        .then(() => { notify('تم حذف الطريقة'); loadFirebaseData(); })
+        .catch((err) => notify(err?.message || 'تعذر الحذف'));
+      return;
+    }
+    const countryBtn = e.target.closest('button[data-deposit-country-delete]');
+    if (countryBtn) {
+      const countryId = countryBtn.dataset.depositCountryDelete;
+      sendAdminRequest({ action: 'deposit:country:delete', countryId })
+        .then(() => { notify('تم حذف الدولة'); loadFirebaseData(); })
+        .catch((err) => notify(err?.message || 'تعذر الحذف'));
+    }
   }
 
   function renderSession() {
@@ -1394,6 +1583,8 @@ const firebaseConfig = {
         : '';
       const created = w.createdAt ? new Date(w.createdAt).toLocaleString('ar-EG') : '';
       const code = w.id || w.code || '';
+      const typeLabel = (w.methodType || w.type) === 'bank' ? 'بنك' : (w.methodType || w.type) === 'wallet' ? 'محفظة' : 'أخرى';
+      const infoLine = [w.bank, w.accountName, w.accountNumber, w.wallet].filter(Boolean).join(' • ');
       return `
         <article class="card">
           <div class="card-body">
@@ -1405,8 +1596,10 @@ const firebaseConfig = {
               </div>
             </div>
             <h3>${w.methodName || 'طريقة سحب'}</h3>
+            <div class="muted tiny">${typeLabel}</div>
             <div class="muted tiny">${w.countryName || w.countryId || ''}</div>
             <div class="muted tiny">المستخدم: ${w.userId || '-'}</div>
+            ${infoLine ? `<div class="muted tiny">${infoLine}</div>` : ''}
             ${w.payoutTarget ? `<p class="muted tiny">رقم التحويل: ${w.payoutTarget}</p>` : ''}
             ${w.payoutName ? `<p class="muted tiny">الاسم: ${w.payoutName}</p>` : ''}
             <div class="muted tiny">${created}</div>
@@ -1442,6 +1635,74 @@ const firebaseConfig = {
     `).join('');
   }
 
+  function renderDepositMethods() {
+    if (!els.depositMethodsList) return;
+    const countries = state.depositCountries || [];
+    if (!countries.length) {
+      els.depositMethodsList.innerHTML = '<p class="muted">لا توجد طرق إيداع بعد.</p>';
+      return;
+    }
+    els.depositMethodsList.innerHTML = countries.map((c) => {
+      const methodsHtml = (c.methods || []).map((m) => {
+        const currency = (m.currencyCode || m.currency || '').toUpperCase();
+        const rateUsd = Number(m.ratePerUSD ?? m.ratePerUsd ?? m.rate);
+        const rateLineParts = [];
+        if (Number.isFinite(rateUsd) && rateUsd > 0) rateLineParts.push(`1 USD = ${rateUsd} ${currency}`);
+        const typeLabel = (m.methodType || m.type) === 'bank' ? 'بنك' : (m.methodType || m.type) === 'wallet' ? 'محفظة' : 'أخرى';
+        const info = m.info || {};
+        const infoLine = [info.bank, info.accountName, info.accountNumber, info.iban, info.wallet]
+          .filter(Boolean)
+          .join(' • ');
+        return `
+          <div class="card" style="margin:6px 0; padding:10px; border:1px solid rgba(255,255,255,0.08);">
+            <div class="actions" style="justify-content: space-between; align-items:flex-start;">
+              <div>
+                <strong>${m.name || 'طريقة'}</strong>
+                <div class="muted tiny">${typeLabel}</div>
+                <div class="muted tiny">${currency || ''}</div>
+                ${rateLineParts.length ? `<div class="muted tiny">${rateLineParts.join(' | ')}</div>` : ''}
+                ${infoLine ? `<div class="muted tiny">${infoLine}</div>` : ''}
+                ${(m.note || '').trim() ? `<div class="muted tiny">${m.note}</div>` : ''}
+              </div>
+              <button class="btn danger small" data-deposit-country="${c.id}" data-deposit-method="${m.id}">حذف</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      return `
+        <article class="card">
+          <div class="card-body">
+            <div class="actions" style="justify-content: space-between; align-items:flex-start;">
+              <div>
+                <h3>${c.name || c.label || c.id || 'دولة'}</h3>
+                <div class="muted tiny">${c.id || ''}</div>
+              </div>
+              <button class="btn ghost small" data-deposit-country-delete="${c.id}">حذف الدولة</button>
+            </div>
+            ${methodsHtml || '<p class="muted tiny">لا توجد طرق لهذه الدولة.</p>'}
+          </div>
+        </article>
+      `;
+    }).join('');
+  }
+
+  function renderWalletTotals() {
+    if (!els.walletTotalsPanel) return;
+    const isAdmin = !!state.isAdmin;
+    if (!isAdmin) {
+      els.walletTotalsPanel.style.display = 'none';
+      return;
+    }
+    // يظل التحكم النهائي في الظهور حسب التبويب النشط عبر renderAdminTabs
+    if (!els.walletTotalsPanel.dataset.adminSection) {
+      els.walletTotalsPanel.dataset.adminSection = 'wallet';
+    }
+    const total = Number(state.walletTotals?.totalUSD) || 0;
+    const count = Number(state.walletTotals?.count) || 0;
+    if (els.walletTotalValue) els.walletTotalValue.textContent = formatPriceCurrency(total);
+    if (els.walletTotalCount) els.walletTotalCount.textContent = `${count} محفظة`;
+  }
+
   function renderWithdrawMethods() {
     if (!els.withdrawMethodsList) return;
     const countries = state.withdrawCountries || [];
@@ -1452,18 +1713,18 @@ const firebaseConfig = {
     els.withdrawMethodsList.innerHTML = countries.map((c) => {
       const methods = (c.methods || []).map((m) => {
         const rateUsd = m.ratePerUSD || m.ratePerUsd || m.rate || null;
-        const rateJod = m.ratePerJOD || m.ratePerJod || null;
-        const rateLine = [
-          rateUsd ? `1 USD = ${rateUsd}` : '',
-          rateJod ? `1 JOD = ${rateJod}` : ''
-        ].filter(Boolean).join(' | ');
+        const rateLine = rateUsd ? `1 USD = ${rateUsd}` : '';
+        const typeLabel = (m.methodType || m.type) === 'bank' ? 'بنك' : (m.methodType || m.type) === 'wallet' ? 'محفظة' : 'أخرى';
+        const infoLine = [m.bank, m.accountName, m.accountNumber, m.wallet].filter(Boolean).join(' • ');
         return `
           <div class="card" style="margin:6px 0; padding:10px; border:1px solid rgba(255,255,255,0.08);">
             <div class="actions" style="justify-content: space-between;">
               <div>
                 <strong>${m.name || 'طريقة'}</strong>
+                <div class="muted tiny">${typeLabel}</div>
                 <div class="muted tiny">${m.currencyCode || m.currency || ''}</div>
                 ${rateLine ? `<div class="muted tiny">${rateLine}</div>` : ''}
+                ${infoLine ? `<div class="muted tiny">${infoLine}</div>` : ''}
                 ${m.note ? `<div class="muted tiny">${m.note}</div>` : ''}
               </div>
               <button class="btn danger small" data-withdraw-country="${c.id}" data-withdraw-method="${m.id}">حذف</button>
@@ -1513,6 +1774,28 @@ const firebaseConfig = {
     if (els.feeTraderInput) els.feeTraderInput.value = fees?.buyerMarkup?.trader ?? 0;
     if (els.feeVipInput) els.feeVipInput.value = fees?.buyerMarkup?.vip ?? 0;
     if (els.feeSellerInput) els.feeSellerInput.value = fees?.sellerFee ?? 0;
+  }
+
+  function updateMethodTypeUI(kind) {
+    const isDeposit = kind === 'deposit';
+    const typeEl = isDeposit ? els.depositMethodTypeInput : els.withdrawMethodTypeInput;
+    if (!typeEl) return;
+    const type = (typeEl.value || '').toLowerCase();
+    const showBank = type === 'bank' || type === 'other';
+    const showWallet = type === 'wallet' || type === 'other';
+    const bankClass = isDeposit ? '.deposit-bank-fields' : '.withdraw-bank-fields';
+    const walletClass = isDeposit ? '.deposit-wallet-fields' : '.withdraw-wallet-fields';
+    document.querySelectorAll(bankClass).forEach((el) => { el.style.display = showBank ? '' : 'none'; });
+    document.querySelectorAll(walletClass).forEach((el) => { el.style.display = showWallet ? '' : 'none'; });
+    if (isDeposit) {
+      if (els.depositBankInput) els.depositBankInput.required = type === 'bank';
+      if (els.depositAccountNumberInput) els.depositAccountNumberInput.required = type === 'bank';
+      if (els.depositWalletInput) els.depositWalletInput.required = type === 'wallet';
+    } else {
+      if (els.withdrawBankInput) els.withdrawBankInput.required = type === 'bank';
+      if (els.withdrawAccountNumberInput) els.withdrawAccountNumberInput.required = type === 'bank';
+      if (els.withdrawWalletInput) els.withdrawWalletInput.required = type === 'wallet';
+    }
   }
 
   function renderCategoryAdminList() {
@@ -1590,18 +1873,27 @@ const firebaseConfig = {
     const countryId = (els.withdrawCountryIdInput?.value || '').trim();
     const countryName = (els.withdrawCountryNameInput?.value || '').trim();
     const methodName = (els.withdrawMethodNameInput?.value || '').trim();
+    const methodType = (els.withdrawMethodTypeInput?.value || '').trim() || 'wallet';
     const currencyCode = (els.withdrawCurrencyInput?.value || '').trim().toUpperCase();
     const ratePerUSD = Number(els.withdrawRateUsdInput?.value || 0);
-    const ratePerJOD = Number(els.withdrawRateJodInput?.value || 0);
     const note = (els.withdrawMethodNoteInput?.value || '').trim();
+    const isBank = methodType === 'bank';
+    const isWallet = methodType === 'wallet';
     if (!countryId || !countryName || !methodName || !currencyCode) {
       notify('أكمل بيانات الدولة والطريقة والعملة');
       return;
     }
     const hasUsd = Number.isFinite(ratePerUSD) && ratePerUSD > 0;
-    const hasJod = Number.isFinite(ratePerJOD) && ratePerJOD > 0;
-    if (!hasUsd && !hasJod) {
-      notify('أدخل سعر صرف صحيح (USD أو JOD)');
+    if (!hasUsd) {
+      notify('أدخل سعر صرف صحيح بالدولار');
+      return;
+    }
+    if (isBank && (!els.withdrawBankInput?.value || !els.withdrawAccountNumberInput?.value)) {
+      notify('أدخل بيانات البنك ورقم الحساب');
+      return;
+    }
+    if (isWallet && !els.withdrawWalletInput?.value) {
+      notify('أدخل معرف المحفظة');
       return;
     }
     sendAdminRequest({
@@ -1609,9 +1901,13 @@ const firebaseConfig = {
       countryId,
       countryName,
       name: methodName,
+      methodType,
       currencyCode,
       ratePerUSD,
-      ratePerJOD,
+      bank: (els.withdrawBankInput?.value || '').trim(),
+      accountName: (els.withdrawAccountNameInput?.value || '').trim(),
+      accountNumber: (els.withdrawAccountNumberInput?.value || '').trim(),
+      wallet: (els.withdrawWalletInput?.value || '').trim(),
       note
     }).then(() => {
       notify('تم حفظ طريقة السحب');
@@ -1755,7 +2051,9 @@ const firebaseConfig = {
 
   function renderAdminTabs() {
     if (!state.isAdmin) return;
-    const active = state.adminTab || 'review';
+    const availableKeys = Array.from(document.querySelectorAll('.admin-tab-btn')).map((btn) => btn.dataset.adminTab);
+    const active = (state.adminTab && availableKeys.includes(state.adminTab)) ? state.adminTab : 'review';
+    state.adminTab = active;
     document.querySelectorAll('.admin-tab-btn').forEach((btn) => {
       const key = btn.dataset.adminTab;
       btn.classList.toggle('active', key === active);
@@ -1780,6 +2078,8 @@ const firebaseConfig = {
     if (els.addMethodForm) els.addMethodForm.addEventListener('submit', handleAddMethod);
     if (els.withdrawMethodsList) els.withdrawMethodsList.addEventListener('click', handleWithdrawMethodClick);
     if (els.withdrawMethodForm) els.withdrawMethodForm.addEventListener('submit', handleAddWithdrawMethod);
+    if (els.depositMethodsList) els.depositMethodsList.addEventListener('click', handleDepositMethodClick);
+    if (els.depositMethodForm) els.depositMethodForm.addEventListener('submit', handleAddDepositMethod);
     if (els.addCurrencyForm) els.addCurrencyForm.addEventListener('submit', handleAddCurrency);
     if (els.currencyAdminList) els.currencyAdminList.addEventListener('click', handleCurrencyAdminClick);
     if (els.feesForm) els.feesForm.addEventListener('submit', handleSaveFees);
@@ -1812,6 +2112,55 @@ const firebaseConfig = {
         notify(`تم رفع ${urls.length} صورة`);
       },
     });
+    bindUpload({
+      fileInput: els.depositLogoFileInput,
+      button: els.depositLogoUploadBtn,
+      targetInput: els.depositLogoInput,
+      multi: false,
+      onAfterUpload: (urls) => {
+        if (els.depositLogoInput) els.depositLogoInput.value = urls[0] || '';
+        notify('تم رفع الشعار');
+      },
+    });
+    if (els.depositCountryImageFileInput) {
+      const dz = els.depositCountryDropZone;
+      const setState = (state) => {
+        if (!dz) return;
+        dz.classList.toggle('uploading', state === 'uploading');
+      };
+      const handleUpload = async (files) => {
+        if (!files || !files.length) return;
+        setState('uploading');
+        try {
+          const url = await uploadImage(files[0]);
+          if (els.depositCountryImageInput) els.depositCountryImageInput.value = url;
+          notify('تم رفع صورة الدولة');
+        } catch (err) {
+          notify('فشل رفع صورة الدولة');
+        } finally {
+          setState(null);
+          try { els.depositCountryImageFileInput.value = ''; } catch (_) {}
+        }
+      };
+      els.depositCountryImageFileInput.addEventListener('change', (e) => handleUpload(e.target.files));
+      if (dz) dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('hover'); });
+      if (dz) dz.addEventListener('dragleave', () => dz.classList.remove('hover'));
+      if (dz) dz.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dz.classList.remove('hover');
+        const files = e.dataTransfer?.files;
+        handleUpload(files);
+      });
+    }
+
+    if (els.depositMethodTypeInput) {
+      els.depositMethodTypeInput.addEventListener('change', () => updateMethodTypeUI('deposit'));
+      updateMethodTypeUI('deposit');
+    }
+    if (els.withdrawMethodTypeInput) {
+      els.withdrawMethodTypeInput.addEventListener('change', () => updateMethodTypeUI('withdraw'));
+      updateMethodTypeUI('withdraw');
+    }
 
     if (els.logoutBtn) {
       els.logoutBtn.addEventListener('click', () => {
@@ -1901,11 +2250,13 @@ const firebaseConfig = {
     renderWallet();
     renderWalletHistory();
     renderMethodAdminList();
+    renderDepositMethods();
     renderWithdrawMethods();
     renderCurrencyAdminList();
     renderAdminTopups();
     renderAdminWithdraws();
     renderFeesForm();
+    renderWalletTotals();
     renderAdminTabs();
   }
 
@@ -1949,23 +2300,27 @@ const firebaseConfig = {
         state.games = snapshot.games || [];
         state.accounts = snapshot.accounts || [];
         state.accountPrivate = snapshot.accountPrivate || [];
-        state.paymentMethods = snapshot.paymentMethods || [];
         state.topups = snapshot.topups || [];
         state.categories = snapshot.categories || [];
         state.purchases = snapshot.purchases || [];
         state.currencies = snapshot.currencies || [];
         state.withdrawRequests = snapshot.withdrawRequests || [];
         state.withdrawCountries = snapshot.withdrawCountries || [];
+        state.depositCountries = snapshot.depositCountries || [];
+        state.walletTotals = snapshot.walletTotals || { totalUSD: 0, count: 0 };
+        state.paymentMethods = flattenDepositMethods(state.depositCountries);
         const mergedMap = currenciesToMap(state.currencies);
         try { if (typeof applyRatesMap === 'function') applyRatesMap(mergedMap, { base: 'USD' }); } catch {}
         renderPaymentMethods();
         renderCurrencyAdminList();
         renderWithdrawMethods();
+        renderDepositMethods();
         renderWalletHistory();
         renderAdminTopups();
         renderAdminWithdraws();
         renderAdminPurchases();
         renderCategoryAdminList();
+        renderWalletTotals();
         await loadFeesConfig();
         await loadWallet();
         renderAll();
@@ -1985,18 +2340,22 @@ const firebaseConfig = {
         const snapshot = await sendAdminRequest({ action: 'public:snapshot' });
         state.games = snapshot.games || [];
         state.accounts = snapshot.accounts || [];
-        state.paymentMethods = snapshot.paymentMethods || [];
         state.topups = snapshot.topups || [];
         state.categories = snapshot.categories || [];
         state.currencies = snapshot.currencies || [];
         state.withdrawCountries = snapshot.withdrawCountries || [];
         state.withdrawRequests = snapshot.withdrawRequests || [];
+        state.depositCountries = snapshot.depositCountries || [];
+        state.walletTotals = snapshot.walletTotals || { totalUSD: 0, count: 0 };
+        state.paymentMethods = flattenDepositMethods(state.depositCountries);
         const mergedMap = currenciesToMap(state.currencies);
         try { if (typeof applyRatesMap === 'function') applyRatesMap(mergedMap, { base: 'USD' }); } catch {}
         renderPaymentMethods();
         renderCurrencyAdminList();
         renderWalletHistory();
         renderWithdrawMethods();
+        renderDepositMethods();
+        renderWalletTotals();
         renderAdminTopups();
         renderAdminWithdraws();
         renderAdminPurchases();
@@ -2031,25 +2390,40 @@ const firebaseConfig = {
         ? db.collection('users').doc(user.uid).get()
         : Promise.resolve(null);
 
-      let [gamesSnap, accountsSnap, methodsSnap, topupsSnap, currencyDoc, categoriesSnap, privatesSnap, purchasesSnap, profileSnap] = await Promise.all([
+      const depositCountriesPromise = db.collection('depositCountries').get().catch(() => ({ docs: [] }));
+
+      let [gamesSnap, accountsSnap, topupsSnap, currencyDoc, categoriesSnap, privatesSnap, purchasesSnap, profileSnap, depositCountriesSnap] = await Promise.all([
         db.collection('games').get(),
         db.collection('accounts').get(),
-        db.collection('paymentMethods').get(),
         topupsPromise,
         db.collection('config').doc('currency').get(),
         db.collection('categories').get(),
         privatePromise,
         purchasesPromise,
         profilePromise,
+        depositCountriesPromise,
       ]);
       state.games = gamesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       state.accounts = accountsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       state.accountPrivate = privatesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       state.purchases = purchasesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      state.paymentMethods = methodsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       state.topups = topupsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       state.categories = categoriesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       state.userProfile = profileSnap && profileSnap.exists ? { id: profileSnap.id, ...profileSnap.data() } : null;
+      const depositCountries = await Promise.all((depositCountriesSnap.docs || []).map(async (doc) => {
+        const data = doc.data() || {};
+        let methods = [];
+        try {
+          const methodsSnap = await doc.ref.collection('methods').get();
+          methods = methodsSnap.docs.map((m) => ({ id: m.id, ...m.data() }));
+        } catch (_) {
+          methods = [];
+        }
+        return { id: doc.id, ...data, methods };
+      }));
+      state.depositCountries = depositCountries;
+      state.paymentMethods = flattenDepositMethods(state.depositCountries);
+      state.walletTotals = state.walletTotals || { totalUSD: 0, count: 0 };
       if (currencyDoc && currencyDoc.exists) {
         const data = currencyDoc.data() || {};
         const map = data.rates || data.ratesJson || {};

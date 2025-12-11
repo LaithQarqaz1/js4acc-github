@@ -578,6 +578,9 @@ function watchSessionDocForDevice(user){
           // Skip elements that are clearly not amounts (e.g., durations with 's')
           const txt = (el.textContent || '').trim();
           if (!el.dataset) return;
+          if (el.dataset.priceLock === '1' || el.dataset.currencyLock === '1' || el.dataset.currencyIgnore === '1' || el.hasAttribute('data-price-lock') || el.hasAttribute('data-currency-lock') || el.hasAttribute('data-currency-ignore')) return;
+          // تجاهل أي عنصر داخل معاينة السعر في نموذج عرض الحساب
+          if (el.closest && el.closest('#pricePreview')) return;
 
           let base = null;
           // 1) Explicit base in JOD
@@ -601,7 +604,9 @@ function watchSessionDocForDevice(user){
               // Assume initial content is JOD-based when first seen unless overridden
               const curGuess = (el.dataset.priceBase || el.dataset.currency || guessCodeFromText(txt) || 'USD').toUpperCase();
               base = convertToJOD(n, curGuess);
-              el.dataset.priceJod = String(base);
+              if (!el.closest || !el.closest('#pricePreview')) {
+                el.dataset.priceJod = String(base);
+              }
             }
           }
           if (base == null) return;
@@ -1291,7 +1296,7 @@ reviewsLi.onclick = () => navigateHomeHash('#/reviews','reviews');
 ul.appendChild(reviewsLi);
 // طلب مراجعة أدمن
 const reviewRequestLi = document.createElement('li');
-reviewRequestLi.innerHTML = '<i class="fa-solid fa-clipboard-check"></i><a href="#">طلب مراجعة</a>';
+reviewRequestLi.innerHTML = '<i class="fa-solid fa-clipboard-check"></i><a href="#">عرض حساب</a>';
 reviewRequestLi.onclick = () => navigateTo('review-request.html');
 ul.appendChild(reviewRequestLi);
 // الإعدادات

@@ -73,6 +73,38 @@
       gap:6px;
     }
     .panel .actions{gap:8px;}
+    /* مناطق رفع على شكل دروبزون مثل صفحة عرض الحساب */
+    .dropzone{
+      position:relative;
+      border:2px dashed rgba(77,161,255,0.4);
+      border-radius:14px;
+      padding:16px;
+      display:flex;
+      gap:12px;
+      align-items:center;
+      background:rgba(255,255,255,0.02);
+      cursor:pointer;
+      transition:border-color .2s ease, background .2s ease, transform .2s ease;
+    }
+    .dropzone.hover{border-color:#4da1ff;background:rgba(77,161,255,0.06);}
+    .dropzone:hover{border-color:#4da1ff;background:rgba(77,161,255,0.06);}
+    .dropzone.uploading{
+      background:linear-gradient(135deg,rgba(77,161,255,0.12),rgba(77,161,255,0.04));
+      animation:pulse 1.2s ease-in-out infinite;
+    }
+    .dropzone .icon{
+      width:44px;height:44px;
+      color:#4da1ff;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .dropzone .text{display:flex;flex-direction:column;gap:4px;}
+    .dropzone .text strong{font-size:1rem;}
+    .dropzone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;}
+    @keyframes pulse{
+      0%{box-shadow:0 0 0 0 rgba(77,161,255,0.25);}
+      70%{box-shadow:0 0 0 10px rgba(77,161,255,0);}
+      100%{box-shadow:0 0 0 0 rgba(77,161,255,0);}
+    }
     /* تحسين العرض على الهواتف */
     @media (max-width: 640px){
       .panel{padding:12px;border-radius:14px;}
@@ -140,7 +172,7 @@
     <button class="admin-tab-btn" data-admin-tab="manage">إدارة الإعلانات</button>
     <button class="admin-tab-btn" data-admin-tab="add">إضافة حساب</button>
     <button class="admin-tab-btn" data-admin-tab="categories">الأقسام</button>
-    <button class="admin-tab-btn" data-admin-tab="methods">طرق الدفع</button>
+    <button class="admin-tab-btn" data-admin-tab="deposit-methods">طرق الإيداع</button>
     <button class="admin-tab-btn" data-admin-tab="withdraw-methods">طرق السحب</button>
     <button class="admin-tab-btn" data-admin-tab="currencies">العملات</button>
     <button class="admin-tab-btn" data-admin-tab="fees">الرسوم</button>
@@ -148,7 +180,18 @@
     <button class="admin-tab-btn" data-admin-tab="purchases">المشتريات</button>
     <button class="admin-tab-btn" data-admin-tab="topups">طلبات الايداع</button>
     <button class="admin-tab-btn" data-admin-tab="withdraw">طلبات السحب</button>
+    <button class="admin-tab-btn" data-admin-tab="wallet">الرصيد الكلي</button>
   </div>
+
+  <section id="walletTotalsPanel" class="panel admin-section" data-admin-section="wallet" style="display:none;max-width:680px;margin:10px auto;">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">الرصيد الكلي للمستخدمين</p>
+        <h2 id="walletTotalValue">—</h2>
+        <p class="muted tiny" id="walletTotalCount">—</p>
+      </div>
+    </div>
+  </section>
 
   <main id="adminMain" class="container">
     <section id="admin-panel" class="panel admin-section" data-admin-section="review">
@@ -254,41 +297,104 @@
       </form>
     </section>
 
-    <section id="admin-methods" class="panel admin-section" data-admin-section="methods">
+    <section id="admin-deposit-methods" class="panel admin-section" data-admin-section="deposit-methods">
       <div class="panel-header">
         <div>
-          <p class="eyebrow">طرق الدفع</p>
-          <h2>إدارة التحويلات / المحافظ</h2>
+          <p class="eyebrow">طرق الإيداع</p>
+          <h2>إدارة الدول وسعر الصرف</h2>
         </div>
       </div>
-
-      <form id="addMethodForm" class="grid two">
+      <p class="muted">أضف دولة للإيداع وحدد العملة وسعر الصرف (1 USD → العملة) مع بيانات الحساب المستلم.</p>
+      <form id="depositMethodForm" class="grid three">
         <div class="field">
-          <label for="methodCountryInput">الدولة</label>
-          <input id="methodCountryInput" type="text" placeholder="مثال: السعودية" required>
+          <label for="depositCountryIdInput">رمز الدولة</label>
+          <input id="depositCountryIdInput" type="text" placeholder="SA / UAE / TR" required>
         </div>
         <div class="field">
-          <label for="methodNameInput">اسم الطريقة</label>
-          <input id="methodNameInput" type="text" placeholder="STC Pay / بنك الراجحي" required>
+          <label for="depositCountryNameInput">اسم الدولة</label>
+          <input id="depositCountryNameInput" type="text" placeholder="السعودية / الإمارات" required>
         </div>
         <div class="field">
-          <label for="methodAccountInput">رقم/معرف المحفظة</label>
-          <input id="methodAccountInput" type="text" placeholder="رقم، IBAN، أو معرّف" required>
+          <label for="depositCountryImageInput">صورة الدولة (اختياري)</label>
+          <label id="depositCountryDropZone" class="dropzone" for="depositCountryImageFileInput">
+            <div class="icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M7.75 18h-1.5A3.75 3.75 0 0 1 2.5 14.25c0-1.78 1.3-3.28 3.02-3.6a4.5 4.5 0 0 1 8.83-1.1 3.75 3.75 0 0 1 5.15 3.38A3.75 3.75 0 0 1 15.75 18h-1.5" />
+                <g transform="translate(-0.9 0)">
+                  <g transform="translate(12 12) scale(0.82) translate(-12 -12)">
+                    <path d="M9 16.5 12 13.5 15 16.5" />
+                    <path d="M12 13.5v6" />
+                  </g>
+                </g>
+              </svg>
+            </div>
+            <div class="text">
+              <strong>اسحب وأفلت أو اختر صورة</strong>
+              <span class="muted tiny">رفع تلقائي عبر imgbb</span>
+            </div>
+            <input id="depositCountryImageFileInput" type="file" accept="image/*">
+          </label>
+          <input id="depositCountryImageInput" type="hidden">
         </div>
         <div class="field">
-          <label for="methodHolderInput">اسم المستقبل</label>
-          <input id="methodHolderInput" type="text" placeholder="الاسم كما في البنك">
+          <label for="depositMethodNameInput">اسم الطريقة</label>
+          <input id="depositMethodNameInput" type="text" placeholder="تحويل بنكي / STC Pay" required>
+        </div>
+        <div class="field">
+          <label for="depositMethodTypeInput">نوع الطريقة</label>
+          <select id="depositMethodTypeInput">
+            <option value="wallet">محفظة</option>
+            <option value="bank">بنك</option>
+            <option value="other">أخرى</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="depositCurrencyInput">العملة</label>
+          <input id="depositCurrencyInput" type="text" placeholder="USD / SAR / TRY" maxlength="6" required>
+        </div>
+        <div class="field">
+          <label for="depositRateUsdInput">سعر 1 USD</label>
+          <input id="depositRateUsdInput" type="number" step="0.0001" placeholder="مثال: 3.75">
+        </div>
+        <div class="field deposit-bank-fields">
+          <label for="depositBankInput">اسم البنك</label>
+          <input id="depositBankInput" type="text" placeholder="اسم البنك">
+        </div>
+        <div class="field deposit-bank-fields">
+          <label for="depositAccountNameInput">اسم المستفيد</label>
+          <input id="depositAccountNameInput" type="text" placeholder="الاسم كما في الحساب">
+        </div>
+        <div class="field deposit-bank-fields">
+          <label for="depositAccountNumberInput">رقم الحساب</label>
+          <input id="depositAccountNumberInput" type="text" placeholder="رقم الحساب">
+        </div>
+        <div class="field deposit-bank-fields">
+          <label for="depositIbanInput">IBAN</label>
+          <input id="depositIbanInput" type="text" placeholder="اختياري">
+        </div>
+        <div class="field deposit-wallet-fields">
+          <label for="depositWalletInput">المعرّف / المحفظة</label>
+          <input id="depositWalletInput" type="text" placeholder="معرف المحفظة أو الوسيط">
+        </div>
+        <div class="field">
+          <label for="depositLogoFileInput">شعار الطريقة (رفع عبر imgbb)</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input id="depositLogoFileInput" type="file" accept="image/*">
+            <button class="btn ghost" type="button" id="depositLogoUploadBtn">رفع الشعار</button>
+          </div>
+          <input id="depositLogoInput" type="hidden">
+          <p class="tiny muted">سيتم رفع الصورة وتخزين رابطها تلقائياً.</p>
         </div>
         <div class="field full">
-          <label for="methodNoteInput">ملاحظات</label>
-          <input id="methodNoteInput" type="text" placeholder="تعليمات إضافية أو وصف">
+          <label for="depositMethodNoteInput">ملاحظات</label>
+          <input id="depositMethodNoteInput" type="text" placeholder="تعليمات إضافية للمحول">
         </div>
-        <div class="field submit">
-          <button class="btn primary" type="submit">حفظ الطريقة</button>
+        <div class="field submit full">
+          <button class="btn primary" type="submit">حفظ طريقة الإيداع</button>
+          <p class="tiny muted">أدخل على الأقل سعر صرف واحد.</p>
         </div>
       </form>
-
-      <div id="methodAdminList" class="cards"></div>
+      <div id="depositMethodsList" class="cards"></div>
     </section>
 
     <section id="admin-withdraw-methods" class="panel admin-section" data-admin-section="withdraw-methods">
@@ -298,7 +404,7 @@
           <h2>إضافة/حذف طرق السحب</h2>
         </div>
       </div>
-      <p class="muted">أدخل دولة السحب، اسم الطريقة، العملة، وسعر الصرف (1 USD → العملة أو 1 JOD → العملة).</p>
+      <p class="muted">أدخل دولة السحب، اسم الطريقة، العملة، وسعر الصرف (1 USD → العملة).</p>
       <form id="withdrawMethodForm" class="grid three">
         <div class="field">
           <label for="withdrawCountryIdInput">رمز الدولة</label>
@@ -313,6 +419,14 @@
           <input id="withdrawMethodNameInput" type="text" placeholder="تحويل بنكي / STC Pay" required>
         </div>
         <div class="field">
+          <label for="withdrawMethodTypeInput">نوع الطريقة</label>
+          <select id="withdrawMethodTypeInput">
+            <option value="wallet">محفظة</option>
+            <option value="bank">بنك</option>
+            <option value="other">أخرى</option>
+          </select>
+        </div>
+        <div class="field">
           <label for="withdrawCurrencyInput">العملة</label>
           <input id="withdrawCurrencyInput" type="text" placeholder="USD / SAR / AED" maxlength="6" required>
         </div>
@@ -320,9 +434,21 @@
           <label for="withdrawRateUsdInput">سعر 1 USD</label>
           <input id="withdrawRateUsdInput" type="number" step="0.0001" placeholder="مثال: 3.75">
         </div>
-        <div class="field">
-          <label for="withdrawRateJodInput">سعر 1 JOD (اختياري)</label>
-          <input id="withdrawRateJodInput" type="number" step="0.0001" placeholder="للتوافق مع جوردان">
+        <div class="field withdraw-bank-fields">
+          <label for="withdrawBankInput">اسم البنك</label>
+          <input id="withdrawBankInput" type="text" placeholder="اسم البنك">
+        </div>
+        <div class="field withdraw-bank-fields">
+          <label for="withdrawAccountNameInput">اسم المستفيد</label>
+          <input id="withdrawAccountNameInput" type="text" placeholder="الاسم كما في الحساب">
+        </div>
+        <div class="field withdraw-bank-fields">
+          <label for="withdrawAccountNumberInput">رقم الحساب</label>
+          <input id="withdrawAccountNumberInput" type="text" placeholder="رقم الحساب">
+        </div>
+        <div class="field withdraw-wallet-fields">
+          <label for="withdrawWalletInput">المعرّف / المحفظة</label>
+          <input id="withdrawWalletInput" type="text" placeholder="معرف المحفظة أو الوسيط">
         </div>
         <div class="field full">
           <label for="withdrawMethodNoteInput">ملاحظات</label>
