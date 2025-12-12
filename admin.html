@@ -135,6 +135,55 @@
     #admin-categories .category-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;}
     #admin-categories .category-card{border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px;background:rgba(8,10,20,0.9);display:flex;justify-content:space-between;align-items:center;gap:8px;}
     #admin-categories .category-card .label{font-weight:700;}
+    /* إعادة تصميم المشتريات – يتماشى مع العناصر الحقيقية */
+    #adminPurchasesList.cards{grid-template-columns:1fr;gap:18px;}
+    .purchase-card{
+      width:100%;
+      min-height:340px;
+      background:rgba(255,255,255,0.03);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:18px;
+      box-shadow:0 18px 44px rgba(0,0,0,0.4);
+      overflow:hidden;
+    }
+    .purchase-card .card-body{display:flex;flex-direction:column;gap:16px;width:100%;box-sizing:border-box;padding:20px;}
+    .purchase-header{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;}
+    .purchase-left{display:flex;gap:12px;align-items:flex-start;flex:1;min-width:0;}
+    .purchase-thumb{
+      width:96px;height:96px;max-width:96px;max-height:96px;
+      flex:0 0 96px;border-radius:12px;overflow:hidden;
+      background:#0f1628;border:1px solid rgba(255,255,255,0.12);
+    }
+    .purchase-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+    .purchase-meta{display:flex;flex-direction:column;gap:4px;min-width:200px;}
+    .purchase-meta .wrap{word-break:break-all;white-space:normal;}
+    .purchase-pricing{display:flex;flex-direction:column;gap:6px;align-items:flex-end;min-width:170px;}
+    .purchase-card .contact-line{color:#9aa6c8;font-size:12px;}
+    .purchase-lines{
+      display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;
+      border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;
+      color:#cfd8ff;font-size:13px;
+    }
+    .purchase-lines div{flex:1;min-width:180px;}
+    .purchase-actions{
+      display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-start;
+      padding:10px;border-top:1px solid rgba(255,255,255,0.08);
+      background:rgba(0,0,0,0.06);border-radius:12px;
+    }
+    .purchase-actions .btn{min-width:150px;text-align:center;}
+    .purchase-actions .btn.primary{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;border:none;}
+    .purchase-actions .btn.danger{background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;border:none;}
+    @media(max-width:900px){
+      .purchase-header{flex-direction:column;}
+      .purchase-pricing{align-items:flex-start;}
+      .purchase-actions{justify-content:center;}
+    }
+    @media(max-width:620px){
+      #adminPurchasesList.cards{grid-template-columns:1fr;}
+      .purchase-card{min-height:680px;}
+      .purchase-thumb{width:96px;height:96px;max-width:96px;max-height:96px;flex:0 0 96px;}
+      .purchase-actions{justify-content:center;}
+    }
   </style>
 </head>
 <body>
@@ -223,6 +272,7 @@
             <option value="approved">مقبول</option>
             <option value="pending">بانتظار</option>
             <option value="rejected">مرفوض</option>
+            <option value="sold">تم البيع</option>
           </select>
         </div>
       </div>
@@ -301,41 +351,11 @@
       <div class="panel-header">
         <div>
           <p class="eyebrow">طرق الإيداع</p>
-          <h2>إدارة الدول وسعر الصرف</h2>
+          <h2>إدارة طرق الدفع وسعر الصرف</h2>
         </div>
       </div>
-      <p class="muted">أضف دولة للإيداع وحدد العملة وسعر الصرف (1 USD → العملة) مع بيانات الحساب المستلم.</p>
+      <p class="muted">أضف طريقة إيداع مباشرة وحدد العملة وسعر الصرف (1 USD → العملة) مع بيانات الحساب المستلم.</p>
       <form id="depositMethodForm" class="grid three">
-        <div class="field">
-          <label for="depositCountryIdInput">رمز الدولة</label>
-          <input id="depositCountryIdInput" type="text" placeholder="SA / UAE / TR" required>
-        </div>
-        <div class="field">
-          <label for="depositCountryNameInput">اسم الدولة</label>
-          <input id="depositCountryNameInput" type="text" placeholder="السعودية / الإمارات" required>
-        </div>
-        <div class="field">
-          <label for="depositCountryImageInput">صورة الدولة (اختياري)</label>
-          <label id="depositCountryDropZone" class="dropzone" for="depositCountryImageFileInput">
-            <div class="icon">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M7.75 18h-1.5A3.75 3.75 0 0 1 2.5 14.25c0-1.78 1.3-3.28 3.02-3.6a4.5 4.5 0 0 1 8.83-1.1 3.75 3.75 0 0 1 5.15 3.38A3.75 3.75 0 0 1 15.75 18h-1.5" />
-                <g transform="translate(-0.9 0)">
-                  <g transform="translate(12 12) scale(0.82) translate(-12 -12)">
-                    <path d="M9 16.5 12 13.5 15 16.5" />
-                    <path d="M12 13.5v6" />
-                  </g>
-                </g>
-              </svg>
-            </div>
-            <div class="text">
-              <strong>اسحب وأفلت أو اختر صورة</strong>
-              <span class="muted tiny">رفع تلقائي عبر imgbb</span>
-            </div>
-            <input id="depositCountryImageFileInput" type="file" accept="image/*">
-          </label>
-          <input id="depositCountryImageInput" type="hidden">
-        </div>
         <div class="field">
           <label for="depositMethodNameInput">اسم الطريقة</label>
           <input id="depositMethodNameInput" type="text" placeholder="تحويل بنكي / STC Pay" required>
@@ -378,10 +398,25 @@
         </div>
         <div class="field">
           <label for="depositLogoFileInput">شعار الطريقة (رفع عبر imgbb)</label>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <input id="depositLogoFileInput" type="file" accept="image/*">
-            <button class="btn ghost" type="button" id="depositLogoUploadBtn">رفع الشعار</button>
-          </div>
+          <label id="depositLogoDropZone" class="dropzone" for="depositLogoFileInput">
+            <div class="icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M7.75 18h-1.5A3.75 3.75 0 0 1 2.5 14.25c0-1.78 1.3-3.28 3.02-3.6a4.5 4.5 0 0 1 8.83-1.1 3.75 3.75 0 0 1 5.15 3.38A3.75 3.75 0 0 1 15.75 18h-1.5" />
+                <g transform="translate(-0.9 0)">
+                  <g transform="translate(12 12) scale(0.82) translate(-12 -12)">
+                    <path d="M9 16.5 12 13.5 15 16.5" />
+                    <path d="M12 13.5v6" />
+                  </g>
+                </g>
+              </svg>
+            </div>
+            <div class="text">
+              <strong>اسحب وأفلت أو اختر الشعار</strong>
+              <span class="muted tiny">يدعم PNG / JPG</span>
+            </div>
+            <input id="depositLogoFileInput" type="file" accept="image/*" style="display:none;">
+          </label>
+          <button class="btn ghost" type="button" id="depositLogoUploadBtn" style="margin-top:8px;">رفع الشعار</button>
           <input id="depositLogoInput" type="hidden">
           <p class="tiny muted">سيتم رفع الصورة وتخزين رابطها تلقائياً.</p>
         </div>
@@ -401,19 +436,11 @@
       <div class="panel-header">
         <div>
           <p class="eyebrow">طرق السحب</p>
-          <h2>إضافة/حذف طرق السحب</h2>
+          <h2>إدارة طرق السحب</h2>
         </div>
       </div>
-      <p class="muted">أدخل دولة السحب، اسم الطريقة، العملة، وسعر الصرف (1 USD → العملة).</p>
+      <p class="muted">أدخل طريقة السحب مباشرة، العملة، وسعر الصرف (1 USD → العملة).</p>
       <form id="withdrawMethodForm" class="grid three">
-        <div class="field">
-          <label for="withdrawCountryIdInput">رمز الدولة</label>
-          <input id="withdrawCountryIdInput" type="text" placeholder="مثال: SA / UAE" required>
-        </div>
-        <div class="field">
-          <label for="withdrawCountryNameInput">اسم الدولة</label>
-          <input id="withdrawCountryNameInput" type="text" placeholder="السعودية / الإمارات" required>
-        </div>
         <div class="field">
           <label for="withdrawMethodNameInput">اسم الطريقة</label>
           <input id="withdrawMethodNameInput" type="text" placeholder="تحويل بنكي / STC Pay" required>

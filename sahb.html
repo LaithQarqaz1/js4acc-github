@@ -339,7 +339,7 @@
   <main>
     <div class="toolbar">
       <button id="backBtn" class="back-btn"><i class="fa fa-arrow-right"></i> رجوع</button>
-      <div class="where" id="whereText">الدول المتاحة للسحب</div>
+      <div class="where" id="whereText">طرق السحب المتاحة</div>
       <div style="width:120px"></div>
     </div>
 
@@ -472,8 +472,6 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
     const submitWithdrawBtn = document.getElementById('submitWithdrawBtn');
 
     // ================= حالة وتنقّل =================
-    let currentCountry = null; // { id, data }
-    let countries = [];
     let methods = [];
     let currentMethod = null;
 
@@ -512,58 +510,35 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
     // ================= بحث =================
     function applySearch(){
       const q=(searchInput.value||'').trim().toLowerCase();
-      const list=currentCountry?methods:countries;
+      const list=methods||[];
       const filtered=list.filter(x=>(x.data.name||'').toLowerCase().includes(q));
-      currentCountry?renderMethods(filtered):renderCountries(filtered);
+      renderMethods(filtered);
     }
     searchInput.addEventListener('input', applySearch);
 
-    // ================= Firestore: الدول والطرق =================
-    function watchCountries(){
+    // ================= Firestore: طرق السحب =================
+    function watchMethods(){
       cardSkeleton();
-      return db.collection('withdrawCountries')
-        .where('active','==', true)
-        .orderBy('order','asc')
-        .onSnapshot(snap=>{
-          countries=snap.docs.map(d=>({id:d.id,data:d.data()}));
-          if(!currentCountry){ renderCountries(countries); applySearch(); }
-        }, err=>{ console.error('countries onSnapshot error:', err); });
+      const ref = db.collection('config').doc('paymentMethods');
+      return ref.onSnapshot(snap=>{
+        const data = snap.exists ? (snap.data() || {}) : {};
+        const withdrawMap = data.withdraw || {};
+        methods = Object.keys(withdrawMap).map((id)=>({ id, data: withdrawMap[id] || {} }));
+        renderMethods(methods);
+        applySearch();
+        hidePreloader();
+      }, err=>{ console.error('methods onSnapshot error:', err); hidePreloader(); });
     }
-
-    async function enterCountry(c){
-      showPreloader();
-      currentCountry=c;
-      whereText.textContent=`طرق السحب — ${c.data.name}`;
-      backBtn.style.display='inline-block';
-      cardSkeleton();
-
-      const snap=await db.collection('withdrawCountries').doc(c.id)
-                    .collection('methods')
-                    .where('active','==', true)
-                    .orderBy('name','asc')
-                    .get();
-
-      methods=snap.docs.map(d=>({id:d.id,data:d.data()}));
-      renderMethods(methods);
-      hidePreloader();
-    }
-
-    function goBack(){
-      currentCountry=null;
-      whereText.textContent='الدول المتاحة للسحب';
-      backBtn.style.display='none';
-      renderCountries(countries);
-    }
-    backBtn.addEventListener('click', goBack);
+    try { backBtn.style.display='none'; whereText.textContent='طرق السحب المتاحة'; }catch(_){}
 
     // ================= FX من الخادم =================
-    async function fetchFx(countryId, methodId){
+    async function fetchFx(methodId){
       // قاعدة العامل: تسمح بتهيئة override عبر localStorage: key 'withdraw:worker'
       let base = WORKER_BASE || '';
       try{ const ov = localStorage.getItem('withdraw:worker'); if (ov) base = ov; }catch(_){ }
       base = (base||'').replace(/\/+$/,'');
 
-      const url = `${base}/withdraw/fx?countryId=${encodeURIComponent(countryId)}&methodId=${encodeURIComponent(methodId)}`;
+      const url = `${base}/withdraw/fx?methodId=${encodeURIComponent(methodId)}`;
       const headers = {};
       try { const u = auth && auth.currentUser; if (u) headers['Authorization'] = 'Bearer ' + await u.getIdToken(); } catch(_){ }
       const res = await fetch(url, { method:'GET', headers });
@@ -609,7 +584,7 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
       try{ methodInfo.style.display='none'; }catch(_){ }
 
       try{
-        const fx = await fetchFx(currentCountry.id, m.id);
+        const fx = await fetchFx(m.id);
         fxCurrency   = fx.currencyCode;
         fxRatePerUSD = Number(fx.ratePerUSD)||null; // 1 USD -> CUR
         fxRatePerJOD = Number(fx.ratePerJOD)||null; // 1 JOD -> CUR
@@ -622,7 +597,7 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
         document.querySelector('label[for="recvCUR"]').textContent = 'سيستلم (—)';
       }
 
-      // تحديد usdPerJOD (1 JOD -> USD) من config/أو طريقة USD بنفس الدولة
+      // تحديد usdPerJOD (1 JOD -> USD) من config/أو طريقة USD متاحة
       try {
         usdPerJOD = null;
         const usdMethod = (methods || []).find(x => {
@@ -716,7 +691,7 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
       return idOk && nameOk;
     }
     function updateSubmitState(){
-      submitWithdrawBtn.disabled = !(amountsValid() && !!window.turnstileToken && !!currentMethod && !!currentCountry && recipientValid());
+      submitWithdrawBtn.disabled = !(amountsValid() && !!window.turnstileToken && !!currentMethod && recipientValid());
     }
 
     // ====== تأكيد السحب: تحميل CSS من الباك-إند + عرض نافذة ======
@@ -771,7 +746,7 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
       return await user.getIdToken(true);
     }
 
-    async function handleSubmitWithdraw(country, method){
+    async function handleSubmitWithdraw(method){
       if(!amountsValid()) return alert('أدخل قيمة صحيحة بالدولار.');
       if(!recipientValid()) return alert('أدخل رقم/معرّف واسم مستخدم صحيحين (٣ أحرف على الأقل).');
       if(!window.turnstileToken) return alert('أكمل التحقق الأمني Turnstile.');
@@ -780,8 +755,6 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
         const idToken = await getIdTokenOrThrow();
 
         const body = {
-          countryId:  country?.id || "",
-          countryName: country?.data?.name || "",
           methodId:   method?.id || "",
           methodName: method?.data?.name || "",
           desiredUSD: Number.isFinite(Number(sendUSD.value))? Number(Number(sendUSD.value).toFixed(2)) : 0,
@@ -816,17 +789,7 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
 
     // ================= رسم الشبكات =================
     function renderCountries(list){
-      clearGrid();
-      list.forEach(c=>{
-        const a=document.createElement('a');
-        a.href='javascript:void(0)';
-        a.className='card';
-        a.dataset.title=c.data.name||'';
-        a.innerHTML=`<img src="${c.data.imageUrl||''}" alt="${c.data.name||''}"><h2>${c.data.name||''}</h2>`;
-        a.addEventListener('click',()=>enterCountry(c));
-        grid.appendChild(a);
-      });
-      showNoResults(list.length===0);
+      renderMethods(list || []);
     }
 
     function renderMethods(list){
@@ -837,7 +800,7 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
         a.className='card';
         a.dataset.title=m.data.name||'';
         a.innerHTML=`<img src="${m.data.logoUrl||''}" alt="${m.data.name||''}"><h2>${m.data.name||''}</h2>`;
-        a.addEventListener('click',()=>{ submitWithdrawBtn.onclick = ()=>handleSubmitWithdraw(currentCountry, m); openMethod(m); });
+        a.addEventListener('click',()=>{ submitWithdrawBtn.onclick = ()=>handleSubmitWithdraw(m); openMethod(m); });
         grid.appendChild(a);
       });
       showNoResults(list.length===0);
@@ -849,24 +812,11 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
     methodModal.addEventListener('click', (e)=>{ if(e.target===methodModal) closeModalFn(); });
 
     // تشغيل
-    watchCountries();
+    watchMethods();
   </script>
   
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

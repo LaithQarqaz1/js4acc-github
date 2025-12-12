@@ -16,11 +16,11 @@
     firebaseUser: null,
     isAdmin: false,
     paymentMethods: [],
+    depositMethods: [],
+    withdrawMethods: [],
     currencies: [],
     topups: [],
     withdrawRequests: [],
-    withdrawCountries: [],
-    depositCountries: [],
     walletTotals: { totalUSD: 0, count: 0 },
     selectedGame: null,
     view: 'games',
@@ -33,22 +33,21 @@
   };
   state.fees = getDefaultFees();
 
-  function flattenDepositMethods(depositCountries = []) {
-    const list = [];
-    depositCountries.forEach((c) => {
-      const countryId = c.id || c.code || c.slug || c.name || c.label || 'country';
-      const countryName = c.name || c.label || c.id || countryId;
-      (c.methods || []).forEach((m, idx) => {
-        const id = m.id || m.methodId || `${countryId}-${idx}`;
-        list.push({
-          ...m,
-          id,
-          country: countryName,
-          countryId,
-        });
-      });
-    });
-    return list;
+  function normalizeMethod(method, fallbackId) {
+    if (!method) return null;
+    const id = method.id || method.methodId || fallbackId || uid('method');
+    return { ...method, id };
+  }
+
+  function flattenDepositMethods(methods = []) {
+    if (!methods) return [];
+    if (Array.isArray(methods)) {
+      return methods.map((m, idx) => normalizeMethod(m, `m-${idx}`)).filter(Boolean);
+    }
+    if (typeof methods === 'object') {
+      return Object.keys(methods).map((id) => normalizeMethod({ id, ...(methods[id] || {}) }, id)).filter(Boolean);
+    }
+    return [];
   }
   function formatPriceCurrency(val){
     const n = Number(val);
@@ -191,6 +190,8 @@
     depositCountryImageInput: document.getElementById('depositCountryImageInput'),
     depositCountryImageFileInput: document.getElementById('depositCountryImageFileInput'),
     depositCountryDropZone: document.getElementById('depositCountryDropZone'),
+    depositCountrySelectExisting: document.getElementById('depositCountrySelectExisting'),
+    depositFillExistingBtn: document.getElementById('depositFillExistingBtn'),
     depositMethodNameInput: document.getElementById('depositMethodNameInput'),
     depositMethodTypeInput: document.getElementById('depositMethodTypeInput'),
     depositCurrencyInput: document.getElementById('depositCurrencyInput'),
@@ -279,6 +280,14 @@ const firebaseConfig = {
       .replace(/^-+|-+$/g, '');
   }
 
+  function displayTitle(raw) {
+    const t = (raw ?? '').toString();
+    if (!t) return '';
+    const looksSlug = !/\s/.test(t) && t.includes('-');
+    const normalized = looksSlug ? t.replace(/-/g, ' ') : t;
+    return normalized.replace(/\s+/g, ' ').trim();
+  }
+
   function save(key, value) {
     try {
       localStorage.setItem(key, JSON.stringify(value));
@@ -330,15 +339,17 @@ const firebaseConfig = {
     const res = await fetch(`${ADMIN_ROUTER_BASE}/accounts`, {
       method: 'POST',
       headers,
-      body: JSON.stringify(body || {})
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || data.ok === false) {
-      const msg = data.error || data.message || 'تعذر تنفيذ طلب الأدمن';
-      throw new Error(msg);
-    }
-    return data;
+    body: JSON.stringify(body || {})
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) {
+    const msg = data.error || data.message || 'تعذر تنفيذ طلب الأدمن';
+    const detail = data && data.details;
+    const statusInfo = detail && detail.status ? ` (الحالة الحالية: ${detail.status})` : '';
+    throw new Error(msg + statusInfo);
   }
+  return data;
+}
 
   function findFreeFireGameId() {
     const keys = ['free fire', 'freefire', 'فري فاير', 'فريفاير'];
@@ -437,6 +448,357 @@ const firebaseConfig = {
     }, 2200);
   }
 
+  // نافذة ردود بسيطة
+  let respModal = null;
+  function ensureResponseModal() {
+    if (respModal) return respModal;
+    const overlay = document.createElement('div');
+    overlay.id = 'responseModal';
+    overlay.style.position = 'fixed';
+    overlay.style.inset = '0';
+    overlay.style.background = 'rgba(0,0,0,0.55)';
+    overlay.style.display = 'none';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.zIndex = '12000';
+    const box = document.createElement('div');
+    box.style.background = 'linear-gradient(145deg,#0f172a,#111827)';
+    box.style.padding = '18px 20px';
+    box.style.borderRadius = '16px';
+    box.style.border = '1px solid rgba(255,255,255,0.12)';
+    box.style.boxShadow = '0 18px 44px rgba(0,0,0,0.45)';
+    box.style.maxWidth = '420px';
+    box.style.width = '90%';
+    const title = document.createElement('h3');
+    title.className = 'resp-title';
+    title.style.margin = '0 0 8px';
+    title.style.color = '#e6edff';
+    const msg = document.createElement('p');
+    msg.className = 'resp-message';
+    msg.style.margin = '0 0 14px';
+    msg.style.color = '#cdd8ff';
+    msg.style.whiteSpace = 'pre-wrap';
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'حسناً';
+    closeBtn.className = 'btn primary';
+    closeBtn.style.width = '100%';
+    closeBtn.style.border = 'none';
+    closeBtn.style.marginTop = '6px';
+    closeBtn.addEventListener('click', () => closeResponseModal());
+    box.appendChild(title); box.appendChild(msg); box.appendChild(closeBtn);
+    overlay.appendChild(box);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeResponseModal(); });
+    document.body.appendChild(overlay);
+    respModal = overlay;
+    return respModal;
+  }
+  function openResponseModal(message, title = 'تنبيه') {
+    const modal = ensureResponseModal();
+    const t = modal.querySelector('.resp-title');
+    const m = modal.querySelector('.resp-message');
+    if (t) t.textContent = title;
+    if (m) m.textContent = message;
+    modal.style.display = 'flex';
+    modal.style.opacity = '1';
+  }
+  function closeResponseModal() {
+    if (!respModal) return;
+    respModal.style.opacity = '0';
+    setTimeout(() => { respModal.style.display = 'none'; }, 150);
+  }
+
+  // ====== عارض صور الحسابات (أزرار أسهم للتنقل) ======
+  let accountImageViewer = null;
+  let accountImageViewerImg = null;
+  let accountImageViewerCounter = null;
+  let accountImageViewerOpenLink = null;
+  let accountImageViewerPrevBtn = null;
+  let accountImageViewerNextBtn = null;
+  let accountImageViewerState = { urls: [], index: 0, restoreOverflow: '' };
+
+  function getAccountImageUrls(acc) {
+    const urls = [];
+    const seen = new Set();
+    const push = (value, { prepend = false } = {}) => {
+      const s = (value || '').toString().trim();
+      if (!s) return;
+      if (seen.has(s)) return;
+      seen.add(s);
+      if (prepend) urls.unshift(s);
+      else urls.push(s);
+    };
+    if (acc && acc.image) push(acc.image, { prepend: true });
+    if (acc && Array.isArray(acc.images)) acc.images.forEach((u) => push(u));
+    return urls;
+  }
+
+  function ensureAccountImageViewer() {
+    if (accountImageViewer) return accountImageViewer;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'accountImageViewer';
+    overlay.style.position = 'fixed';
+    overlay.style.inset = '0';
+    overlay.style.zIndex = '13000';
+    overlay.style.display = 'none';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.padding = '18px';
+    overlay.style.boxSizing = 'border-box';
+    overlay.style.background = 'rgba(0,0,0,0.76)';
+    overlay.style.backdropFilter = 'blur(6px)';
+
+    const box = document.createElement('div');
+    box.style.width = 'min(980px, 96vw)';
+    box.style.maxHeight = '92vh';
+    box.style.background = 'linear-gradient(145deg,rgba(10,12,24,0.98),rgba(12,18,40,0.98))';
+    box.style.border = '1px solid rgba(255,255,255,0.14)';
+    box.style.borderRadius = '18px';
+    box.style.boxShadow = '0 26px 80px rgba(0,0,0,0.55)';
+    box.style.overflow = 'hidden';
+    box.style.display = 'flex';
+    box.style.flexDirection = 'column';
+
+    const header = document.createElement('div');
+    header.style.display = 'flex';
+    header.style.alignItems = 'center';
+    header.style.justifyContent = 'space-between';
+    header.style.gap = '10px';
+    header.style.padding = '10px 12px';
+    header.style.borderBottom = '1px solid rgba(255,255,255,0.08)';
+
+    const title = document.createElement('div');
+    title.textContent = 'صور الحساب';
+    title.style.color = '#e6edff';
+    title.style.fontWeight = '800';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'btn ghost small';
+    closeBtn.textContent = 'إغلاق';
+    closeBtn.style.minWidth = '110px';
+    closeBtn.addEventListener('click', closeAccountImageViewer);
+
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+
+    const stage = document.createElement('div');
+    stage.style.display = 'flex';
+    stage.style.alignItems = 'center';
+    stage.style.justifyContent = 'space-between';
+    stage.style.gap = '10px';
+    stage.style.padding = '12px';
+    stage.style.flex = '1';
+    stage.style.minHeight = '0';
+
+    const mkNavBtn = (label, aria) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = label;
+      btn.setAttribute('aria-label', aria);
+      btn.style.width = '46px';
+      btn.style.height = '46px';
+      btn.style.borderRadius = '14px';
+      btn.style.border = '1px solid rgba(255,255,255,0.14)';
+      btn.style.background = 'rgba(255,255,255,0.06)';
+      btn.style.color = '#e6edff';
+      btn.style.fontSize = '22px';
+      btn.style.fontWeight = '900';
+      btn.style.cursor = 'pointer';
+      btn.style.flex = '0 0 auto';
+      btn.style.userSelect = 'none';
+      return btn;
+    };
+
+    // في RTL: التالي ← ، السابق →
+    const nextBtn = mkNavBtn('‹', 'التالي');
+    const prevBtn = mkNavBtn('›', 'السابق');
+    nextBtn.addEventListener('click', accountImageViewerNext);
+    prevBtn.addEventListener('click', accountImageViewerPrev);
+
+    const frame = document.createElement('div');
+    frame.style.flex = '1';
+    frame.style.minHeight = '0';
+    frame.style.display = 'flex';
+    frame.style.alignItems = 'center';
+    frame.style.justifyContent = 'center';
+    frame.style.background = 'rgba(0,0,0,0.18)';
+    frame.style.border = '1px solid rgba(255,255,255,0.08)';
+    frame.style.borderRadius = '14px';
+    frame.style.overflow = 'hidden';
+
+    const img = document.createElement('img');
+    img.alt = 'صورة';
+    img.style.maxWidth = '100%';
+    img.style.maxHeight = '100%';
+    img.style.objectFit = 'contain';
+    img.style.display = 'block';
+    img.style.background = 'rgba(0,0,0,0.22)';
+    img.style.borderRadius = '12px';
+
+    frame.appendChild(img);
+    stage.appendChild(nextBtn);
+    stage.appendChild(frame);
+    stage.appendChild(prevBtn);
+
+    const footer = document.createElement('div');
+    footer.style.display = 'flex';
+    footer.style.alignItems = 'center';
+    footer.style.justifyContent = 'space-between';
+    footer.style.gap = '10px';
+    footer.style.padding = '10px 12px';
+    footer.style.borderTop = '1px solid rgba(255,255,255,0.08)';
+    footer.style.color = '#9aa6c8';
+    footer.style.fontSize = '13px';
+
+    const counter = document.createElement('span');
+    counter.textContent = '—';
+
+    const openLink = document.createElement('a');
+    openLink.textContent = 'فتح في تبويب';
+    openLink.target = '_blank';
+    openLink.rel = 'noopener';
+    openLink.href = '#';
+    openLink.style.color = '#7aa7ff';
+    openLink.style.fontWeight = '800';
+    openLink.style.textDecoration = 'none';
+
+    footer.appendChild(counter);
+    footer.appendChild(openLink);
+
+    box.appendChild(header);
+    box.appendChild(stage);
+    box.appendChild(footer);
+    overlay.appendChild(box);
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeAccountImageViewer();
+    });
+
+    document.body.appendChild(overlay);
+
+    accountImageViewer = overlay;
+    accountImageViewerImg = img;
+    accountImageViewerCounter = counter;
+    accountImageViewerOpenLink = openLink;
+    accountImageViewerPrevBtn = prevBtn;
+    accountImageViewerNextBtn = nextBtn;
+    return accountImageViewer;
+  }
+
+  function renderAccountImageViewer() {
+    if (!accountImageViewerImg || !accountImageViewerCounter || !accountImageViewerOpenLink) return;
+    const urls = accountImageViewerState.urls || [];
+    const len = urls.length;
+    const idx = accountImageViewerState.index || 0;
+    const src = urls[idx] || '';
+    accountImageViewerImg.src = src;
+    accountImageViewerOpenLink.href = src || '#';
+    accountImageViewerCounter.textContent = len ? `${idx + 1} / ${len}` : '—';
+    const disabled = len <= 1;
+    if (accountImageViewerPrevBtn) {
+      accountImageViewerPrevBtn.disabled = disabled;
+      accountImageViewerPrevBtn.style.opacity = disabled ? '0.35' : '1';
+      accountImageViewerPrevBtn.style.cursor = disabled ? 'not-allowed' : 'pointer';
+    }
+    if (accountImageViewerNextBtn) {
+      accountImageViewerNextBtn.disabled = disabled;
+      accountImageViewerNextBtn.style.opacity = disabled ? '0.35' : '1';
+      accountImageViewerNextBtn.style.cursor = disabled ? 'not-allowed' : 'pointer';
+    }
+  }
+
+  function openAccountImageViewer(urls, startIndex = 0) {
+    const cleaned = (urls || []).map((u) => (u || '').toString().trim()).filter(Boolean);
+    if (!cleaned.length) {
+      notify('لا توجد صور لهذا الحساب');
+      return;
+    }
+    ensureAccountImageViewer();
+    const idx = Number(startIndex);
+    const safeIndex = Number.isFinite(idx) && idx >= 0 && idx < cleaned.length ? idx : 0;
+    accountImageViewerState.urls = cleaned;
+    accountImageViewerState.index = safeIndex;
+    renderAccountImageViewer();
+    accountImageViewerState.restoreOverflow = document.body.style.overflow || '';
+    document.body.style.overflow = 'hidden';
+    accountImageViewer.style.display = 'flex';
+    document.addEventListener('keydown', handleAccountImageViewerKeydown);
+  }
+
+  function closeAccountImageViewer() {
+    if (!accountImageViewer) return;
+    accountImageViewer.style.display = 'none';
+    document.body.style.overflow = accountImageViewerState.restoreOverflow || '';
+    document.removeEventListener('keydown', handleAccountImageViewerKeydown);
+    accountImageViewerState.urls = [];
+    accountImageViewerState.index = 0;
+  }
+
+  function accountImageViewerPrev() {
+    const urls = accountImageViewerState.urls || [];
+    if (urls.length <= 1) return;
+    accountImageViewerState.index = (accountImageViewerState.index - 1 + urls.length) % urls.length;
+    renderAccountImageViewer();
+  }
+
+  function accountImageViewerNext() {
+    const urls = accountImageViewerState.urls || [];
+    if (urls.length <= 1) return;
+    accountImageViewerState.index = (accountImageViewerState.index + 1) % urls.length;
+    renderAccountImageViewer();
+  }
+
+  function handleAccountImageViewerKeydown(e) {
+    if (!accountImageViewer || accountImageViewer.style.display !== 'flex') return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeAccountImageViewer();
+      return;
+    }
+    const isRtl = (document.documentElement.getAttribute('dir') || '').toLowerCase() === 'rtl';
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      if (isRtl) accountImageViewerNext();
+      else accountImageViewerPrev();
+      return;
+    }
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      if (isRtl) accountImageViewerPrev();
+      else accountImageViewerNext();
+    }
+  }
+
+  function handleOpenAccountImages(e) {
+    const trigger = e.target.closest('[data-open-account-images]');
+    if (!trigger) return;
+    const accountId = (trigger.dataset.openAccountImages || '').trim();
+    if (!accountId) return;
+    const acc = state.accounts.find((a) => a && a.id === accountId);
+    if (!acc) return;
+    const urls = getAccountImageUrls(acc);
+    if (!urls.length) {
+      notify('لا توجد صور لهذا الحساب');
+      return;
+    }
+    let clickedUrl = '';
+    const encodedUrl = (trigger.dataset.imgUrl || '').trim();
+    if (encodedUrl) {
+      try { clickedUrl = decodeURIComponent(encodedUrl); }
+      catch { clickedUrl = encodedUrl; }
+    }
+    let startIndex = 0;
+    if (clickedUrl) {
+      const found = urls.indexOf(clickedUrl);
+      if (found >= 0) startIndex = found;
+    } else if (trigger.dataset.imgIndex) {
+      const idx = Number(trigger.dataset.imgIndex);
+      if (Number.isFinite(idx) && idx >= 0 && idx < urls.length) startIndex = idx;
+    }
+    openAccountImageViewer(urls, startIndex);
+  }
+
   function scrollToId(id) {
     const el = document.querySelector(id);
     if (el) {
@@ -492,7 +854,7 @@ const firebaseConfig = {
       if (!c) return;
       const key = c.id || c.key || c.slug;
       const label = c.label || c.name || c.title || key;
-      if (key) map[key] = label;
+      if (key) map[key] = displayTitle(label);
     });
     return map;
   }
@@ -513,7 +875,8 @@ const firebaseConfig = {
       const key = c.id || c.key || c.slug;
       if (!key) return;
       const label = c.label || c.name || c.title || key;
-      parts.push(`<option value="${key}">${label}</option>`);
+      const display = displayTitle(label);
+      parts.push(`<option value="${key}">${display}</option>`);
     });
     el.innerHTML = parts.join('') || '<option value="">لا توجد أقسام</option>';
   }
@@ -592,75 +955,66 @@ const firebaseConfig = {
   }
 
   function renderPaymentMethods() {
-    if (!els.walletCountrySelect || !els.walletMethodSelect) return;
-    const countries = state.depositCountries || [];
-    if (!countries.length) {
-      els.walletCountrySelect.innerHTML = '<option value=\"\">لا توجد طرق إيداع</option>';
-      els.walletMethodSelect.innerHTML = '<option value=\"\">—</option>';
-      if (els.walletMethodInfo) els.walletMethodInfo.textContent = '';
-      return;
-    }
-    const selected = els.walletCountrySelect.value;
-    const options = countries.map((c) => {
-      const id = c.id || c.code || c.slug || c.name || c.label || '';
-      const name = c.name || c.label || id || 'دولة';
-      return `<option value="${id}">${name}</option>`;
-    }).join('');
-    els.walletCountrySelect.innerHTML = options;
-    if (!countries.some((c) => (c.id || c.code || c.slug || c.name || c.label || '') === selected)) {
-      const firstId = countries[0].id || countries[0].code || countries[0].slug || countries[0].name || countries[0].label || '';
-      els.walletCountrySelect.value = firstId;
-    } else {
-      els.walletCountrySelect.value = selected;
-    }
-    renderMethodsForCountry();
-  }
-
-  function renderMethodsForCountry() {
-    if (!els.walletCountrySelect || !els.walletMethodSelect) return;
-    const countries = state.depositCountries || [];
-    const selectedCountryId = els.walletCountrySelect.value;
-    const country = countries.find((c) => (c.id || c.code || c.slug || c.name || c.label || '') === selectedCountryId) || countries[0];
-    const methods = (country && country.methods) ? country.methods : [];
+    if (!els.walletMethodSelect) return;
+    const methods = (state.depositMethods && state.depositMethods.length)
+      ? state.depositMethods
+      : (state.paymentMethods || []);
     if (!methods.length) {
-      els.walletMethodSelect.innerHTML = '<option value=\"\">لا توجد طرق لهذه الدولة</option>';
+      els.walletMethodSelect.innerHTML = '<option value=\"\">لا توجد طرق إيداع</option>';
+      if (els.walletCountrySelect) els.walletCountrySelect.innerHTML = '<option value=\"\">—</option>';
       if (els.walletMethodInfo) els.walletMethodInfo.textContent = '';
       return;
     }
-    const options = methods.map((m, idx) => {
-      const id = m.id || m.methodId || `${selectedCountryId}-${idx}`;
-      const label = m.name || m.type || 'طريقة';
-      return `<option value="${id}">${label}</option>`;
-    }).join('');
     const prev = els.walletMethodSelect.value;
-    els.walletMethodSelect.innerHTML = options;
-    const hasPrev = methods.some((m, idx) => (m.id || m.methodId || `${selectedCountryId}-${idx}`) === prev);
-    if (hasPrev) {
+    els.walletMethodSelect.innerHTML = methods.map((m) => {
+      const label = m.name || m.type || 'طريقة';
+      const cur = (m.currencyCode || m.currency || '').toUpperCase();
+      return `<option value="${m.id}">${label}${cur ? ` (${cur})` : ''}</option>`;
+    }).join('');
+    if (methods.some((m) => m.id === prev)) {
       els.walletMethodSelect.value = prev;
-    } else if (methods.length) {
-      const firstId = methods[0].id || methods[0].methodId || `${selectedCountryId}-0`;
-      els.walletMethodSelect.value = firstId;
+    }
+    if (els.walletCountrySelect) {
+      els.walletCountrySelect.innerHTML = '<option value="">—</option>';
     }
     renderMethodInfo();
   }
 
   function renderMethodInfo() {
     if (!els.walletMethodInfo) return;
-    const countryId = els.walletCountrySelect?.value || '';
-    const country = (state.depositCountries || []).find((c) => (c.id || c.code || c.slug || c.name || c.label || '') === countryId);
-    const methods = (country && country.methods) ? country.methods : [];
-    const methodId = els.walletMethodSelect?.value;
-    const method = methods.find((m, idx) => (m.id || m.methodId || `${countryId}-${idx}`) === methodId);
+    const methods = (state.depositMethods && state.depositMethods.length)
+      ? state.depositMethods
+      : (state.paymentMethods || []);
+    const methodId = els.walletMethodSelect?.value || '';
+    const method = methods.find((m) => (m.id || '').toString() === (methodId || '').toString());
     if (!method) {
       els.walletMethodInfo.textContent = '';
       return;
     }
+    const info = method.info || {};
+    const currencyLabel = (method.currency || method.currencyCode || '').toUpperCase();
+    const bankLabel = method.bank || method.bankName || info.bank || '';
+    const accountName = method.accountName || info.accountName || '';
+    const accountNumber = method.accountNumber || info.accountNumber || info.wallet || '';
+    const walletId = method.wallet || info.wallet || '';
+    const iban = method.iban || info.iban || '';
+    const note = (method.note || info.note || '').trim();
+    const rateUsd = Number(method.ratePerUSD ?? method.rateUsd ?? method.rate);
+    const rateJod = Number(method.ratePerJOD ?? method.rateJOD);
+    const rateLines = [];
+    if (Number.isFinite(rateUsd) && rateUsd > 0) rateLines.push(`1 USD = ${rateUsd} ${currencyLabel || ''}`.trim());
+    if (Number.isFinite(rateJod) && rateJod > 0 && (!currencyLabel || currencyLabel !== 'JOD')) {
+      rateLines.push(`1 JOD = ${rateJod} ${currencyLabel || ''}`.trim());
+    }
     const details = [
-      method.currency || method.currencyCode ? `العملة: ${method.currency || method.currencyCode}` : '',
-      method.bank || method.bankName ? `البنك/المحفظة: ${method.bank || method.bankName}` : '',
-      method.accountName ? `الاسم: ${method.accountName}` : '',
-      method.accountNumber ? `الرقم/المعرف: ${method.accountNumber}` : '',
-      method.note ? method.note : '',
+      currencyLabel ? `العملة: ${currencyLabel}` : '',
+      bankLabel ? `البنك/المحفظة: ${bankLabel}` : '',
+      accountName ? `الاسم: ${accountName}` : '',
+      accountNumber ? `الرقم/المعرف: ${accountNumber}` : '',
+      walletId && !accountNumber ? `المحفظة: ${walletId}` : '',
+      iban ? `IBAN: ${iban}` : '',
+      rateLines.join(' | '),
+      note,
     ].filter(Boolean).join(' • ');
     els.walletMethodInfo.textContent = details;
   }
@@ -798,22 +1152,22 @@ const firebaseConfig = {
       notify('أدخل مبلغ صحيح');
       return;
     }
-    const country = els.walletCountrySelect?.value || '';
-    const depositCountry = (state.depositCountries || []).find((c) => (c.id || c.code || c.slug || c.name || c.label || '') === country);
+    const methods = (state.depositMethods && state.depositMethods.length)
+      ? state.depositMethods
+      : (state.paymentMethods || []);
     const methodId = els.walletMethodSelect?.value || '';
-    const methods = depositCountry?.methods || [];
-    const method = methods.find((m, idx) => (m.id || m.methodId || `${country}-${idx}`) === methodId);
+    const method = methods.find((m) => (m.id || '').toString() === (methodId || '').toString());
     if (!method) {
       notify('اختر طريقة إيداع');
       return;
     }
     const reference = els.walletRefInput?.value?.trim() || '';
     const methodName = method?.name || method?.type || 'تحويل';
-    const countryName = depositCountry?.name || depositCountry?.label || country || '';
+    const countryName = method?.country || method?.region || '';
     db.collection('topups').add({
       ownerId: user.uid,
       amount,
-      country: countryName || country,
+      country: countryName || methodName,
       methodId,
       methodName,
       reference,
@@ -876,6 +1230,15 @@ const firebaseConfig = {
       createdAt: Date.now(),
     };
 
+    // حلّل رمز الدولة إن وُجد في الحقل
+    let contactCode = '';
+    let contactNumber = contact;
+    const m = (contact || '').trim().match(/^(\+?\d{1,4})\s*(.*)$/);
+    if (m) {
+      contactCode = m[1].startsWith('+') ? m[1] : ('+' + m[1]);
+      contactNumber = m[2] || '';
+    }
+
     // استخدم الباك اند إن توفر
     if (state.isAdmin && ADMIN_ROUTER_BASE) {
       try {
@@ -887,7 +1250,9 @@ const firebaseConfig = {
           description,
           images: [...newAccountImages],
           image,
-          contact
+          contact,
+          contactCode,
+          contactNumber
         });
         notify('تم إرسال الإعلان للمراجعة');
         if (els.addAccountForm) els.addAccountForm.reset();
@@ -1109,9 +1474,6 @@ const firebaseConfig = {
       notify('اضبط ADMIN_ROUTER_BASE للعمليات الإدارية');
       return;
     }
-    const countryId = (els.depositCountryIdInput?.value || '').trim();
-    const countryName = (els.depositCountryNameInput?.value || '').trim();
-    const countryImage = (els.depositCountryImageInput?.value || '').trim();
     const name = (els.depositMethodNameInput?.value || '').trim();
     const methodType = (els.depositMethodTypeInput?.value || '').trim() || 'wallet';
     const currencyCode = (els.depositCurrencyInput?.value || '').trim().toUpperCase();
@@ -1119,8 +1481,8 @@ const firebaseConfig = {
     const hasRate = Number.isFinite(ratePerUSD) && ratePerUSD > 0;
     const isBank = methodType === 'bank';
     const isWallet = methodType === 'wallet';
-    if (!countryId || !countryName || !name || !currencyCode || !hasRate) {
-      notify('أكمل الدولة، الطريقة، العملة، وسعر الصرف (بالدولار)');
+    if (!name || !currencyCode || !hasRate) {
+      notify('أكمل اسم الطريقة، العملة، وسعر الصرف (بالدولار)');
       return;
     }
     if (isBank && (!els.depositBankInput?.value || !els.depositAccountNumberInput?.value)) {
@@ -1131,11 +1493,9 @@ const firebaseConfig = {
       notify('أدخل معرف المحفظة');
       return;
     }
+    const label = '';
     const payload = {
       action: 'deposit:method:add',
-      countryId,
-      countryName,
-      countryImage,
       name,
       methodType,
       currencyCode,
@@ -1147,6 +1507,8 @@ const firebaseConfig = {
       wallet: (els.depositWalletInput?.value || '').trim(),
       note: (els.depositMethodNoteInput?.value || '').trim(),
       logoUrl: (els.depositLogoInput?.value || '').trim(),
+      country: label,
+      region: label
     };
     sendAdminRequest(payload).then(() => {
       notify('تم حفظ طريقة الإيداع');
@@ -1158,18 +1520,11 @@ const firebaseConfig = {
   function handleDepositMethodClick(e) {
     const methodBtn = e.target.closest('button[data-deposit-method]');
     if (methodBtn) {
-      const countryId = methodBtn.dataset.depositCountry;
       const methodId = methodBtn.dataset.depositMethod;
-      sendAdminRequest({ action: 'deposit:method:delete', countryId, methodId })
+      if (!methodId) return;
+      if (!confirm('سيتم حذف طريقة الإيداع. متابعة؟')) return;
+      sendAdminRequest({ action: 'deposit:method:delete', methodId })
         .then(() => { notify('تم حذف الطريقة'); loadFirebaseData(); })
-        .catch((err) => notify(err?.message || 'تعذر الحذف'));
-      return;
-    }
-    const countryBtn = e.target.closest('button[data-deposit-country-delete]');
-    if (countryBtn) {
-      const countryId = countryBtn.dataset.depositCountryDelete;
-      sendAdminRequest({ action: 'deposit:country:delete', countryId })
-        .then(() => { notify('تم حذف الدولة'); loadFirebaseData(); })
         .catch((err) => notify(err?.message || 'تعذر الحذف'));
     }
   }
@@ -1236,13 +1591,23 @@ const firebaseConfig = {
   }
 
   function statusBadge(status) {
-    const labels = { approved: 'مقبول', pending: 'انتظار', rejected: 'مرفوض' };
-    return `<span class="badge ${status}">${labels[status] || status}</span>`;
+    const raw = (status == null) ? '' : String(status);
+    const normalized = raw.trim().toLowerCase();
+    const labels = {
+      approved: 'مقبول',
+      pending: 'انتظار',
+      rejected: 'مرفوض',
+      sold: 'تم البيع',
+      completed: 'تم البيع',
+    };
+    const cls = (normalized === 'completed') ? 'sold' : normalized;
+    return `<span class="badge ${cls}">${labels[normalized] || raw}</span>`;
   }
 
   function accountCard(acc, opts = {}) {
     const game = state.games.find((g) => g.id === acc.gameId);
     const img = acc.image || (Array.isArray(acc.images) ? acc.images[0] : '') || game?.image || PLACEHOLDER;
+    const titleText = displayTitle(acc.title) || 'حساب';
     const created = acc.createdAt ? new Date(acc.createdAt).toLocaleDateString('ar-EG') : '';
     const reviewer = acc.reviewedBy ? acc.reviewedBy : '';
     const categoryLabel = getCategoryMap()[acc.category] || '';
@@ -1268,14 +1633,14 @@ const firebaseConfig = {
 
     return `
       <article class="card">
-        <img src="${img}" alt="${acc.title}">
+        <img src="${img}" alt="${titleText}">
         <div class="card-body">
           <div class="actions" style="justify-content: space-between;">
             <span>${statusBadge(acc.status)}</span>
             <span class="price-tag">${priceTag}</span>
           </div>
           ${markupNote}
-          <h3>${acc.title}</h3>
+          <h3>${titleText}</h3>
           <div class="muted tiny">${game ? game.name : ''} ${created ? `• ${created}` : ''}</div>
           ${categoryLabel ? `<div class="muted tiny">القسم: ${categoryLabel}</div>` : ''}
           <p class="muted">${acc.description || ''}</p>
@@ -1364,7 +1729,9 @@ const firebaseConfig = {
       const label = categoryMap[key] || 'حسابات أخرى';
       const cards = list.map((acc) => {
         const img = acc.image || (Array.isArray(acc.images) ? acc.images[0] : '') || PLACEHOLDER;
-        const more = Array.isArray(acc.images) && acc.images.length > 1 ? `<span class="more">+${acc.images.length - 1} صور</span>` : '';
+        const titleText = displayTitle(acc.title) || 'حساب';
+        const images = getAccountImageUrls(acc);
+        const more = images.length > 1 ? `<span class="more">${images.length} صور</span>` : '';
         const created = acc.createdAt ? new Date(acc.createdAt).toLocaleString('ar-EG') : '';
         const priv = getAccountPrivate(acc.id);
         const contact = priv?.contact || '';
@@ -1392,8 +1759,8 @@ const firebaseConfig = {
         `;
         return `
           <article class="account-card-admin" data-acc-id="${acc.id}">
-            <div class="thumb">
-              <img src="${img}" alt="${acc.title}">
+            <div class="thumb" data-open-account-images="${acc.id}" data-img-index="0" title="عرض صور الحساب" style="cursor:pointer;">
+              <img src="${img}" alt="${titleText}">
               ${more}
             </div>
             <div class="body">
@@ -1404,7 +1771,7 @@ const firebaseConfig = {
                 </div>
                 ${statusBadge(acc.status)}
               </div>
-              <h3>${acc.title}</h3>
+              <h3>${titleText}</h3>
               <div class="muted tiny">${contact}</div>
               <p class="muted">${acc.description || ''}</p>
               <div class="muted tiny">${created}</div>
@@ -1437,9 +1804,15 @@ const firebaseConfig = {
       els.adminManageList.innerHTML = '<p class="muted">صلاحية الأدمن مطلوبة.</p>';
       return;
     }
-    const statusFilter = (els.adminManageStatus && els.adminManageStatus.value) || 'all';
+    const statusFilterRaw = (els.adminManageStatus && els.adminManageStatus.value) || 'all';
+    const statusFilter = String(statusFilterRaw || 'all').toLowerCase();
     const list = state.accounts
-      .filter((a) => statusFilter === 'all' ? true : (a.status === statusFilter))
+      .filter((a) => {
+        if (statusFilter === 'all') return true;
+        const st = (a && a.status != null) ? String(a.status).toLowerCase() : '';
+        if (statusFilter === 'sold') return st === 'sold' || st === 'completed';
+        return st === statusFilter;
+      })
       .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     if (!list.length) {
       els.adminManageList.innerHTML = '<p class="muted">لا توجد إعلانات مطابقة.</p>';
@@ -1447,9 +1820,12 @@ const firebaseConfig = {
     }
     els.adminManageList.innerHTML = list.map((acc) => {
       const img = acc.image || (Array.isArray(acc.images) ? acc.images[0] : '') || PLACEHOLDER;
+      const titleText = displayTitle(acc.title) || 'حساب';
       const created = acc.createdAt ? new Date(acc.createdAt).toLocaleString('ar-EG') : '';
       const priv = getAccountPrivate(acc.id);
       const contactVal = priv?.contact || '';
+      const statusNorm = (acc.status == null) ? '' : String(acc.status).toLowerCase();
+      const allImages = getAccountImageUrls(acc);
       let catOptionsForAcc = getCategoryList().map((c) => {
         const key = c.id || c.key || c.slug;
         const lbl = c.label || c.name || key;
@@ -1459,16 +1835,23 @@ const firebaseConfig = {
       if (acc.category && !catOptionsForAcc.includes(`value="${acc.category}"`)) {
         catOptionsForAcc += `<option value="${acc.category}" selected>${acc.category}</option>`;
       }
-      const imagesPreview = Array.isArray(acc.images) && acc.images.length
-        ? acc.images.slice(0,3).map((url)=>`<img src="${url}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,0.12);" alt="صورة">`).join('')
-        : '<span class="muted tiny">لا توجد صور أخرى</span>';
+      const imagesPreview = allImages.length
+        ? [
+          allImages.slice(0, 3).map((url) => (
+            `<img src="${url}" data-open-account-images="${acc.id}" data-img-url="${encodeURIComponent(url)}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,0.12);cursor:pointer;" alt="صورة">`
+          )).join(''),
+          allImages.length > 3
+            ? `<button type="button" class="btn ghost small" data-open-account-images="${acc.id}" data-img-index="0" style="padding:6px 10px;">عرض كل الصور (${allImages.length})</button>`
+            : ''
+        ].filter(Boolean).join(' ')
+        : '<span class="muted tiny">لا توجد صور</span>';
       const videoPreview = acc.video
         ? `<video src="${acc.video}" controls style="max-width:240px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:#000;"></video>`
         : '<span class="muted tiny">لا يوجد فيديو</span>';
       return `
         <article class="manage-card" data-acc-id="${acc.id}">
           <div class="row">
-            <img class="thumb" src="${img}" alt="${acc.title}">
+            <img class="thumb" src="${img}" alt="${titleText}" data-open-account-images="${acc.id}" data-img-index="0" title="عرض صور الحساب" style="cursor:pointer;">
             <div class="fields">
               <label>العنوان<input class="admin-edit-title" type="text" placeholder="عنوان الإعلان" value="${acc.title || ''}" data-acc-id="${acc.id}"></label>
               <label>السعر ($)<input class="admin-edit-price" type="number" step="0.01" min="0" placeholder="0.00" value="${acc.price != null ? acc.price : ''}" data-acc-id="${acc.id}"></label>
@@ -1481,9 +1864,11 @@ const firebaseConfig = {
               </label>
               <label>الحالة
                 <select class="admin-edit-status" data-acc-id="${acc.id}">
-                  <option value="pending" ${acc.status === 'pending' ? 'selected' : ''}>بانتظار</option>
-                  <option value="approved" ${acc.status === 'approved' ? 'selected' : ''}>مقبول</option>
-                  <option value="rejected" ${acc.status === 'rejected' ? 'selected' : ''}>مرفوض</option>
+                  <option value="pending" ${statusNorm === 'pending' ? 'selected' : ''}>بانتظار</option>
+                  <option value="approved" ${statusNorm === 'approved' ? 'selected' : ''}>مقبول</option>
+                  <option value="rejected" ${statusNorm === 'rejected' ? 'selected' : ''}>مرفوض</option>
+                  <option value="sold" ${statusNorm === 'sold' ? 'selected' : ''}>تم البيع</option>
+                  <option value="completed" ${statusNorm === 'completed' ? 'selected' : ''}>تم البيع (مكتمل)</option>
                 </select>
               </label>
             </div>
@@ -1519,25 +1904,84 @@ const firebaseConfig = {
       els.adminPurchasesList.innerHTML = '<p class="muted">لا توجد طلبات شراء.</p>';
       return;
     }
-    els.adminPurchasesList.innerHTML = list.map((p) => `
-      <article class="card">
+    const privatesById = new Map();
+    (state.accountPrivate || []).forEach(pvt => {
+      if (pvt && (pvt.accountId || pvt.id)) {
+        privatesById.set(pvt.accountId || pvt.id, pvt);
+      }
+    });
+    const accountsById = new Map();
+    (state.accounts || []).forEach(acc => { if (acc && acc.id) accountsById.set(acc.id, acc); });
+    els.adminPurchasesList.innerHTML = list.map((p) => {
+      const sellerContact = (privatesById.get(p.accountId)?.contactNumber || privatesById.get(p.accountId)?.contact || '').trim();
+      const buyerContact = (p.buyerPhone || p.buyerContact || '').trim();
+      const acc = accountsById.get(p.accountId) || {};
+      const thumb = (acc.images && acc.images[0]) || acc.image || '';
+      return `
+      <article class="card purchase-card">
         <div class="card-body">
-          <div class="actions" style="justify-content: space-between;">
-            <span class="badge ${p.status || 'pending'}">${p.status || 'pending'}</span>
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+          <div class="purchase-header">
+            <div class="purchase-left">
+              <div class="purchase-thumb">
+                ${thumb ? `<img src="${thumb}" alt="صورة الحساب">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#9aa6c8;font-size:12px;">لا صورة</div>`}
+              </div>
+              <div class="purchase-meta">
+                <h3 style="margin:0;">${displayTitle(p.accountTitle || p.accountId || 'حساب')}</h3>
+                <div class="muted tiny wrap">المشتري: ${p.buyerId || '-'}</div>
+                <div class="muted tiny wrap">المالك: ${p.accountOwnerId || '-'}</div>
+                ${p.buyerLevel ? `<div class="muted tiny">المستوى: ${p.buyerLevel}${p.buyerMarkupPct ? ` • زيادة ${p.buyerMarkupPct}%` : ''}</div>` : ''}
+                <div class="muted tiny">${p.createdAt ? new Date(p.createdAt).toLocaleString('ar-EG') : ''}</div>
+              </div>
+            </div>
+            <div class="purchase-pricing">
+              <span class="badge ${p.status || 'pending'}">${p.status || 'pending'}</span>
               <span class="price-tag">${formatPriceCurrency(p.chargedPrice || p.price || 0)}</span>
               ${p.price && p.chargedPrice && p.chargedPrice !== p.price ? `<span class="muted tiny">أساس: ${formatPriceCurrency(p.price || 0)}</span>` : ''}
               ${p.sellerNet ? `<span class="muted tiny">صافي البائع: ${formatPriceCurrency(p.sellerNet)}</span>` : ''}
             </div>
           </div>
-          <h3>${p.accountTitle || p.accountId || 'حساب'}</h3>
-          <div class="muted tiny">المشتري: ${p.buyerId || '-'}</div>
-          <div class="muted tiny">المالك: ${p.accountOwnerId || '-'}</div>
-          ${p.buyerLevel ? `<div class="muted tiny">المستوى: ${p.buyerLevel}${p.buyerMarkupPct ? ` • زيادة ${p.buyerMarkupPct}%` : ''}</div>` : ''}
-          <div class="muted tiny">${p.createdAt ? new Date(p.createdAt).toLocaleString('ar-EG') : ''}</div>
+          <div class="purchase-lines">
+            <div>رقم البائع: ${sellerContact || 'غير متوفر'}</div>
+            <div>رقم المشتري: ${buyerContact || 'غير متوفر'}</div>
+          </div>
+          <div class="purchase-actions">
+            <button class="btn ghost small" data-contact="${sellerContact}" data-contact-label="البائع">تواصل مع البائع</button>
+            <button class="btn ghost small" data-contact="${buyerContact}" data-contact-label="المشتري">تواصل مع المشتري</button>
+            <button class="btn primary small" data-purchase-review="approved" data-id="${p.id || p.code || ''}">تحرير الرصيد للبائع</button>
+            <button class="btn danger small" data-purchase-review="rejected" data-id="${p.id || p.code || ''}">رفض وإرجاع المبلغ</button>
+          </div>
         </div>
       </article>
-    `).join('');
+    `;
+    }).join('');
+
+    els.adminPurchasesList.querySelectorAll('button[data-contact]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const raw = btn.dataset.contact || '';
+        const c = raw.replace(/[^0-9]/g,'');
+        if (!c) { showToast(`لا يوجد رقم ${btn.dataset.contactLabel || ''}`, true); return; }
+        window.open(`https://wa.me/${c}`, '_blank');
+      });
+    });
+    els.adminPurchasesList.querySelectorAll('button[data-purchase-review]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const decision = btn.dataset.purchaseReview;
+        const id = btn.dataset.id;
+        if (!id) { showToast('معرف الطلب مفقود', true); return; }
+        try {
+          const res = await sendAdminRequest({ action: 'purchase:review', purchaseId: id, status: decision });
+          if (res.ok) {
+            openResponseModal('تم تحديث الطلب بنجاح', 'نجاح');
+          } else {
+            throw new Error(res.error || 'تعذر التحديث');
+          }
+          await loadAdminSnapshot();
+          renderAdminPurchases();
+        } catch (err) {
+          openResponseModal(err?.message || 'خطأ أثناء التحديث', 'تنبيه');
+        }
+      });
+    });
   }
 
   function renderAdminTopups() {
@@ -1637,49 +2081,41 @@ const firebaseConfig = {
 
   function renderDepositMethods() {
     if (!els.depositMethodsList) return;
-    const countries = state.depositCountries || [];
-    if (!countries.length) {
+    const methods = (state.depositMethods && state.depositMethods.length)
+      ? state.depositMethods
+      : (state.paymentMethods || []);
+    if (!methods.length) {
       els.depositMethodsList.innerHTML = '<p class="muted">لا توجد طرق إيداع بعد.</p>';
       return;
     }
-    els.depositMethodsList.innerHTML = countries.map((c) => {
-      const methodsHtml = (c.methods || []).map((m) => {
-        const currency = (m.currencyCode || m.currency || '').toUpperCase();
-        const rateUsd = Number(m.ratePerUSD ?? m.ratePerUsd ?? m.rate);
-        const rateLineParts = [];
-        if (Number.isFinite(rateUsd) && rateUsd > 0) rateLineParts.push(`1 USD = ${rateUsd} ${currency}`);
-        const typeLabel = (m.methodType || m.type) === 'bank' ? 'بنك' : (m.methodType || m.type) === 'wallet' ? 'محفظة' : 'أخرى';
-        const info = m.info || {};
-        const infoLine = [info.bank, info.accountName, info.accountNumber, info.iban, info.wallet]
-          .filter(Boolean)
-          .join(' • ');
-        return `
-          <div class="card" style="margin:6px 0; padding:10px; border:1px solid rgba(255,255,255,0.08);">
-            <div class="actions" style="justify-content: space-between; align-items:flex-start;">
-              <div>
-                <strong>${m.name || 'طريقة'}</strong>
-                <div class="muted tiny">${typeLabel}</div>
-                <div class="muted tiny">${currency || ''}</div>
-                ${rateLineParts.length ? `<div class="muted tiny">${rateLineParts.join(' | ')}</div>` : ''}
-                ${infoLine ? `<div class="muted tiny">${infoLine}</div>` : ''}
-                ${(m.note || '').trim() ? `<div class="muted tiny">${m.note}</div>` : ''}
-              </div>
-              <button class="btn danger small" data-deposit-country="${c.id}" data-deposit-method="${m.id}">حذف</button>
-            </div>
-          </div>
-        `;
-      }).join('');
+    const sorted = [...methods].sort((a, b) => (Number(b.order) || 0) - (Number(a.order) || 0));
+    els.depositMethodsList.innerHTML = sorted.map((m) => {
+      const currency = (m.currencyCode || m.currency || '').toUpperCase();
+      const rateUsd = Number(m.ratePerUSD ?? m.ratePerUsd ?? m.rate);
+      const rateJod = Number(m.ratePerJOD ?? m.ratePerJod);
+      const rateLineParts = [];
+      if (Number.isFinite(rateUsd) && rateUsd > 0) rateLineParts.push(`1 USD = ${rateUsd} ${currency || ''}`.trim());
+      if (Number.isFinite(rateJod) && rateJod > 0 && currency !== 'JOD') rateLineParts.push(`1 JOD = ${rateJod} ${currency || ''}`.trim());
+      const info = m.info || {};
+      const infoLine = [info.bank || m.bank, info.accountName || m.accountName, info.accountNumber || m.accountNumber, info.iban || m.iban, info.wallet || m.wallet]
+        .filter(Boolean)
+        .join(' • ');
+      const note = (m.note || info.note || '').trim();
+      const typeLabel = (m.methodType || m.type) === 'bank' ? 'بنك' : (m.methodType || m.type) === 'wallet' ? 'محفظة' : 'أخرى';
       return `
         <article class="card">
           <div class="card-body">
             <div class="actions" style="justify-content: space-between; align-items:flex-start;">
               <div>
-                <h3>${c.name || c.label || c.id || 'دولة'}</h3>
-                <div class="muted tiny">${c.id || ''}</div>
+                <h3>${m.name || 'طريقة'}</h3>
+                <div class="muted tiny">${typeLabel}</div>
+                <div class="muted tiny">${currency || ''}</div>
+                ${rateLineParts.length ? `<div class="muted tiny">${rateLineParts.join(' | ')}</div>` : ''} 
+                ${infoLine ? `<div class="muted tiny">${infoLine}</div>` : ''} 
+                ${note ? `<div class="muted tiny">${note}</div>` : ''} 
               </div>
-              <button class="btn ghost small" data-deposit-country-delete="${c.id}">حذف الدولة</button>
+              <button class="btn danger small" data-deposit-method="${m.id}">حذف</button>
             </div>
-            ${methodsHtml || '<p class="muted tiny">لا توجد طرق لهذه الدولة.</p>'}
           </div>
         </article>
       `;
@@ -1705,44 +2141,35 @@ const firebaseConfig = {
 
   function renderWithdrawMethods() {
     if (!els.withdrawMethodsList) return;
-    const countries = state.withdrawCountries || [];
-    if (!countries.length) {
+    const methods = state.withdrawMethods || [];
+    if (!methods.length) {
       els.withdrawMethodsList.innerHTML = '<p class="muted">لا توجد طرق سحب بعد.</p>';
       return;
     }
-    els.withdrawMethodsList.innerHTML = countries.map((c) => {
-      const methods = (c.methods || []).map((m) => {
-        const rateUsd = m.ratePerUSD || m.ratePerUsd || m.rate || null;
-        const rateLine = rateUsd ? `1 USD = ${rateUsd}` : '';
-        const typeLabel = (m.methodType || m.type) === 'bank' ? 'بنك' : (m.methodType || m.type) === 'wallet' ? 'محفظة' : 'أخرى';
-        const infoLine = [m.bank, m.accountName, m.accountNumber, m.wallet].filter(Boolean).join(' • ');
-        return `
-          <div class="card" style="margin:6px 0; padding:10px; border:1px solid rgba(255,255,255,0.08);">
-            <div class="actions" style="justify-content: space-between;">
-              <div>
-                <strong>${m.name || 'طريقة'}</strong>
-                <div class="muted tiny">${typeLabel}</div>
-                <div class="muted tiny">${m.currencyCode || m.currency || ''}</div>
-                ${rateLine ? `<div class="muted tiny">${rateLine}</div>` : ''}
-                ${infoLine ? `<div class="muted tiny">${infoLine}</div>` : ''}
-                ${m.note ? `<div class="muted tiny">${m.note}</div>` : ''}
-              </div>
-              <button class="btn danger small" data-withdraw-country="${c.id}" data-withdraw-method="${m.id}">حذف</button>
-            </div>
-          </div>
-        `;
-      }).join('');
+    const sorted = [...methods].sort((a, b) => (Number(b.order) || 0) - (Number(a.order) || 0));
+    els.withdrawMethodsList.innerHTML = sorted.map((m) => {
+      const rateUsd = m.ratePerUSD || m.ratePerUsd || m.rate || null;
+      const rateJod = m.ratePerJOD || m.ratePerJod || null;
+      const rateLine = rateUsd ? `1 USD = ${rateUsd}` : '';
+      const rateJodLine = rateJod ? `1 JOD = ${rateJod}` : '';
+      const typeLabel = (m.methodType || m.type) === 'bank' ? 'بنك' : (m.methodType || m.type) === 'wallet' ? 'محفظة' : 'أخرى';
+      const infoLine = [m.bank, m.accountName, m.accountNumber, m.wallet].filter(Boolean).join(' • ');
+      const note = (m.note || '').trim();
       return `
         <article class="card">
           <div class="card-body">
             <div class="actions" style="justify-content: space-between;">
               <div>
-                <h3>${c.name || c.label || c.id || 'دولة'}</h3>
-                <div class="muted tiny">${c.id || ''}</div>
+                <strong>${m.name || 'طريقة'}</strong>
+                <div class="muted tiny">${typeLabel}</div>
+                <div class="muted tiny">${m.currencyCode || m.currency || ''}</div>
+                ${rateLine ? `<div class="muted tiny">${rateLine}</div>` : ''} 
+                ${rateJodLine ? `<div class="muted tiny">${rateJodLine}</div>` : ''} 
+                ${infoLine ? `<div class="muted tiny">${infoLine}</div>` : ''} 
+                ${note ? `<div class="muted tiny">${note}</div>` : ''} 
               </div>
-              <button class="btn ghost small" data-withdraw-country-delete="${c.id}">حذف الدولة</button>
+              <button class="btn danger small" data-withdraw-method="${m.id}">حذف</button>
             </div>
-            ${methods || '<p class="muted tiny">لا توجد طرق لهذه الدولة.</p>'}
           </div>
         </article>
       `;
@@ -1807,13 +2234,13 @@ const firebaseConfig = {
     }
     els.categoryAdminList.innerHTML = list.map((c) => {
       const key = c.id || c.key || c.slug;
-      const label = c.label || c.name || key;
+      const label = displayTitle(c.label || c.name || key);
       const count = state.accounts.filter((a) => (a.category || '') === key).length;
       return `
         <div class="category-card" data-category-id="${key}">
           <div>
             <div class="label">${label}</div>
-            <div class="muted tiny">${key}</div>
+            <div class="muted tiny" title="${key}">${label}</div>
             <div class="muted tiny">${count} إعلان</div>
           </div>
           <button class="btn danger small" data-category-id="${key}">حذف</button>
@@ -1870,8 +2297,6 @@ const firebaseConfig = {
     e.preventDefault();
     if (!state.isAdmin) { notify('صلاحية الادمن مطلوبة'); return; }
     if (!ADMIN_ROUTER_BASE) { notify('اضبط ADMIN_ROUTER_BASE للعمليات الإدارية'); return; }
-    const countryId = (els.withdrawCountryIdInput?.value || '').trim();
-    const countryName = (els.withdrawCountryNameInput?.value || '').trim();
     const methodName = (els.withdrawMethodNameInput?.value || '').trim();
     const methodType = (els.withdrawMethodTypeInput?.value || '').trim() || 'wallet';
     const currencyCode = (els.withdrawCurrencyInput?.value || '').trim().toUpperCase();
@@ -1879,8 +2304,8 @@ const firebaseConfig = {
     const note = (els.withdrawMethodNoteInput?.value || '').trim();
     const isBank = methodType === 'bank';
     const isWallet = methodType === 'wallet';
-    if (!countryId || !countryName || !methodName || !currencyCode) {
-      notify('أكمل بيانات الدولة والطريقة والعملة');
+    if (!methodName || !currencyCode) {
+      notify('أكمل بيانات الطريقة والعملة');
       return;
     }
     const hasUsd = Number.isFinite(ratePerUSD) && ratePerUSD > 0;
@@ -1896,10 +2321,9 @@ const firebaseConfig = {
       notify('أدخل معرف المحفظة');
       return;
     }
+    const label = '';
     sendAdminRequest({
       action: 'withdraw:method:add',
-      countryId,
-      countryName,
       name: methodName,
       methodType,
       currencyCode,
@@ -1908,7 +2332,9 @@ const firebaseConfig = {
       accountName: (els.withdrawAccountNameInput?.value || '').trim(),
       accountNumber: (els.withdrawAccountNumberInput?.value || '').trim(),
       wallet: (els.withdrawWalletInput?.value || '').trim(),
-      note
+      note,
+      country: label,
+      region: label
     }).then(() => {
       notify('تم حفظ طريقة السحب');
       if (els.withdrawMethodForm) els.withdrawMethodForm.reset();
@@ -1919,22 +2345,11 @@ const firebaseConfig = {
   function handleWithdrawMethodClick(e) {
     const methodBtn = e.target.closest('button[data-withdraw-method]');
     if (methodBtn) {
-      const countryId = methodBtn.dataset.withdrawCountry;
       const methodId = methodBtn.dataset.withdrawMethod;
-      if (!countryId || !methodId) return;
+      if (!methodId) return;
       if (!confirm('سيتم حذف طريقة السحب. متابعة؟')) return;
-      sendAdminRequest({ action: 'withdraw:method:delete', countryId, methodId })
+      sendAdminRequest({ action: 'withdraw:method:delete', methodId })
         .then(() => { notify('تم حذف الطريقة'); loadFirebaseData(); })
-        .catch((err) => notify(err?.message || 'تعذر حذف الطريقة'));
-      return;
-    }
-    const countryBtn = e.target.closest('button[data-withdraw-country-delete]');
-    if (countryBtn) {
-      const countryId = countryBtn.dataset.withdrawCountryDelete;
-      if (!countryId) return;
-      if (!confirm('سيتم حذف الدولة وجميع طرقها. متأكد؟')) return;
-      sendAdminRequest({ action: 'withdraw:country:delete', countryId })
-        .then(() => { notify('تم حذف الدولة وطرقها'); loadFirebaseData(); })
         .catch((err) => notify(err?.message || 'تعذر الحذف'));
     }
   }
@@ -2070,7 +2485,9 @@ const firebaseConfig = {
     if (els.adminAuthForm) els.adminAuthForm.addEventListener('submit', handleAdminAuthLogin);
     if (els.addAccountForm) els.addAccountForm.addEventListener('submit', handleAddAccount);
     if (els.adminList) els.adminList.addEventListener('click', handleAdminAction);
+    if (els.adminList) els.adminList.addEventListener('click', handleOpenAccountImages);
     if (els.adminManageList) els.adminManageList.addEventListener('click', handleAdminManageClick);
+    if (els.adminManageList) els.adminManageList.addEventListener('click', handleOpenAccountImages);
     if (els.adminManageStatus) els.adminManageStatus.addEventListener('change', renderAdminManageList);
     if (els.addCategoryForm) els.addCategoryForm.addEventListener('submit', handleAddCategory);
     if (els.categoryAdminList) els.categoryAdminList.addEventListener('click', handleCategoryAdminClick);
@@ -2220,9 +2637,6 @@ const firebaseConfig = {
       els.walletForm.addEventListener('submit', handleWalletTopup);
     }
 
-    if (els.walletCountrySelect) {
-      els.walletCountrySelect.addEventListener('change', renderMethodsForCountry);
-    }
     if (els.walletMethodSelect) {
       els.walletMethodSelect.addEventListener('change', renderMethodInfo);
     }
@@ -2305,10 +2719,10 @@ const firebaseConfig = {
         state.purchases = snapshot.purchases || [];
         state.currencies = snapshot.currencies || [];
         state.withdrawRequests = snapshot.withdrawRequests || [];
-        state.withdrawCountries = snapshot.withdrawCountries || [];
-        state.depositCountries = snapshot.depositCountries || [];
+        state.withdrawMethods = flattenDepositMethods(snapshot.withdrawMethods || []);
+        state.depositMethods = flattenDepositMethods(snapshot.depositMethods || snapshot.paymentMethods);
         state.walletTotals = snapshot.walletTotals || { totalUSD: 0, count: 0 };
-        state.paymentMethods = flattenDepositMethods(state.depositCountries);
+        state.paymentMethods = state.depositMethods;
         const mergedMap = currenciesToMap(state.currencies);
         try { if (typeof applyRatesMap === 'function') applyRatesMap(mergedMap, { base: 'USD' }); } catch {}
         renderPaymentMethods();
@@ -2343,11 +2757,11 @@ const firebaseConfig = {
         state.topups = snapshot.topups || [];
         state.categories = snapshot.categories || [];
         state.currencies = snapshot.currencies || [];
-        state.withdrawCountries = snapshot.withdrawCountries || [];
+        state.withdrawMethods = flattenDepositMethods(snapshot.withdrawMethods || []);
         state.withdrawRequests = snapshot.withdrawRequests || [];
-        state.depositCountries = snapshot.depositCountries || [];
+        state.depositMethods = flattenDepositMethods(snapshot.depositMethods || snapshot.paymentMethods);
         state.walletTotals = snapshot.walletTotals || { totalUSD: 0, count: 0 };
-        state.paymentMethods = flattenDepositMethods(state.depositCountries);
+        state.paymentMethods = state.depositMethods;
         const mergedMap = currenciesToMap(state.currencies);
         try { if (typeof applyRatesMap === 'function') applyRatesMap(mergedMap, { base: 'USD' }); } catch {}
         renderPaymentMethods();
@@ -2390,9 +2804,9 @@ const firebaseConfig = {
         ? db.collection('users').doc(user.uid).get()
         : Promise.resolve(null);
 
-      const depositCountriesPromise = db.collection('depositCountries').get().catch(() => ({ docs: [] }));
+      const paymentMethodsDocPromise = db.collection('config').doc('paymentMethods').get().catch(() => null);
 
-      let [gamesSnap, accountsSnap, topupsSnap, currencyDoc, categoriesSnap, privatesSnap, purchasesSnap, profileSnap, depositCountriesSnap] = await Promise.all([
+      let [gamesSnap, accountsSnap, topupsSnap, currencyDoc, categoriesSnap, privatesSnap, purchasesSnap, profileSnap, paymentMethodsDoc] = await Promise.all([
         db.collection('games').get(),
         db.collection('accounts').get(),
         topupsPromise,
@@ -2401,7 +2815,7 @@ const firebaseConfig = {
         privatePromise,
         purchasesPromise,
         profilePromise,
-        depositCountriesPromise,
+        paymentMethodsDocPromise,
       ]);
       state.games = gamesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       state.accounts = accountsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -2410,19 +2824,10 @@ const firebaseConfig = {
       state.topups = topupsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       state.categories = categoriesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       state.userProfile = profileSnap && profileSnap.exists ? { id: profileSnap.id, ...profileSnap.data() } : null;
-      const depositCountries = await Promise.all((depositCountriesSnap.docs || []).map(async (doc) => {
-        const data = doc.data() || {};
-        let methods = [];
-        try {
-          const methodsSnap = await doc.ref.collection('methods').get();
-          methods = methodsSnap.docs.map((m) => ({ id: m.id, ...m.data() }));
-        } catch (_) {
-          methods = [];
-        }
-        return { id: doc.id, ...data, methods };
-      }));
-      state.depositCountries = depositCountries;
-      state.paymentMethods = flattenDepositMethods(state.depositCountries);
+      const paymentData = paymentMethodsDoc && paymentMethodsDoc.exists ? (paymentMethodsDoc.data() || {}) : {};
+      state.depositMethods = flattenDepositMethods(paymentData.deposit || []);
+      state.withdrawMethods = flattenDepositMethods(paymentData.withdraw || []);
+      state.paymentMethods = state.depositMethods;
       state.walletTotals = state.walletTotals || { totalUSD: 0, count: 0 };
       if (currencyDoc && currencyDoc.exists) {
         const data = currencyDoc.data() || {};

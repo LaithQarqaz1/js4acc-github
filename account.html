@@ -67,8 +67,6 @@
       </div>
       <div class="thumbs" id="thumbs"></div>
       <div class="actions">
-        <button class="btn ghost" id="downloadBtn">تحميل صور الحساب</button>
-        <button class="btn ghost" id="copyLinkBtn">نسخ رابط الحساب</button>
         <button class="btn primary" id="purchaseBtn">شراء الحساب بالرصيد</button>
       </div>
       <div class="muted tiny" id="purchaseStatus"></div>
@@ -113,8 +111,8 @@
     const priceEl = document.getElementById('price');
     const priceNoteEl = document.getElementById('priceNote');
     const descEl = document.getElementById('desc');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const copyLinkBtn = document.getElementById('copyLinkBtn');
+    const downloadBtn = null;
+    const copyLinkBtn = null;
     const purchaseBtn = document.getElementById('purchaseBtn');
     const purchaseStatus = document.getElementById('purchaseStatus');
     const ADMIN_ROUTER_BASE = (window.ADMIN_ROUTER_BASE || window.ROUTER_BASE || window.BACKEND_BASE || '').toString().replace(/\/+$/, '');
@@ -144,6 +142,13 @@
 
     function getDefaultFees(){
       return { buyerMarkup: { customer: 0, trader: 0, vip: 0 }, sellerFee: 0 };
+    }
+    function displayTitle(raw){
+      const t = (raw ?? '').toString();
+      if (!t) return '';
+      const looksSlug = !/\s/.test(t) && t.includes('-');
+      const normalized = looksSlug ? t.replace(/-/g, ' ') : t;
+      return normalized.replace(/\s+/g, ' ').trim();
     }
     function normalizeLevel(value){
       const v = (value || '').toString().trim().toLowerCase();
@@ -246,16 +251,13 @@
       });
     }
 
-    function renderGallery(list){
-      gallery.innerHTML = list.map(src => `<img src="${src}" alt="صورة الحساب">`).join('');
-      Array.from(gallery.querySelectorAll('img')).forEach(img => {
-        img.addEventListener('click', ()=>showFull(img.src));
-      });
-    }
-
-    function renderVideo(url){
-      const poster = images.length ? ` poster="${images[0]}"` : '';
-      gallery.innerHTML = `<video controls playsinline preload="metadata"${poster}><source src="${url}"></video>`;
+    function renderGallery(){
+      if (videoUrl) {
+        const poster = images.length ? ` poster="${images[0]}"` : '';
+        gallery.innerHTML = `<video controls playsinline preload="metadata"${poster}><source src="${videoUrl}"></video>`;
+      } else {
+        gallery.innerHTML = '<p class="muted">لا يوجد فيديو متوفر.</p>';
+      }
     }
 
     async function loadAccount(){
@@ -264,7 +266,7 @@
         const snap = await db.collection('accounts').doc(accountId).get();
         if (!snap.exists){ titleEl.textContent = 'الحساب غير موجود'; return; }
         const data = snap.data() || {};
-        titleEl.textContent = data.title || 'حساب';
+        titleEl.textContent = displayTitle(data.title) || 'حساب';
         const basePriceVal = (data.price != null) ? data.price : (data.priceUSD != null ? data.priceUSD : null);
         if (basePriceVal != null) {
           basePriceRef.value = basePriceVal;
@@ -288,18 +290,20 @@
           hero.innerHTML = '<div class="skeleton" style="width:100%;aspect-ratio:16/9;"></div>';
         }
 
-        if (videoUrl){
-          renderVideo(videoUrl);
-        } else if (images.length){
-          renderGallery(images);
-        } else {
-          gallery.innerHTML = '<p class="muted">لا يوجد استعراض متاح لهذا الحساب حالياً.</p>';
-        }
+        renderGallery();
         if (purchaseBtn) {
-          if (data.status && data.status !== 'approved') {
+          const status = (data.status || '').toString().trim().toLowerCase();
+          const sold = status === 'sold' || status === 'completed';
+          if (sold) {
+            purchaseBtn.disabled = true;
+            purchaseBtn.style.display = 'none';
+            setPurchaseStatus('تم البيع', 'error');
+          } else if (status && status !== 'approved') {
+            purchaseBtn.style.display = '';
             purchaseBtn.disabled = true;
             setPurchaseStatus('الحساب غير متاح للشراء حالياً', 'error');
           } else {
+            purchaseBtn.style.display = '';
             purchaseBtn.disabled = false;
             setPurchaseStatus('');
           }
@@ -308,21 +312,6 @@
         titleEl.textContent = 'تعذر تحميل الحساب';
       }
     }
-
-    downloadBtn.addEventListener('click', ()=>{
-      if (!images.length) return;
-      const a = document.createElement('a');
-      a.href = images[0];
-      a.download = 'account.jpg';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    });
-
-    copyLinkBtn.addEventListener('click', ()=>{
-      const link = location.href;
-      navigator.clipboard.writeText(link).then(()=>{ copyLinkBtn.textContent='تم النسخ'; setTimeout(()=>{ copyLinkBtn.textContent='نسخ رابط الحساب'; },1200); });
-    });
 
     function setPurchaseStatus(text, kind = '') {
       if (!purchaseStatus) return;

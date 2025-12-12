@@ -377,6 +377,12 @@ select {
   color: #842029;
 }
 
+.badge.sold,
+.badge.completed {
+  background: rgba(239, 68, 68, 0.18);
+  color: #b91c1c;
+}
+
 .grid.two {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

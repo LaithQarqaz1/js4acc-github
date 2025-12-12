@@ -172,7 +172,6 @@
     .search{border-color:#d1d5db !important; background:#fff !important; color:#111827 !important;}
     html[data-theme=\"dark\"] .search{border-color:#1f2937 !important; background:#0b1020 !important; color:#e6edff !important;}
     .search:focus{border-color:#111827 !important; box-shadow:0 0 0 3px rgba(17,24,39,.12) !important;}
-    .support-section{background:var(--page-bg) !important;}
     .support-icon{background:var(--card-bg) !important; box-shadow:0 8px 18px rgba(0,0,0,.08) !important;}
     .support-rights a{color:var(--text) !important;}
     .footer-icons{background:#0d1017 !important;}
@@ -285,8 +284,20 @@
       transition:.2s;
       text-decoration:none;
       text-align:center;
+      border:none;
     }
     .account-actions .btn:hover{filter:brightness(0.95);}
+    .account-actions .btn[disabled]{
+      cursor:not-allowed;
+      opacity:.75;
+      background:rgba(239,68,68,0.14);
+      color:#fecaca;
+      border:1px solid rgba(239,68,68,0.25);
+      filter:none;
+    }
+    .account-actions .btn[disabled]:hover{filter:none;}
+    .account-card.sold{opacity:0.9;}
+    .account-card.sold .account-thumb img{filter:grayscale(0.1) brightness(0.9);}
     /* تفاصيل الحساب */
     #accountModal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,7,15,0.7);backdrop-filter:blur(4px);z-index:10000;padding:16px;}
     #accountModal .modal-card{background:#0c1020;border:1px solid rgba(255,255,255,0.08);border-radius:18px;max-width:820px;width:100%;max-height:90vh;overflow:auto;padding:18px;box-shadow:0 18px 60px rgba(0,0,0,0.5);color:#e6edff;}
@@ -2876,8 +2887,9 @@ button#logoutBtn:hover{background:#990000}
       function render(){
         const query = norm(input.value);
         const visible = accountsData.filter(acc => {
-          const status = (acc.status || '').toLowerCase();
-          if (status && status !== 'approved') return false;
+          const status = (acc.status == null ? '' : String(acc.status)).trim().toLowerCase();
+          const allowed = !status || status === 'approved' || status === 'sold' || status === 'completed';
+          if (!allowed) return false;
           const title = acc.title || '';
           const desc = acc.description || '';
           const contact = acc.contact || '';
@@ -2908,11 +2920,12 @@ button#logoutBtn:hover{background:#990000}
             const img = (Array.isArray(acc.images) && acc.images[0]) || acc.image || 'loading.png';
             const price = formatPrice(acc.price);
             const desc = acc.description || '';
-            const sold = acc.status === 'sold';
+            const status = (acc.status == null ? '' : String(acc.status)).trim().toLowerCase();
+            const sold = status === 'sold' || status === 'completed';
             const shortDesc = desc.length > 52 ? (desc.slice(0, 52) + '...') : desc;
             return `
-              <article class="account-card" data-account-id="${acc.id || ''}">
-                ${sold ? '<span class="account-badge">مباع</span>' : ''}
+              <article class="account-card${sold ? ' sold' : ''}" data-account-id="${acc.id || ''}">
+                ${sold ? '<span class="account-badge">تم البيع</span>' : ''}
                 <div class="account-thumb">
                   <img src="${img}" alt="${acc.title || 'حساب'}" loading="lazy" decoding="async">
                 </div>
@@ -2923,7 +2936,9 @@ button#logoutBtn:hover{background:#990000}
                     <h3 class="account-title">${acc.title || 'حساب'}</h3>
                     ${desc ? `<p class="account-desc">${shortDesc}</p>` : ''}
                     <div class="account-actions">
-                    <a class="btn" href="account.html?id=${acc.id || ''}">عرض التفاصيل</a>
+                    ${sold
+                      ? '<button class="btn" type="button" disabled aria-disabled="true">تم البيع</button>'
+                      : `<a class="btn" href="account.html?id=${acc.id || ''}">عرض التفاصيل</a>`}
                     </div>
                   </div>
                 </article>
@@ -2963,12 +2978,21 @@ button#logoutBtn:hover{background:#990000}
         }catch(e){ console.warn('تعذر تحميل الأقسام', e); }
       }
 
+      let accountsUnsub = null;
       async function loadAccountsDirect(){
         accountsData = [];
+        if (accountsUnsub) {
+          try { accountsUnsub(); } catch (_) {}
+          accountsUnsub = null;
+        }
         if (firebaseAvailable && db){
           try {
-            const snap = await db.collection('accounts').get();
-            accountsData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            accountsUnsub = db.collection('accounts').onSnapshot((snap) => {
+              accountsData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+              render();
+            }, (e) => {
+              console.warn('تعذر متابعة الحسابات', e);
+            });
           } catch(e){
             console.warn('تعذر تحميل الحسابات', e);
           }
@@ -2979,7 +3003,11 @@ button#logoutBtn:hover{background:#990000}
       const saved = localStorage.getItem(KEY) || '';
       if (saved) input.value = saved;
 
-      (async () => { await loadCategoriesDirect(); await loadAccountsDirect(); render(); })();
+      (async () => {
+        await loadCategoriesDirect();
+        await loadAccountsDirect();
+        if (!firebaseAvailable || !db) render();
+      })();
 
       // البحث يعتمد على إدخال فوري أو Enter
       input.addEventListener('keydown', (e) => {
@@ -6331,21 +6359,21 @@ button#logoutBtn:hover{background:#990000}
           <strong class="wa-badge-brand">JS4ACC</strong>
         </div>
       </div>
-      <h3 id="wa-title">نورّتنا!</h3>
-      <p id="wa-desc">يرجى الانضمام إلى مجتمع الواتساب الخاص بنا لتصلك أهم أخبار المتجر والعروض الحصرية.</p>
+      <h3 id="wa-title">يرجى الانضمام إلى قناة الواتساب</h3>
+      <p id="wa-desc">يرجى الانضمام الى قناة الواتساب الخاصة بنا لتصلك اهم أخبار الموقع والعروض الحصرية</p>
       <ul class="wa-benefits" aria-label="مزايا الانضمام">
         <li>
           <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-          <span>تحديثات المتجر أولاً بأول</span>
+          <span>تحديثات الموقع أولًا بأول</span>
         </li>
         <li>
           <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-          <span>عروض مميزة لأعضاء القروب</span>
+          <span>عروض وخصومات مميزة لأعضاء القناة</span>
         </li>
       </ul>
-      <a class="wa-btn wa-primary" href="https://chat.whatsapp.com/Gs3vxpniUy6a?mode=wwt" target="_blank" rel="noopener noreferrer">
+      <a class="wa-btn wa-primary" href="https://whatsapp.com/channel/0029Vb6l0yn4Crfqgo85e33I" target="_blank" rel="noopener noreferrer">
         <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
-        <span>انضم للقروب الآن</span>
+        <span>انضم الآن</span>
       </a>
     </div>
   </div>
@@ -6380,10 +6408,4 @@ button#logoutBtn:hover{background:#990000}
 
 </body>
 </html>
-
-
-
-
-
-
 

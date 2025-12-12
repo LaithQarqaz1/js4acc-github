@@ -833,7 +833,7 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
   <main>
     <div class="toolbar">
       <button id="backBtn" class="back-btn"><i class="fa fa-arrow-right"></i> رجوع</button>
-      <div class="where" id="whereText">الدول المتاحة للإيداع</div>
+      <div class="where" id="whereText">طرق الإيداع المتاحة</div>
       <div style="width:120px"></div>
     </div>
 
@@ -929,6 +929,9 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
     /* ========================= إعداد عام ========================= */
   const WORKER_BASE = "https://js4acc.laithqarqaz1.workers.dev/";
   const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
+  // رفع الإثبات مباشرة (بدون Worker)
+  const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
+  const IMGBB_API_KEY = '2b029ac6f8b085f387494cc99a7e5da7';
   function generateGuardToken(prefix){
     var tag = prefix || 'guard';
     try{
@@ -1040,8 +1043,6 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
     const recvCUR = document.getElementById('recvCUR'); // ما سيُضاف بالدولار
 
     /* ========================= حالة وتنقّل ========================= */
-    let currentCountry = null; // { id, data }
-    let countries = [];
     let methods = [];
     let currentMethod = null;
     let currentProofFile = null;
@@ -1053,7 +1054,6 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
     let fxRatePerUSD = null;    // 1 USD -> كم من عملة الطريقة (CUR)
     let usdPerJOD = null;       // 1 JOD -> كم USD (لاحتساب الإضافة بالدولار)
     // تتبُّع حالة التفرّع عبر العنوان
-    let pendingRoute = null;     // يُستخدم لوضع المسار المطلوب حتى تكتمل قائمة الدول
 
     // جلب قيمة 1 JOD بالدولار من إعداد عام (config/currency)
     async function fetchUsdPerJODFromConfig(){
@@ -1116,42 +1116,30 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
 
     /* ========================= رسم القوائم ========================= */
     function renderCountries(list){
-      clearGrid();
-      list.forEach(c=>{
-        const a=document.createElement('a');
-        a.href='javascript:void(0)';
-        a.className='card';
-        a.dataset.title=c.data.name||'';
-        a.innerHTML=`
-          <img src="${c.data.imageUrl||''}" alt="${c.data.name||''}">
-          <h2>${c.data.name||''}</h2>`;
-        a.addEventListener('click',()=>navigateToCountry(c));
-        grid.appendChild(a);
-      });
-      showNoResults(list.length===0);
+      renderMethods(list || []);
     }
 
     /* ========================= بحث ========================= */
     function applySearch(){
       const q=(searchInput.value||'').trim().toLowerCase();
-      const list=currentCountry?methods:countries;
+      const list=methods||[];
       const filtered=list.filter(x=>(x.data.name||'').toLowerCase().includes(q));
-      currentCountry?renderMethods(filtered):renderCountries(filtered);
+      renderMethods(filtered);
     }
     searchInput.addEventListener('input', applySearch);
 
     /* ========================= جلب الدول & الطرق ========================= */
-    function watchCountries(){
+    function watchMethods(){
       cardSkeleton();
-      return db.collection('depositCountries')
-        .where('active','==', true)
-        .orderBy('order','asc')
-        .onSnapshot(snap=>{
-          countries=snap.docs.map(d=>({id:d.id,data:d.data()}));
-          if(!currentCountry){ renderCountries(countries); applySearch(); }
-          // إن وُجد مسار مطلوب قبل اكتمال التحميل، طبّقه الآن
-          if (pendingRoute){ try { applyRoute(true); } catch(_){} pendingRoute=null; }
-        }, err=>{ console.error('countries onSnapshot error:', err); });
+      const ref = db.collection('config').doc('paymentMethods');
+      return ref.onSnapshot((snap)=>{
+        const data = snap.exists ? (snap.data() || {}) : {};
+        const depositMap = data.deposit || {};
+        methods = Object.keys(depositMap).map((id)=>({ id, data: depositMap[id] || {} }));
+        renderMethods(methods);
+        applySearch();
+        hidePreloader();
+      }, err=>{ console.error('methods onSnapshot error:', err); hidePreloader(); });
     }
 
     // أدوات التوجيه البسيطة (hash)
@@ -1305,62 +1293,36 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
       }
     }
 
-    async function enterCountry(c, fromHistory){
-      currentCountry=c;
-      whereText.textContent=`طرق الدفع — ${c.data.name}`;
-      backBtn.style.display='inline-block';
-      if (!fromHistory){ setHashForCountry(c.id, false); }
-      cardSkeleton();
-
-      const snap=await db.collection('depositCountries').doc(c.id)
-                    .collection('methods')
-                    .where('active','==', true)
-                    .orderBy('name','asc')
-                    .get();
-
-      methods=snap.docs.map(d=>({id:d.id,data:d.data()}));
-      renderMethods(methods);
-    }
-
-    // إظهار الجذر (قائمة الدول)
-    function showRoot(){
-      currentCountry=null;
-      whereText.textContent='الدول المتاحة للإيداع';
-      backBtn.style.display='none';
-      renderCountries(countries);
-    }
-    // زر الرجوع (إن فُعِّل) ينسّق مع سجلّ المتصفح
-    function goBack(){ try{ history.back(); }catch(_){ showRoot(); } }
-    backBtn.addEventListener('click', goBack);
-
-    // الانتقال عند الضغط على بطاقة الدولة
-    function navigateToCountry(c){ enterCountry(c, false); }
-
-    // تطبيق المسار الحالي عند الرجوع/التقدّم أو عند التحميل
-    function applyRoute(fromPop){
-      const r = parseHash();
-      if (r.type === 'country'){
-        const c = (countries||[]).find(x => (x.id||'').toLowerCase() === (r.id||'').toLowerCase());
-        if (c){ enterCountry(c, true); }
-        else { pendingRoute = r; }
-      } else {
-        showRoot();
-      }
-    }
-    window.addEventListener('popstate', function(){ try{ applyRoute(true); }catch(_){ } });
-    window.addEventListener('hashchange', function(){ try{ applyRoute(true); }catch(_){ } });
+    // عرض الطرق مباشرة بدون تقسيم دول
+    try { backBtn.style.display = 'none'; whereText.textContent = 'طرق الإيداع المتاحة'; } catch(_){ }
 
     /* ========================= فتح المودال + FX (من الخادم) ========================= */
-    async function fetchFx(countryId, methodId){
-      const url = `${WORKER}/deposit/fx?countryId=${encodeURIComponent(countryId)}&methodId=${encodeURIComponent(methodId)}`;
-      const res = await fetch(url, { method:'GET' });
-      const data = await res.json();
-      if (!res.ok || data.success !== true) throw new Error(data.error || 'تعذر جلب سعر الصرف');
+    async function fetchFx(methodId){
+      // نحسب السعر من وثيقة config/paymentMethods (methods[] محمّلة من Firebase)
+      const m = (methods || []).find(x => x && x.id === methodId);
+      const d = (m && m.data) ? m.data : {};
+      const currencyCode = String(d.currencyCode || d.currency || 'USD').toUpperCase();
+      const ratePerUSD = Number(d.ratePerUSD ?? d.rateUsd ?? d.rate);
+      const ratePerJODRaw = Number(d.ratePerJOD ?? d.rateJOD);
+      const rateToJOD = Number(d.rateToJOD);
+      const usdPerJODRaw = Number(d.usdPerJOD);
+
+      let ratePerJOD = (Number.isFinite(ratePerJODRaw) && ratePerJODRaw > 0) ? ratePerJODRaw : null;
+      if (!ratePerJOD && Number.isFinite(rateToJOD) && rateToJOD > 0) ratePerJOD = 1 / rateToJOD;
+
+      let usdPerJODVal = (Number.isFinite(usdPerJODRaw) && usdPerJODRaw > 0) ? usdPerJODRaw : null;
+      if (!usdPerJODVal) {
+        const fromCfg = await fetchUsdPerJODFromConfig();
+        if (Number.isFinite(fromCfg) && fromCfg > 0) usdPerJODVal = fromCfg;
+      }
+
+      const ratePerUSDVal = (Number.isFinite(ratePerUSD) && ratePerUSD > 0) ? ratePerUSD : null;
+
       return {
-        currencyCode: data.currencyCode,
-        ratePerJOD: Number(data.ratePerJOD),
-        ratePerUSD: Number(data.ratePerUSD),
-        usdPerJOD: Number(data.usdPerJOD)
+        currencyCode,
+        ratePerJOD,
+        ratePerUSD: ratePerUSDVal,
+        usdPerJOD: usdPerJODVal
       };
     }
 
@@ -1436,7 +1398,7 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
       // جلب السعر من الخادم فقط
       let fetchedUsdPerJOD = null;
       try{
-        const fx = await fetchFx(currentCountry.id, m.id);
+        const fx = await fetchFx(m.id);
         fxCurrency   = fx.currencyCode;
         fxRatePerJOD = toPositiveOrNull(fx.ratePerJOD);   // 1 JOD -> CUR
         fxRatePerUSD = toPositiveOrNull(fx.ratePerUSD);   // 1 USD -> CUR
@@ -1471,7 +1433,7 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
       } catch(_){ }
 
       // تحديد قيمة USD لكل 1 JOD: إن كانت الطريقة USD نستخدم نفس السعر،
-      // وإلا نحاول البحث عن طريقة أخرى في نفس الدولة عملتها USD لاستخراج السعر منها.
+      // وإلا نحاول البحث عن طريقة أخرى عملتها USD لاستخراج السعر منها.
       try {
         usdPerJOD = isPositiveNumber(fetchedUsdPerJOD) ? fetchedUsdPerJOD : null;
         const curCode = (fxCurrency || '').toUpperCase();
@@ -1627,8 +1589,8 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
         updateSubmitState();
         return;
       }
-      if (!currentCountry || !currentMethod) {
-        proofPreview.textContent = 'اختر الدولة والطريقة قبل رفع الإثبات.';
+      if (!currentMethod) {
+        proofPreview.textContent = 'اختر الطريقة قبل رفع الإثبات.';
         updateProofUI();
         updateSubmitState();
         return;
@@ -1661,38 +1623,20 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
 
     async function autoUploadProof(){
       if(!currentProofFile) throw new Error('اختر صورة أولاً.');
-      if(!currentCountry || !currentCountry.id) throw new Error('اختر الدولة قبل رفع الإثبات.');
-      if(!currentMethod || !currentMethod.id) throw new Error('اختر الطريقة قبل رفع الإثبات.');
-      const idToken = await getIdTokenOrThrow();
       const fd = new FormData();
       fd.append('image', currentProofFile);
-      fd.append('countryId', currentCountry.id);
-      fd.append('countryName', currentCountry?.data?.name || '');
-      fd.append('methodId', currentMethod.id);
-      fd.append('methodName', currentMethod?.data?.name || '');
-      const guardToken = generateGuardToken('edaa-upload');
-      fd.append('guardToken', guardToken);
-      fd.append('turnstileToken', guardToken);
-      fd.append('cf-turnstile-response', guardToken);
-
-      const res = await fetch(`${WORKER}/deposit/upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + idToken
-        },
-        body: fd
-      });
-      let data = {};
-      try { data = await res.json(); } catch(_){ data = {}; }
-      if(!res.ok || !data?.success) throw new Error((data && data.error) || 'فشل رفع الإثبات');
-
-      uploadedProofUrl =
+      const res = await fetch(`${IMGBB_UPLOAD_URL}?key=${encodeURIComponent(IMGBB_API_KEY)}`, { method: 'POST', body: fd });
+      const data = await res.json().catch(()=>({}));
+      const url =
+        (data && data.data && (data.data.url || data.data.display_url)) ||
         data.url ||
         data.display_url ||
-        data.displayUrl ||
-        (data.data ? (data.data.url || data.data.display_url) : null) ||
         null;
-      if(!uploadedProofUrl) throw new Error('الخادم لم يرجع رابطًا صالحًا للملف.');
+      if (!res.ok || data.success !== true || !url) {
+        const msg = (data && data.error && (data.error.message || data.error.code)) || 'فشل رفع الإثبات';
+        throw new Error(msg);
+      }
+      uploadedProofUrl = url;
 
       proofPreview.innerHTML = `تم الرفع: <a href="${uploadedProofUrl}" target="_blank" rel="noopener">فتح الرابط</a>`;
       updateProofUI();
@@ -1701,7 +1645,7 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
     function updateSubmitState(){
       const okPay   = amountsValid();
       const okProof = !!uploadedProofUrl;
-      const okMeta  = !!currentMethod && !!currentCountry;
+      const okMeta  = !!currentMethod;
       submitDepositBtn.disabled = !(okPay && okProof && okMeta);
     }
 
@@ -1712,82 +1656,80 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
       return await user.getIdToken(true);
     }
 
-    async function handleSubmitDeposit(country, method){
+    function generateDepositCode(){
+      try{
+        if (window.crypto && typeof window.crypto.randomUUID === 'function'){
+          return 'DEP' + window.crypto.randomUUID().replace(/-/g,'').slice(0,12).toUpperCase();
+        }
+      }catch(_){ }
+      return 'DEP' + (Math.random().toString(16).slice(2,14).toUpperCase().padEnd(12,'0').slice(0,12));
+    }
+
+    async function handleSubmitDeposit(method){
       if(!amountsValid()) return alert('أدخل المبلغ أولاً.');
       if(!uploadedProofUrl) return alert('من فضلك ارفع الإثبات أولاً.');
       try{
-        const idToken = await getIdTokenOrThrow(); // الإرسال ما زال يتطلب تسجيل الدخول
-        const guardToken = generateGuardToken('edaa-submit');
+        submitDepositBtn.disabled = true;
+        const user = auth.currentUser;
+        if(!user) throw new Error('يجب تسجيل الدخول أولاً.');
 
-        const payAmount = Number(sendJOD.value); // ما سيدفعه العميل بعملة الطريقة
-        const body = {
-          countryId: country?.id || "",
-          countryName: country?.data?.name || country?.name || "",
-          methodId: method?.id || "",
-          methodName: method?.data?.name || method?.name || "",
-          payAmount,                       // السيرفر يحسب الباقي
+        const payAmountRaw = Number(sendJOD.value);
+        const payAmount = Number.isFinite(payAmountRaw) ? Number(payAmountRaw.toFixed(2)) : NaN;
+        if (!Number.isFinite(payAmount) || payAmount <= 0) throw new Error('أدخل مبلغ صحيح.');
+
+        const usdAddedRaw = computeUsdFromCur(payAmount);
+        if (!isPositiveNumber(usdAddedRaw)) throw new Error('تعذر حساب مبلغ الدولار. تحقق من سعر الصرف للطريقة.');
+        const usdAdded = Number(usdAddedRaw.toFixed(2));
+
+        const depCode = generateDepositCode();
+        const methodId = method?.id || "";
+        const methodName = method?.data?.name || method?.name || "";
+        const curCode = (fxCurrency || method?.data?.currencyCode || method?.data?.currency || 'USD').toString().toUpperCase();
+
+        const now = firebase.firestore.FieldValue.serverTimestamp();
+        const payload = {
+          code: depCode,
+          userId: user.uid,
+          methodId,
+          methodName,
+          amountCurrency: payAmount,
+          currency: curCode,
+          ...(isPositiveNumber(fxRatePerJOD) ? { ratePerJOD: Number(fxRatePerJOD) } : {}),
+          ...(isPositiveNumber(fxRatePerUSD) ? { ratePerUSD: Number(fxRatePerUSD) } : {}),
+          ...(isPositiveNumber(usdPerJOD) ? { usdPerJOD: Number(usdPerJOD) } : {}),
+          amountUSD: usdAdded,
+          addedAmount: usdAdded,
+          addedCurrency: "USD",
+          added: usdAdded,
+          addedUSD: usdAdded,
+          computedAt: now,
+          client_payAmount: payAmount,
           proofUrl: uploadedProofUrl,
-          guardToken,
-          turnstileToken: guardToken
+          status: "pending",
+          createdAt: now
         };
 
-        const res = await fetch(`${WORKER}/deposit/submit`, {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer ' + idToken,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(body)
-        });
-        const data = await res.json();
-        if(!res.ok || !data.success) throw new Error(data.error || 'فشل تقديم الطلب');
+        await db.collection('depositRequests').doc(depCode).set(payload);
 
-        // احسب ما سيُضاف بالدولار
-        let usdAdded = null;
-        if (data && typeof data.amountUSD === 'number') {
-          usdAdded = Number(data.amountUSD);
-        } else {
-          try{
-            if (usdPerJOD && Number.isFinite(Number(usdPerJOD))) {
-              const calc = Number(data.amountJOD) * Number(usdPerJOD);
-              if (Number.isFinite(calc)) usdAdded = calc;
-            }
-          }catch(_){ usdAdded = null; }
-        }
-
-        const usdLine = (usdAdded!=null && Number.isFinite(usdAdded)) ? `سيُضاف (دولار): ${usdAdded.toFixed(2)} USD` : '';
-        const usdRateLine = (typeof data.usdPerJOD === 'number' && data.usdPerJOD>0)
-          ? `\n(1 JOD = ${Number(data.usdPerJOD).toFixed(4)} USD)`
-          : '';
-        const fxLine = (typeof data.ratePerUSD === 'number' && data.ratePerUSD>0)
-          ? `(السعر من الخادم: 1 USD = ${Number(data.ratePerUSD).toFixed(4)} ${data.currency})`
-          : ((typeof data.ratePerJOD === 'number' && data.ratePerJOD>0)
-              ? `(السعر من الخادم: 1 JOD = ${Number(data.ratePerJOD).toFixed(4)} ${data.currency})`
-              : '');
-
-        // عرض نافذة تأكيد عصرية — CSS يُجلب من الباك-إند المحمي
-        try { await ensureConfirmCss(idToken); } catch(_){ }
         showDepositConfirm({
-          code: data.depositCode,
-          paid: `${data.amountCurrency} ${data.currency}`,
-          addedUSD: (usdAdded!=null && Number.isFinite(usdAdded)) ? usdAdded.toFixed(2)+ ' USD' : '—',
-          fx: (function(){
-            if (typeof data.ratePerUSD === 'number' && data.ratePerUSD>0) return `1 USD = ${Number(data.ratePerUSD).toFixed(4)} ${data.currency}`;
-            if (typeof data.ratePerJOD === 'number' && data.ratePerJOD>0) return `1 JOD = ${Number(data.ratePerJOD).toFixed(4)} ${data.currency}`;
-            return '';
-          })(),
-          extra: (typeof data.usdPerJOD === 'number' && data.usdPerJOD>0) ? `1 JOD = ${Number(data.usdPerJOD).toFixed(4)} USD` : ''
+          code: depCode,
+          paid: `${payAmount.toFixed(2)} ${curCode}`,
+          addedUSD: `${usdAdded.toFixed(2)} USD`,
+          fx: (rateLine && rateLine.textContent && rateLine.textContent !== '—') ? String(rateLine.textContent) : '',
+          extra: (isPositiveNumber(usdPerJOD) ? `1 JOD = ${Number(usdPerJOD).toFixed(4)} USD` : '')
         });
         try { closeModalFn(); } catch(_){ }
       }catch(err){
         console.error(err);
         alert(err.message || 'فشل تقديم الطلب');
+      } finally {
+        try { updateSubmitState(); } catch(_){ }
       }
     }
 
     /* ========================= تشغيل ========================= */
     function openMethodBound(m){
-      submitDepositBtn.onclick = ()=>handleSubmitDeposit(currentCountry, m);
+      submitDepositBtn.onclick = ()=>handleSubmitDeposit(m);
       openMethod(m);
     }
 
@@ -1812,7 +1754,7 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
 
     // طبّق المسار الحالي (إن وُجد) ثم ابدأ مراقبة الدول
     try { applyRoute(true); } catch(_){}
-    watchCountries();
+    watchMethods();
 
     (function(){
       try {
@@ -1825,34 +1767,6 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
   
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

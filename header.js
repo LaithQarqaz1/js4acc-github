@@ -1504,18 +1504,155 @@ function wirePageBalanceBox(){
 (function(){
   try {
     const section = document.createElement('section'); section.className = 'support-section'; section.id = 'support';
-    const title = document.createElement('h2'); title.className = 'support-title'; title.textContent = 'متواجدون لمساعدتك'; section.appendChild(title);
+    const title = document.createElement('h2'); title.className = 'support-title'; title.textContent = 'طرق التواصل'; section.appendChild(title);
     const iconsDiv = document.createElement('div'); iconsDiv.className = 'support-icons';
     const contacts = [
-      { href: '', iconURL: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/telegram.svg', class: 'telegram' },
-      { href: '', iconURL: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/instagram.svg', class: 'instagram' },
-      { href: '', iconURL: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/whatsapp.svg', class: 'whatsapp' },
-      { href: '', iconURL: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/facebook.svg', class: 'facebook' },
-      { href: '', iconURL: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/gmail.svg', class: 'email' },
+      { href: 'https://instagram.com/js4accounts', iconURL: 'https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png', class: 'instagram', label: 'Instagram' },
+      { href: 'https://wa.me/962780282492', iconURL: 'https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg', class: 'whatsapp', label: 'WhatsApp' },
+      { href: 'https://wa.me/967739086790', iconURL: 'https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg', class: 'whatsapp second', label: 'WhatsApp 2' },
+      { href: 'https://whatsapp.com/channel/0029Vb6l0yn4Crfqgo85e33I', iconURL: 'https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg', class: 'whatsapp channel', label: 'WhatsApp Channel' },
+      { href: 'https://t.me/js_4card', iconURL: 'https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg', class: 'telegram', label: 'Telegram' },
     ];
-    contacts.forEach(c => { const a = document.createElement('a'); a.href = c.href; a.target = '_blank'; a.className = 'support-icon ' + c.class; const img = document.createElement('img'); img.src = c.iconURL; img.alt = c.class + ' icon'; img.style.width = '32px'; img.style.height = '32px'; a.appendChild(img); iconsDiv.appendChild(a); });
+    contacts.forEach(c => {
+      const a = document.createElement('a');
+      a.href = c.href;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.className = 'support-icon ' + c.class;
+      a.title = c.label || '';
+      const img = document.createElement('img');
+      img.src = c.iconURL;
+      img.alt = (c.label || c.class) + ' icon';
+      img.style.width = '32px';
+      img.style.height = '32px';
+      a.appendChild(img);
+      iconsDiv.appendChild(a);
+    });
     section.appendChild(iconsDiv);
-    document.body.appendChild(section);
+    const host = document.getElementById('sidebar') || document.body;
+    host.appendChild(section);
+
+    function moveToSidebar(){
+      try{
+        const sidebarHost = document.getElementById('sidebar');
+        if (sidebarHost && section.parentElement !== sidebarHost){
+          sidebarHost.appendChild(section);
+        }
+      } catch(_){}
+    }
+    // حاول النقل فوراً، ثم بعد تحميل الـ DOM، وبعدها بفواصل لضمان ظهور الشريط
+    moveToSidebar();
+    const schedule = [0, 150, 500, 1200];
+    schedule.forEach((ms) => {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => setTimeout(moveToSidebar, ms), { once: ms===schedule[schedule.length-1] });
+      } else {
+        setTimeout(moveToSidebar, ms);
+      }
+    });
+
+    // ضبط تنسيق القسم ليطابق الشريط الجانبي ويصغر الأيقونات
+    const style = document.createElement('style');
+    style.textContent = `
+      .support-section {
+        background: transparent !important;
+        padding: 14px 14px 8px !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+      .support-section .support-icons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      .support-section .support-icon {
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        position: relative;
+      }
+      .support-section .support-icon img {
+        width: 18px;
+        height: 18px;
+        filter: none !important;
+      }
+      #sidebar .support-section {
+        background: transparent !important;
+        padding: 14px 14px 8px;
+        border-radius: 0;
+      }
+      #sidebar .support-section .support-title {
+        color: #e6edff;
+        font-size: 1rem;
+        margin: 0 0 10px;
+      }
+      #sidebar .support-section .support-icons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      #sidebar .support-section .support-icon {
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: transparent;
+        box-shadow: none;
+        padding: 0;
+        position: relative;
+      }
+      #sidebar .support-section .support-icon img {
+        width: 18px;
+        height: 18px;
+        filter: none;
+      }
+      #sidebar .support-section .support-icon.whatsapp.second::after {
+        content: '2';
+        position: absolute;
+        top: -4px;
+        right: -6px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #1d4ed8;
+        color: #fff;
+        font-size: 9px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 0 1px #0b2140;
+      }
+      #sidebar .support-section .support-icon.whatsapp.channel::after {
+        content: '🔔';
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        font-size: 12px;
+        line-height: 1;
+      }
+      #sidebar .support-section .support-rights {
+        margin-top: 12px !important;
+        color: #e6edff;
+        font-size: 11px;
+        text-align: center;
+      }
+      #sidebar .support-section .support-rights a {
+        color: #fff !important;
+        text-decoration: none;
+      }
+    `;
+    document.head.appendChild(style);
   } catch {}
 })();
 
@@ -1523,16 +1660,20 @@ function wirePageBalanceBox(){
 (function(){
   try{
     var links = {
-      whatsapp: 'https://wa.me/963981983751',
-      telegram: 'https://t.me/963969898534',
-      facebook: 'https://www.facebook.com/share/1B1b48AcqV/',
-      email: 'mailto:hazemediek@gmail.com',
-      instagram: 'https://www.instagram.com/z3.i.m?igsh=MXRwZGl6dXh2YTd2Zg=='
+      whatsapp: 'https://wa.me/967739086790',
+      whatsapp2: 'https://wa.me/962780282492',
+      whatsappChannel: 'https://whatsapp.com/channel/0029Vb6l0yn4Crfqgo85e33I',
+      telegram: 'https://t.me/js_4card',
+      facebook: 'https://instagram.com/js4accounts',
+      email: 'mailto:',
+      instagram: 'https://instagram.com/js4accounts'
     };
 
     function applySupportLinks(){
       var defs = [
-        { key: 'whatsapp', sels: ['a.support-icon.whatsapp','i.fa-whatsapp'] },
+        { key: 'whatsapp', sels: ['a.support-icon.whatsapp:not(.second):not(.channel)','i.fa-whatsapp'] },
+        { key: 'whatsapp2', sels: ['a.support-icon.whatsapp.second'] },
+        { key: 'whatsappChannel', sels: ['a.support-icon.whatsapp.channel'] },
         { key: 'telegram', sels: ['a.support-icon.telegram','i.fa-telegram','i.fa-telegram-plane','i.fa-paper-plane'] },
         { key: 'facebook', sels: ['a.support-icon.facebook','i.fa-facebook','i.fa-facebook-f'] },
         { key: 'email', sels: ['a.support-icon.email','i.fa-envelope','a[href^="mailto:"]'] },
@@ -1552,6 +1693,7 @@ function wirePageBalanceBox(){
           document.querySelectorAll(finalSelector).forEach(function(el){
             var a = ensureAnchor(el);
             if(!a) return;
+            if (a.closest && a.closest('#wa-join-modal')) return; // اترك زر الانضمام في النافذة كما هو
             if (d.key === 'telegram') {
               var appHref = 'tg://resolve?phone=201104453086';
               a.setAttribute('href', href); // web fallback
@@ -1604,6 +1746,8 @@ function wirePageBalanceBox(){
       pointer-events: auto; /* Re-enable clicks just on link */
       display: inline-block; /* Contains the clickable area */
       padding: 5px 10px; /* Add some padding for better touch target */
+      color: #fff !important;
+      text-decoration: none !important;
       }
     `;
     document.head.appendChild(creditStyle);
@@ -1627,17 +1771,17 @@ function wirePageBalanceBox(){
         if (!anchor){
           anchor = document.createElement('a');
           // Add link styling
-          anchor.style.color = '#3b82f6'; // Blue color
+          anchor.style.color = '#fff';
           anchor.style.textDecoration = 'none';
           anchor.style.transition = 'all 0.2s';
           
           // Hover effect
           anchor.addEventListener('mouseover', () => {
-            anchor.style.color = '#2563eb';
+            anchor.style.color = '#e5e7eb';
             anchor.style.textDecoration = 'underline';
           });
           anchor.addEventListener('mouseout', () => {
-            anchor.style.color = '#3b82f6';
+            anchor.style.color = '#fff';
             anchor.style.textDecoration = 'none';
           });
 
@@ -1674,5 +1818,3 @@ function wirePageBalanceBox(){
     }
   }catch(_){ }
 })();
-
-
