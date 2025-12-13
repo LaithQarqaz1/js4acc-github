@@ -927,7 +927,7 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
       }
     }
     /* ========================= إعداد عام ========================= */
-  const WORKER_BASE = "https://edaaandsahb.laithqarqaz66.workers.dev/";
+  const WORKER_BASE = "https://js4acc.laithqarqaz1.workers.dev/";
   const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
   // رفع الإثبات مباشرة (بدون Worker)
   const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
@@ -1159,7 +1159,7 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
     async function ensureConfirmCss(idToken){
       if (__CONFIRM_CSS_ADDED) return true;
       try{
-        const res = await fetch(`${WORKER}/ui/confirm.css`, { headers: { Authorization: 'Bearer '+idToken }});
+        const res = await fetch(`${WORKER}/ui/confirm.css`, { headers: { Authorization: 'Bearer '+idToken, 'x-game': 'edaa' }});
         if(!res.ok){ __CONFIRM_CSS_ADDED=false; return false; }
         const css = await res.text();
         const st = document.createElement('style'); st.id='zconfirm-style'; st.textContent = css;
@@ -1230,7 +1230,7 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
     async function ensureConfirmCss(idToken){
       if (__CONFIRM_CSS_ADDED) return true;
       try{
-        const res = await fetch(`${WORKER}/ui/confirm.css`, { headers: { Authorization: 'Bearer '+idToken }});
+        const res = await fetch(`${WORKER}/ui/confirm.css`, { headers: { Authorization: 'Bearer '+idToken, 'x-game': 'edaa' }});
         if(!res.ok){ __CONFIRM_CSS_ADDED=false; return false; }
         const css = await res.text();
         const st = document.createElement('style'); st.id='zconfirm-style'; st.textContent = css;
@@ -1688,7 +1688,7 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
 
         const res = await fetch(`${WORKER}/deposit/submit`, {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + idToken, 'Content-Type': 'application/json' },
+          headers: { 'Authorization': 'Bearer ' + idToken, 'Content-Type': 'application/json', 'x-game': 'edaa' },
           body: JSON.stringify({
             methodId,
             methodName,
@@ -1699,7 +1699,13 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
         });
 
         const data = await res.json().catch(()=>({}));
-        if(!res.ok || !data.success) throw new Error(data.error || 'فشل تقديم طلب الإيداع');
+        if(!res.ok || !data.success) {
+          const base = (data && data.error) ? String(data.error) : 'فشل تقديم طلب الإيداع';
+          const extra = (data && (data.message || data.details)) ? String(data.message || data.details) : '';
+          const statusHint = (!res.ok && typeof res.status === 'number' && res.status) ? `HTTP ${res.status}` : '';
+          const msg = extra && extra !== base ? `${base}\n${extra}` : base;
+          throw new Error(statusHint ? `${msg}\n${statusHint}` : msg);
+        }
 
         try { await ensureConfirmCss(idToken); } catch(_){ }
 
@@ -1759,6 +1765,3 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
   
 </body>
 </html>
-
-
-

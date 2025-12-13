@@ -153,6 +153,7 @@
     adminManage: document.getElementById('admin-manage'),
     adminManageList: document.getElementById('adminManageList'),
     adminManageStatus: document.getElementById('adminManageStatus'),
+    adminManageQuery: document.getElementById('adminManageQuery'),
     adminAddAccounts: document.getElementById('admin-add-accounts'),
     adminMethods: document.getElementById('admin-methods'),
     adminAuthPanel: document.getElementById('admin-auth'),
@@ -1897,12 +1898,21 @@ const firebaseConfig = {
     }
     const statusFilterRaw = (els.adminManageStatus && els.adminManageStatus.value) || 'all';
     const statusFilter = String(statusFilterRaw || 'all').toLowerCase();
+    const queryRaw = (els.adminManageQuery && els.adminManageQuery.value) || '';
+    const query = String(queryRaw || '').trim().toLowerCase();
     const list = state.accounts
       .filter((a) => {
         if (statusFilter === 'all') return true;
         const st = (a && a.status != null) ? String(a.status).toLowerCase() : '';
         if (statusFilter === 'sold') return st === 'sold' || st === 'completed';
         return st === statusFilter;
+      })
+      .filter((a) => {
+        if (!query) return true;
+        const id = (a && a.id != null) ? String(a.id).toLowerCase() : '';
+        const title = (a && a.title != null) ? String(a.title).toLowerCase() : '';
+        const owner = (a && (a.ownerWebuid || a.ownerId) != null) ? String(a.ownerWebuid || a.ownerId).toLowerCase() : '';
+        return id.includes(query) || title.includes(query) || owner.includes(query);
       })
       .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     if (!list.length) {
@@ -2043,6 +2053,7 @@ const firebaseConfig = {
             <button class="btn ghost small" data-contact="${buyerContact}" data-contact-label="المشتري">تواصل مع المشتري</button>
             <button class="btn primary small" data-purchase-review="approved" data-id="${p.id || p.code || ''}">تحرير الرصيد للبائع</button>
             <button class="btn danger small" data-purchase-review="rejected" data-id="${p.id || p.code || ''}">رفض وإرجاع المبلغ</button>
+            <button class="btn danger small" data-purchase-delete="1" data-id="${p.id || p.code || ''}">حذف الطلب</button>
           </div>
         </div>
       </article>
@@ -2073,6 +2084,22 @@ const firebaseConfig = {
           renderAdminPurchases();
         } catch (err) {
           openResponseModal(err?.message || 'خطأ أثناء التحديث', 'تنبيه');
+        }
+      });
+    });
+
+    els.adminPurchasesList.querySelectorAll('button[data-purchase-delete]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        if (!id) { showToast('معرف الطلب مفقود', true); return; }
+        if (!confirm('سيتم حذف طلب الشراء نهائياً. متأكد؟')) return;
+        try {
+          await sendAdminRequest({ action: 'purchase:delete', purchaseId: id });
+          openResponseModal('تم حذف الطلب', 'نجاح');
+          await loadAdminSnapshot();
+          renderAdminPurchases();
+        } catch (err) {
+          openResponseModal(err?.message || 'تعذر حذف الطلب', 'تنبيه');
         }
       });
     });
@@ -2819,6 +2846,7 @@ const firebaseConfig = {
     if (els.adminManageList) els.adminManageList.addEventListener('click', handleAdminManageClick);
     if (els.adminManageList) els.adminManageList.addEventListener('click', handleOpenAccountImages);
     if (els.adminManageStatus) els.adminManageStatus.addEventListener('change', renderAdminManageList);
+    if (els.adminManageQuery) els.adminManageQuery.addEventListener('input', renderAdminManageList);
     if (els.addCategoryForm) els.addCategoryForm.addEventListener('submit', handleAddCategory);
     if (els.categoryAdminList) els.categoryAdminList.addEventListener('click', handleCategoryAdminClick);
     if (els.methodAdminList) els.methodAdminList.addEventListener('click', handleMethodAdminClick);

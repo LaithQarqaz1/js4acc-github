@@ -1,4 +1,4 @@
-﻿// Deobfuscated and cleaned header logic
+// Deobfuscated and cleaned header logic
 
 // ألغينا حد إعادة تحميل Firebase؛ أعِد الوظائف الأصلية إن وُجدت
 (function(){
@@ -1250,88 +1250,59 @@ sidebar.style.overflowY = 'auto'; // Enable vertical scrolling
 sidebar.style.overflowX = 'hidden'; // Prevent horizontal scrolling
 sidebar.style.maxHeight = '100vh'; // Full viewport height
 
-const ul = document.createElement('ul');
-// الرئيسية
-const homeLi = document.createElement('li');
-homeLi.onclick = () => navigateTo('index.html');
-homeLi.innerHTML = '<i class="fas fa-home"></i><a href="#">الرئيسية</a>';
-ul.appendChild(homeLi);
-// الإيداع
-const depositLi = document.createElement('li');
-depositLi.id = 'depositBtn';
-depositLi.innerHTML = '<i class="fa-solid fa-circle-dollar-to-slot"></i><a href="#">الإيداع</a>';
-depositLi.onclick = () => navigateTo('edaa.html');
-depositLi.style.display = 'none';
-ul.appendChild(depositLi);
-// طلباتي
-const ordersLi = document.createElement('li');
-ordersLi.onclick = () => navigateTo('talabat.html');
-ordersLi.innerHTML = '<i class="fas fa-list"></i><a href="#">طلباتي</a>';
-ul.appendChild(ordersLi);
-// محفظتي
-const walletLi = document.createElement('li');
-walletLi.id = 'walletBtn';
-walletLi.innerHTML = '<i class="fas fa-wallet"></i><a href="#">محفظتي</a>';
-walletLi.onclick = () => navigateHomeHash('#/wallet','wallet');
-walletLi.style.display = 'none';
-ul.appendChild(walletLi);
-// سحب الأموال
-const withdrawLi = document.createElement('li');
-withdrawLi.id = 'withdrawBtn';
-withdrawLi.innerHTML = '<i class="fa-solid fa-money-bill-transfer"></i><a href="#">سحب الأموال</a>';
-withdrawLi.onclick = () => navigateTo('sahb.html');
-withdrawLi.style.display = 'none';
-ul.appendChild(withdrawLi);
-// تحويل الرصيد
-const transferLi = document.createElement('li');
-transferLi.id = 'transferBtn';
-transferLi.innerHTML = '<i class="fa-solid fa-right-left"></i><a href="#">تحويل رصيد</a>';
-transferLi.onclick = () => navigateHomeHash('#/transfer','transfer');
-transferLi.style.display = 'none';
-ul.appendChild(transferLi);
+const ADMIN_TABS = [
+  { key: 'review', label: 'المراجعة', icon: 'fa-solid fa-clipboard-check' },
+  { key: 'manage', label: 'إدارة الإعلانات', icon: 'fa-solid fa-list-check' },
+  { key: 'add', label: 'إضافة حساب', icon: 'fa-solid fa-circle-plus' },
+  { key: 'categories', label: 'الأقسام', icon: 'fa-solid fa-layer-group' },
+  { key: 'deposit-methods', label: 'طرق الإيداع', icon: 'fa-solid fa-circle-dollar-to-slot' },
+  { key: 'withdraw-methods', label: 'طرق السحب', icon: 'fa-solid fa-money-bill-transfer' },
+  { key: 'currencies', label: 'العملات', icon: 'fa-solid fa-coins' },
+  { key: 'fees', label: 'الرسوم', icon: 'fa-solid fa-percent' },
+  { key: 'levels', label: 'ترقية رتبة', icon: 'fa-solid fa-arrow-up-wide-short' },
+  { key: 'users', label: 'المستخدمين', icon: 'fa-solid fa-users' },
+  { key: 'purchases', label: 'المشتريات', icon: 'fa-solid fa-cart-shopping' },
+  { key: 'topups', label: 'طلبات الايداع', icon: 'fa-solid fa-file-invoice-dollar' },
+  { key: 'withdraw', label: 'طلبات السحب', icon: 'fa-solid fa-hand-holding-dollar' },
+  { key: 'wallet', label: 'الرصيد الكلي', icon: 'fa-solid fa-sack-dollar' }
+];
 
-// طلب مراجعة أدمن
-const reviewRequestLi = document.createElement('li');
-reviewRequestLi.innerHTML = '<i class="fa-solid fa-clipboard-check"></i><a href="#">عرض حساب</a>';
-reviewRequestLi.onclick = () => navigateTo('review-request.html');
-ul.appendChild(reviewRequestLi);
-// اعلاناتي
-const myAdsLi = document.createElement('li');
-myAdsLi.id = 'myAdsBtn';
-myAdsLi.innerHTML = '<i class="fa-solid fa-bullhorn"></i><a href="#">اعلاناتي</a>';
-myAdsLi.onclick = () => navigateTo('myads.html');
-myAdsLi.style.display = 'none';
-ul.appendChild(myAdsLi);
-// الإعدادات
-const settingsLi = document.createElement('li');
-settingsLi.id = 'settingsBtn';
-settingsLi.innerHTML = '<i class="fa-solid fa-gear"></i><a href="#">الإعدادات</a>';
-settingsLi.onclick = () => navigateHomeHash('#/settings','settings');
-settingsLi.style.display = 'none';
-ul.appendChild(settingsLi);
-// تسجيل الدخول / الخروج
-const loginLi = document.createElement('li');
-loginLi.id = 'loginSidebarBtn';
-loginLi.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i><a href="#">تسجيل الدخول</a>';
-loginLi.onclick = () => navigateTo('login.html');
-ul.appendChild(loginLi);
+const ul = document.createElement('ul');
+ul.id = 'adminTabNav';
+ul.style.display = 'none';
+
+ADMIN_TABS.forEach(({ key, label, icon }) => {
+  const li = document.createElement('li');
+  li.className = 'admin-tab-btn';
+  li.dataset.adminTab = key;
+
+  if (icon) {
+    const i = document.createElement('i');
+    i.className = icon;
+    li.appendChild(i);
+  }
+
+  const a = document.createElement('a');
+  a.href = '#';
+  a.textContent = label;
+  li.appendChild(a);
+
+  ul.appendChild(li);
+});
+
 const logoutLi = document.createElement('li');
 logoutLi.id = 'logoutBtn';
-logoutLi.style.display = 'none';
+logoutLi.className = 'hidden';
 logoutLi.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i><a href="#">تسجيل الخروج</a>';
-logoutLi.onclick = () => {
-  try { showPageLoader(); } catch {}
-  try {
-    firebase.auth().signOut().catch(()=>{}).finally(()=>{
-      try { sessionStorage.setItem('nav:fromHome','1'); } catch {}
-      window.location.href = 'index.html';
-    });
-  } catch {
-    try { window.location.href = 'index.html'; } catch {}
-  }
-};
 ul.appendChild(logoutLi);
+
 sidebar.appendChild(ul);
+
+ul.addEventListener('click', (e) => {
+  const btn = e.target && e.target.closest ? e.target.closest('.admin-tab-btn') : null;
+  if (!btn) return;
+  try { if (typeof toggleSidebar === 'function') toggleSidebar(); } catch {}
+});
 
 // Attach to containers
 window.addEventListener('DOMContentLoaded', () => {

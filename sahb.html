@@ -182,7 +182,8 @@
     .card.maintenance::after{ display:none; }
     .card.maintenance h2{ color:#a00; }
     .card.maintenance img{ filter:grayscale(100%); }
-    .card:hover{\n      transform:translateY(-5px);
+    .card:hover{
+      transform:translateY(-5px);
       box-shadow:var(--card-shadow-hover, var(--card-shadow));
       border-color:var(--card-border-hover, var(--card-border-strong, var(--card-border)));
     }
@@ -207,10 +208,12 @@
     @keyframes shimmer{0%{right:-150px}100%{right:100%}}
 
     /* المودال */
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
     .modal.open{display:flex}
-    .modal-content{background:#fff;padding:18px;border-radius:16px;max-width:680px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.22)}
-    .modal-title{font-size:1.2rem;font-weight:800;text-align:center;letter-spacing:.2px;background:linear-gradient(90deg,#9c9ede,#b9bbef,#a7f3d0);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:10px}
+    .modal.open .modal-content{animation:modalSlideUp .22s ease-out both}
+    @keyframes modalSlideUp{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+    .modal-content{position:relative;background:#fff;padding:18px;border-radius:16px;max-width:680px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.22)}
+    .modal-title{text-align:center;margin-top:6px;font-size:1.35rem;font-weight:800;letter-spacing:.2px;background:linear-gradient(90deg,#66aee9,#9dc5e8,#a7f3d0);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:10px}
     /* Floating close button like deposit */
     .modal-x{ position:absolute; inset-inline-end:10px; inset-block-start:10px; width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border-radius:12px; cursor:pointer; border:1px solid transparent; background:transparent; }
     html[data-theme="dark"] .modal-x{ border-color:#2b2d52; background:rgba(2,6,23,.45); color:#cbd5e1 }
@@ -233,8 +236,9 @@
 
     .calc{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0}
     .calc .field{background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:8px 10px}
-    /* إخفاء حقل السعر الحالي بالكامل */
-    .rate-line{display:none !important}
+    /* السعر الحالي (مثل صفحة الإيداع) */
+    .rate-line{margin-top:6px;color:#5b8fc2;display:flex;align-items:center;gap:8px;justify-content:center}
+    .rate-line .mini{opacity:.9}
     .rate-line .chip{background:#eceeff;border:1px solid #e2e8f0;border-radius:9999px;padding:6px 10px; direction:ltr}
 
     .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
@@ -243,35 +247,60 @@
     .btn-outline{background:#fff;border:1px solid #cbd5e1}
     .btn[disabled]{opacity:.5;cursor:not-allowed}
 
-    .turnstile-wrap{margin-top:8px}
     .muted{color:#667085;font-size:.92rem}
     .error{color:var(--danger);font-size:.9rem;margin-top:4px}
     /* تحسينات المودال والحقول مثل صفحة الإيداع */
-    #methodModal .modal-content{ position:relative; border-radius:18px; }
-    #methodModal .modal-content::before{ content:""; position:absolute; inset-inline:0; inset-block-start:0; height:4px; background:linear-gradient(90deg,#9c9ede,#7a7cd0,#22c55e); opacity:.9; }
-    #methodModal .calc .field{ position:relative; margin:0; border-radius:14px; padding:6px; }
-    #methodModal .calc .field input{ height:44px; font-weight:800; direction:ltr; text-align:end; font-variant-numeric:tabular-nums; border:0; background:transparent; padding:0 64px; }
-    #methodModal .calc .field::before{ content: attr(data-cur); position:absolute; inset-inline-start:8px; top:50%; transform:translateY(-50%); padding:2px 10px; border-radius:999px; font-size:.75rem; font-weight:800; letter-spacing:.3px; background:#eef2f7; border:1px solid #e5e7eb; color:#475569; pointer-events:none; }
-    #methodModal .calc .field > label{ position:absolute; inset-inline-end:12px; top:-10px; padding:0 8px; border-radius:999px; font-size:.75rem; font-weight:800; line-height:1.6; background:#ffffff; color:#475569; }
+    #methodModal .modal-content{ position:relative; overflow:hidden; max-height:calc(100dvh - 24px); overflow-y:auto; overscroll-behavior:contain; scroll-behavior:smooth; border-radius:18px; }
+    #methodModal .modal-content::before{ content:""; position:absolute; inset-inline:0; inset-block-start:0; height:4px; background:linear-gradient(90deg,#66aee9,#3A8BD1,#22c55e); opacity:.9; }
+    #methodModal .calc{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; margin-top:8px; align-items:flex-start; }
+    #methodModal .calc .field{ position:relative; margin:0; border:1px solid transparent; border-radius:14px; padding:6px; }
+    html[data-theme="dark"] #methodModal .calc .field{ border-color:#2b2d52; background:rgba(2,6,23,.45); box-shadow:0 1px 0 rgba(255,255,255,.03) inset; }
+    html[data-theme="light"] #methodModal .calc .field{ border-color:#e5e7eb; background:#ffffff; }
+    #methodModal .calc .field:focus-within{ box-shadow:0 0 0 4px rgba(56,189,248,.22); border-color:#9dc5e8; }
+    #methodModal .calc .field input{ width:100%; height:32px; border-radius:10px; padding:0 64px; font-weight:800; font-size:.95rem; direction:ltr; text-align:end; font-variant-numeric:tabular-nums; outline:none; border:0; background:transparent; color:inherit; }
+    #methodModal .calc .field input::placeholder{ opacity:.5; }
+    #methodModal .calc .field::before{ content: attr(data-cur); position:absolute; inset-inline-start:8px; top:50%; transform:translateY(-50%); padding:2px 10px; border-radius:999px; font-size:.75rem; font-weight:800; letter-spacing:.3px; pointer-events:none; }
+    #methodModal .calc .field > label{ position:absolute; inset-inline-end:12px; top:-10px; padding:0 8px; border-radius:999px; font-size:.75rem; font-weight:800; line-height:1.6; margin:0; display:inline-flex; align-items:center; }
+    html[data-theme="dark"] #methodModal .calc .field > label{ background:#05050b; color:#cbd5e1; }
+    html[data-theme="light"] #methodModal .calc .field > label{ background:#ffffff; color:#475569; }
+
+    #methodModal .form{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; margin:12px 0 6px; }
+    #methodModal .form .field{ position:relative; margin:0; border:1px solid transparent; border-radius:14px; padding:6px; }
+    html[data-theme="dark"] #methodModal .form .field{ border-color:#2b2d52; background:rgba(2,6,23,.45); box-shadow:0 1px 0 rgba(255,255,255,.03) inset; }
+    html[data-theme="light"] #methodModal .form .field{ border-color:#e5e7eb; background:#ffffff; }
+    #methodModal .form .field:focus-within{ box-shadow:0 0 0 4px rgba(56,189,248,.22); border-color:#9dc5e8; }
+    #methodModal .form .field > label{ position:absolute; inset-inline-end:12px; top:-10px; padding:0 8px; border-radius:999px; font-size:.75rem; font-weight:800; line-height:1.6; margin:0; display:inline-flex; align-items:center; }
+    html[data-theme="dark"] #methodModal .form .field > label{ background:#05050b; color:#cbd5e1; }
+    html[data-theme="light"] #methodModal .form .field > label{ background:#ffffff; color:#475569; }
+    #methodModal .form .field input{ width:100%; height:40px; border-radius:10px; padding:0 14px; font-weight:700; font-size:.95rem; outline:none; border:0; background:transparent; color:inherit; }
+    #methodModal .form .field input::placeholder{ opacity:.5; }
+    #methodModal #recipientId{ direction:ltr; text-align:start; font-variant-numeric:tabular-nums; }
+    #methodModal .calc .field input:focus{ box-shadow:none; }
+    #methodModal .form .field input:focus{ box-shadow:none; }
     /* Modal theme (match deposit) */
     html[data-theme="dark"] #methodModal .modal-content { background: linear-gradient(180deg, rgba(2,6,23,.92), rgba(2,6,23,.86)); border: 1px solid #2b2d52; color: #f0f1ff; box-shadow:0 12px 36px rgba(0,0,0,.45); }
     html[data-theme="light"] #methodModal .modal-content { background:#ffffff; border:1px solid #e5e7eb; color:#111827; box-shadow:0 18px 40px rgba(0,0,0,.12); }
-    /* Info list look */
-    #methodInfo.info-list{ border-radius:14px; padding:12px }
-    html[data-theme="dark"] #methodInfo.info-list{ border:1px solid #2b2d52; background:rgba(2,6,23,.45) }
-    html[data-theme="light"] #methodInfo.info-list{ border:1px solid #e6eef7; background:#f8fafc }
-    #methodInfo .info-item{ display:flex; justify-content:space-between; align-items:center; background:transparent; border:none; padding:8px 0 }
-    #methodInfo .info-item + .info-item{ border-top:1px dashed rgba(148,163,184,.25) }
-    html[data-theme="dark"] #methodInfo .info-item strong{ color:#9c9ede }
-    html[data-theme="light"] #methodInfo .info-item strong{ color:#5c5ebf }
+    /* Info list look (match deposit modal) */
+    #methodInfo.info-list{ margin:16px 0; padding:0; display:flex; flex-direction:column; gap:12px; }
+    #methodInfo .info-item{ display:flex; align-items:flex-start; justify-content:flex-start; gap:14px; padding:12px 16px; border-radius:16px; border:1px solid #2b2d52; background:rgba(2,6,23,.45); box-shadow:0 1px 0 rgba(255,255,255,.03) inset; }
+    html[data-theme="light"] #methodInfo .info-item{ border-color:#e5e7eb; background:#ffffff; box-shadow:0 1px 0 rgba(255,255,255,.4) inset; }
+    #methodInfo .info-item strong{ font-size:.85rem; font-weight:800; color:#cbd5e1; letter-spacing:.2px; flex:0 0 auto; }
+    html[data-theme="light"] #methodInfo .info-item strong{ color:#475569; }
+    #methodInfo .info-item > div{ flex:1 1 auto; min-width:0; font-size:.92rem; font-weight:700; overflow-wrap:anywhere; word-break:break-word; text-align:start; }
     /* Primary button gradient */
-    .btn-primary{ background:linear-gradient(135deg,#7a7cd0,#3b3e8c); border:0 }
+    .btn-primary{ background:linear-gradient(135deg,#3A8BD1,#2867A5); border:0 }
     .btn-primary:hover{ filter:brightness(.98) }
     html[data-theme="dark"] #methodModal .calc .field::before { background:rgba(148,163,184,.12); border:1px solid #2b2d52; color:#cbd5e1; }
     html[data-theme="light"] #methodModal .calc .field::before { background:#eef2f7; border:1px solid #e5e7eb; color:#475569; }
     /* ضبط اتجاه شارات السعر لعدم انعكاسها بالعربية */
     #fxBadge, #rateLine{ direction:ltr }
-    @media (max-width: 480px){ #methodModal .calc .field input{ padding:0 40px; height:42px; } }
+    @media (max-width: 480px){
+      #methodModal .calc{ grid-template-columns:1fr; }
+      #methodModal .form{ grid-template-columns:1fr; }
+      #methodModal .calc .field input{ padding:0 40px; height:42px; }
+      .actions{ flex-direction:column; }
+      .btn{ width:100%; }
+    }
     /* دعم الثيم الداكن */
     body.dark-mode{ background:#05050b; color:#f0f1ff; --card-bg:#101223; --card-text:#f0f1ff; --card-border:#2b2d52; --card-gradient:linear-gradient(160deg, rgba(122,124,208,.14) 0%, rgba(16,18,35,.9) 100%); --card-border-strong:rgba(156,158,222,.32); --card-border-hover:rgba(156,158,222,.5); --card-shadow:0 10px 28px rgba(5,6,18,.6); --card-shadow-hover:0 14px 36px rgba(5,6,18,.68); --elev-shadow:0 6px 22px rgba(3,4,12,.55); --skeleton:#0d0e1d; }
     body.dark-mode .card::after{ background:radial-gradient(circle at top right, rgba(156,158,222,.18), rgba(0,0,0,0) 65%); opacity:.45; }
@@ -358,6 +387,11 @@
         <i class="fa-solid fa-xmark"></i>
       </button>
       <div class="modal-title" id="modalTitle">تفاصيل السحب</div>
+
+      <div class="rate-line">
+        <div class="mini"><i class="fa-regular fa-circle-question"></i> السعر الحالي:</div>
+        <div class="chip" id="rateLine">—</div>
+      </div>
       <div id="fxBadge" class="badge" style="display:none;">
         <i class="fa-solid fa-coins"></i><span id="fxText"></span>
       </div>
@@ -388,25 +422,11 @@
         </div>
       </div>
 
-      <div class="rate-line">
-        <div class="muted"><i class="fa-regular fa-circle-question"></i> السعر الحالي:</div>
-        <div class="chip" id="rateLine">—</div>
-      </div>
-
       <div id="methodInfo" class="info-list"></div>
 
       <div class="actions">
         <button id="submitWithdrawBtn" class="btn btn-primary" disabled>تقديم طلب السحب</button>
         <button id="cancelBtn" class="btn btn-outline">إلغاء</button>
-      </div>
-
-      <!-- Turnstile -->
-      <div class="turnstile-wrap">
-        <div class="cf-turnstile"
-             data-sitekey="0x4AAAAAAB6SSL-8W0hsAOMn"
-             data-callback="onTurnstileSuccess"
-             data-expired-callback="onTurnstileExpired">
-        </div>
       </div>
 
       <div class="muted">※ الموقع غير مسؤول عن اي خطا من جانب المستخدم.</div>
@@ -424,25 +444,20 @@
       const pre = document.getElementById('preloader');
       if(!pre) return; pre.classList.add('hidden'); setTimeout(()=>{ pre.style.display='none'; }, 450);
     }
-const WORKER_BASE = "https://edaaandsahb.laithqarqaz66.workers.dev/";
+const WORKER_BASE = "https://js4acc.laithqarqaz1.workers.dev/";
 const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
     const firebaseConfig = {
-          apiKey:"AIzaSyBRVEViuKnCUZqBoD0liuA-P0DVN7mTePA",
-          authDomain:"z3em-d9b11.firebaseapp.com",
-          projectId:"z3em-d9b11",
-          storageBucket:"z3em-d9b11.firebasestorage.app",
-          messagingSenderId:"236716520945",
-          appId:"1:236716520945:web:a0c336db7dc7079c190050",
-          measurementId:"G-1GG6DE12K6"
+          apiKey: "AIzaSyBD4zpvsUdygm7KxRYXPDHbotwvf9Y7pOQ",
+          authDomain: "js4accweb.firebaseapp.com",
+          projectId: "js4accweb",
+          storageBucket: "js4accweb.firebasestorage.app",
+          messagingSenderId: "635891162580",
+          appId: "1:635891162580:web:1ee495e5b51f96ab16ca41",
+          measurementId: "G-0Y3LMPBEWJ"
         };
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
-
-    // Turnstile
-    window.turnstileToken = null;
-    window.onTurnstileSuccess = (token)=>{ window.turnstileToken = token; updateSubmitState(); };
-    window.onTurnstileExpired  = ()=>{ window.turnstileToken = null; updateSubmitState(); };
 
     // ================= عناصر DOM =================
     const grid = document.getElementById('grid');
@@ -504,7 +519,6 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
       recipientId.value=''; recipientName.value='';
       recipientIdErr.style.display='none'; recipientNameErr.style.display='none';
       updateSubmitState();
-      try { if (window.turnstile) turnstile.reset(); } catch(_){}
     }
 
     // ================= بحث =================
@@ -531,24 +545,26 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
     }
     try { backBtn.style.display='none'; whereText.textContent='طرق السحب المتاحة'; }catch(_){}
 
-    // ================= FX من الخادم =================
+    // ================= FX من الوثيقة (config/paymentMethods) =================
     async function fetchFx(methodId){
-      // قاعدة العامل: تسمح بتهيئة override عبر localStorage: key 'withdraw:worker'
-      let base = WORKER_BASE || '';
-      try{ const ov = localStorage.getItem('withdraw:worker'); if (ov) base = ov; }catch(_){ }
-      base = (base||'').replace(/\/+$/,'');
+      const m = (methods || []).find(x => x && x.id === methodId);
+      const d = (m && m.data) ? m.data : {};
+      const currencyCode = String(d.currencyCode || d.currency || 'CUR').toUpperCase();
+      const ratePerUSD = Number(d.ratePerUSD ?? d.rateUsd ?? d.rate);
+      const ratePerJODRaw = Number(d.ratePerJOD ?? d.rateJOD);
+      const rateToJOD = Number(d.rateToJOD);
 
-      const url = `${base}/withdraw/fx?methodId=${encodeURIComponent(methodId)}`;
-      const headers = {};
-      try { const u = auth && auth.currentUser; if (u) headers['Authorization'] = 'Bearer ' + await u.getIdToken(); } catch(_){ }
-      const res = await fetch(url, { method:'GET', headers });
-      const data = await res.json();
-      if (!res.ok || data.success !== true) throw new Error(data.error || 'تعذر جلب سعر الصرف');
+      let ratePerJOD = (Number.isFinite(ratePerJODRaw) && ratePerJODRaw > 0) ? ratePerJODRaw : null;
+      if (!ratePerJOD && Number.isFinite(rateToJOD) && rateToJOD > 0) ratePerJOD = 1 / rateToJOD;
+
+      const ratePerUSDVal = (Number.isFinite(ratePerUSD) && ratePerUSD > 0) ? ratePerUSD : null;
+      if (!ratePerJOD && ratePerUSDVal) ratePerJOD = ratePerUSDVal;
+      if (currencyCode === 'JOD' && !ratePerJOD) ratePerJOD = 1;
+
       return {
-        currencyCode: data.currencyCode,
-        ratePerUSD: Number(data.ratePerUSD), // 1 USD -> CUR (إن توفر)
-        ratePerJOD: Number(data.ratePerJOD), // 1 JOD -> CUR (توافق)
-        feeHint: data.feeHint || null
+        currencyCode,
+        ratePerUSD: ratePerUSDVal,
+        ratePerJOD
       };
     }
     // جلب قيمة 1 JOD بالدولار من إعداد عام (config/currency)
@@ -592,7 +608,7 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
         document.querySelector('label[for="recvCUR"]').textContent = `سيستلم (${fxCurrency})`;
       }catch(e){
         fxCurrency = null; fxRatePerUSD=null; fxRatePerJOD = null;
-        rateLine.textContent = 'فشل جلب السعر من الخادم';
+        rateLine.textContent = 'فشل قراءة سعر الصرف';
         fxBadge.style.display='none';
         document.querySelector('label[for="recvCUR"]').textContent = 'سيستلم (—)';
       }
@@ -679,8 +695,6 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
       openModal();
       hidePreloader();
       }
-
-
     function amountsValid(){
       const v = Number(sendUSD.value);
       return isFinite(v) && v > 0 && Number.isFinite(curPerUSD) && curPerUSD>0;
@@ -691,7 +705,9 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
       return idOk && nameOk;
     }
     function updateSubmitState(){
-      submitWithdrawBtn.disabled = !(amountsValid() && !!window.turnstileToken && !!currentMethod && recipientValid());
+      const okPay = amountsValid();
+      const okRecipient = recipientValid();
+      submitWithdrawBtn.disabled = !(okPay && okRecipient && !!currentMethod);
     }
 
     // ====== تأكيد السحب: تحميل CSS من الباك-إند + عرض نافذة ======
@@ -699,7 +715,7 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
     async function ensureConfirmCss(idToken){
       if (__CONFIRM_CSS_ADDED) return true;
       try{
-        const res = await fetch(`${WORKER}/ui/confirm.css`, { headers: { Authorization: 'Bearer '+idToken }});
+        const res = await fetch(`${WORKER}/ui/confirm.css`, { headers: { Authorization: 'Bearer '+idToken, 'x-game': 'edaa' }});
         if(!res.ok){ __CONFIRM_CSS_ADDED=false; return false; }
         const css = await res.text();
         const st = document.createElement('style'); st.id='zconfirm-style'; st.textContent = css;
@@ -749,10 +765,13 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
     async function handleSubmitWithdraw(method){
       if(!amountsValid()) return alert('أدخل قيمة صحيحة بالدولار.');
       if(!recipientValid()) return alert('أدخل رقم/معرّف واسم مستخدم صحيحين (٣ أحرف على الأقل).');
-      if(!window.turnstileToken) return alert('أكمل التحقق الأمني Turnstile.');
 
       try {
+        submitWithdrawBtn.disabled = true;
         const idToken = await getIdTokenOrThrow();
+        const guardToken = (window.crypto && typeof window.crypto.randomUUID === 'function')
+          ? window.crypto.randomUUID()
+          : (String(Date.now()) + '-' + Math.random().toString(16).slice(2));
 
         const body = {
           methodId:   method?.id || "",
@@ -760,12 +779,12 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
           desiredUSD: Number.isFinite(Number(sendUSD.value))? Number(Number(sendUSD.value).toFixed(2)) : 0,
           payoutTarget: (recipientId.value||'').trim(),
           payoutName:   (recipientName.value||'').trim(),
-          turnstileToken: window.turnstileToken
+          guardToken
         };
 
         const res = await fetch(`${WORKER}/withdraw/submit`, {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + idToken, 'Content-Type': 'application/json' },
+          headers: { 'Authorization': 'Bearer ' + idToken, 'Content-Type': 'application/json', 'x-game': 'edaa' },
           body: JSON.stringify(body)
         });
 
@@ -784,6 +803,8 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
       } catch (err) {
         console.error(err);
         alert(err.message || 'فشل تقديم الطلب');
+      } finally {
+        updateSubmitState();
       }
     }
 
@@ -817,16 +838,3 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
   
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
