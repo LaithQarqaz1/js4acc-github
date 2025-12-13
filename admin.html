@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="header.css">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="loader.css">
+  <link href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/css/intlTelInput.min.css" rel="stylesheet"/>
   <style>
     .admin-tabs{display:flex;flex-wrap:wrap;gap:10px;margin:20px auto 12px;justify-content:center;}
     .admin-tab-btn{padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:#e6edff;font-weight:700;cursor:pointer;transition:.2s;min-width:120px;text-align:center;}
@@ -73,6 +74,78 @@
       gap:6px;
     }
     .panel .actions{gap:8px;}
+    /* مستخدمين: كارد معلومات أكبر بدون قص */
+    #admin-users .user-admin-card{
+      width:100%;
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:18px;
+      background:linear-gradient(145deg,rgba(255,255,255,0.05),rgba(255,255,255,0.01));
+      box-shadow:0 16px 40px rgba(0,0,0,0.35);
+      overflow:visible;
+    }
+    #admin-users .user-admin-card .card-body{
+      padding:16px;
+      display:block;
+    }
+    #admin-users .user-admin-card .actions{
+      margin-top:10px;
+    }
+    /* Phone picker مثل صفحة التسجيل */
+    #admin-users .phone-field .iti{
+      width:100%;
+      box-sizing:border-box;
+      display:flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 10px;
+      border:1px solid rgba(255,255,255,0.12);
+      border-radius:10px;
+      background:rgba(255,255,255,0.04);
+      overflow:visible;
+      direction:ltr;
+    }
+    #admin-users .phone-field .iti__flag-container{
+      position:static !important;
+      margin:0 !important;
+      padding:0 !important;
+      border:none !important;
+      background:transparent !important;
+    }
+    #admin-users .phone-field .iti__selected-flag{
+      background:transparent !important;
+      padding:0 8px !important;
+      display:flex !important;
+      align-items:center !important;
+    }
+    #admin-users .phone-field .iti__selected-dial-code{
+      color:var(--text,#e6edff);
+      font-weight:700;
+    }
+    #admin-users .phone-field input[type="tel"]{
+      width:100% !important;
+      border:none !important;
+      background:transparent !important;
+      padding:10px 6px !important;
+      direction:ltr !important;
+      text-align:left !important;
+      box-shadow:none !important;
+      outline:none !important;
+      min-width:0;
+    }
+    #admin-users .phone-field input[type="tel"]::placeholder{color:rgba(230,237,255,0.65);}
+    #admin-users .phone-field .iti__country-list,
+    #admin-users .phone-field .iti__dropdown-content{
+      z-index:20000;
+      min-width:280px;
+      border-radius:10px;
+    }
+    #admin-users .phone-field .iti__country-list{
+      background:#0f1628;
+      border:1px solid rgba(255,255,255,0.12);
+      color:#e6edff;
+    }
+    #admin-users .phone-field .iti__country{padding:8px 10px;}
+    #admin-users .phone-field .iti__divider{border-color:rgba(255,255,255,0.12);}
     /* مناطق رفع على شكل دروبزون مثل صفحة عرض الحساب */
     .dropzone{
       position:relative;
@@ -226,6 +299,7 @@
     <button class="admin-tab-btn" data-admin-tab="currencies">العملات</button>
     <button class="admin-tab-btn" data-admin-tab="fees">الرسوم</button>
     <button class="admin-tab-btn" data-admin-tab="levels">ترقية رتبة</button>
+    <button class="admin-tab-btn" data-admin-tab="users">المستخدمين</button>
     <button class="admin-tab-btn" data-admin-tab="purchases">المشتريات</button>
     <button class="admin-tab-btn" data-admin-tab="topups">طلبات الايداع</button>
     <button class="admin-tab-btn" data-admin-tab="withdraw">طلبات السحب</button>
@@ -577,6 +651,35 @@
       </form>
     </section>
 
+    <section id="admin-users" class="panel admin-section" data-admin-section="users">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">المستخدمين</p>
+          <h2>بحث + تعديل + حظر مستخدم</h2>
+        </div>
+      </div>
+      <form id="userLookupForm" class="grid two">
+        <div class="field">
+          <label for="userLookupQuery">WebUID / UserUID / Email</label>
+          <input id="userLookupQuery" type="text" placeholder="مثال: abc123... أو vo0... أو user@mail.com" required>
+        </div>
+        <div class="field">
+          <label for="userLookupType">نوع البحث</label>
+          <select id="userLookupType">
+            <option value="auto">تلقائي</option>
+            <option value="webuid">WebUID</option>
+            <option value="uid">UserUID</option>
+            <option value="email">Email</option>
+          </select>
+        </div>
+        <div class="field submit full">
+          <button class="btn primary" type="submit">جلب بيانات المستخدم</button>
+          <p class="tiny muted" id="userLookupStatus">—</p>
+        </div>
+      </form>
+      <div id="userLookupResult"></div>
+    </section>
+
     <section id="admin-purchases" class="panel admin-section" data-admin-section="purchases">
       <div class="panel-header">
         <div>
@@ -612,6 +715,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/intlTelInput.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/utils.js"></script>
   <script>window.ADMIN_ROUTER_BASE = 'https://js4acc.laithqarqaz1.workers.dev/';</script>
   <script src="loader.js" defer></script>
   <script src="header.js"></script>

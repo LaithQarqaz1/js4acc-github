@@ -170,6 +170,7 @@ const auth = firebase.auth();
 // ========= إعدادات عامة =========
 const STATUS_REFRESH_WINDOW_DAYS = 7; // عدد الأيام التي نحدّث فيها حالة الطلب عند كل دخول
 const PAGINATION = { size: 20, page: 1, orders: [] };
+const PURCHASE_CODE_PREFIX = "PUR-";
 
 // تفضيلات العرض (مثل المحفظة)
 let ORDERS_FILTER = 'all';   // all | pending | approved | rejected
@@ -224,6 +225,108 @@ function formatAmountDisplay(totalStr, total, currency){
   return amount;
 }
 
+function escapeHtmlWithBreaks(value){
+  return escapeHtml(value).replace(/\r?\n/g, "<br>");
+}
+
+function normalizeAccountImages(acc){
+  const raw = acc && Array.isArray(acc.images) ? acc.images : [];
+  const list = raw
+    .map((x) => (x == null ? "" : String(x).trim()))
+    .filter(Boolean);
+  if (list.length) return list;
+  const single = acc && (acc.image || acc.img || acc.thumbnail);
+  return single ? [String(single).trim()] : [];
+}
+
+function normalizeAccountDescription(acc){
+  const d = acc && (acc.description || acc.desc || acc.details || "");
+  return String(d || "").trim();
+}
+
+function formatPurchaseStatusLabel(status){
+  const v = String(status || "").trim().toLowerCase();
+  if (!v || v === "pending") return "قيد المراجعة";
+  if (v === "completed" || v === "approved") return "مكتمل";
+  if (v === "rejected") return "مرفوض";
+  return formatStatusLabel(status);
+}
+
+async function fetchAccountsByIds(ids){
+  const out = new Map();
+  const unique = Array.from(new Set((ids || []).map((x) => String(x || "").trim()).filter(Boolean)));
+  if (!unique.length) return out;
+  await Promise.all(unique.map(async (id) => {
+    try {
+      const snap = await db.collection("accounts").doc(id).get();
+      if (snap && snap.exists) out.set(id, snap.data() || {});
+    } catch {}
+  }));
+  return out;
+}
+
+function purchaseToOrderLike(purchase, accountFallback){
+  const p = purchase || {};
+  const purchaseId = String(p.id || p.purchaseId || p.code || "").trim();
+  const code = PURCHASE_CODE_PREFIX + (purchaseId || String(Date.now()));
+  const accountId = String(p.accountId || "").trim();
+  const snap = (p.accountSnapshot && typeof p.accountSnapshot === "object") ? p.accountSnapshot : null;
+  const acc = snap || accountFallback || {};
+
+  const accountTitle = String(p.accountTitle || acc.title || "حساب").trim();
+  const accountDescription = normalizeAccountDescription(acc);
+  const accountImages = normalizeAccountImages(acc);
+  const accountVideo = (typeof acc.video === "string") ? acc.video.trim() : "";
+  const createdAt = p.createdAt ?? p.timestamp ?? Date.now();
+  const charged = (typeof p.chargedPrice === "number" && Number.isFinite(p.chargedPrice))
+    ? p.chargedPrice
+    : ((typeof p.price === "number" && Number.isFinite(p.price)) ? p.price : null);
+
+  return {
+    __type: "accountPurchase",
+    code,
+    purchaseId,
+    accountId,
+    title: accountTitle,
+    status: p.status || "pending",
+    timestamp: createdAt,
+    total: charged,
+    currency: "$",
+    accountTitle,
+    accountDescription,
+    accountImages,
+    accountVideo,
+    __purchase: p
+  };
+}
+
+async function fetchAccountPurchasesOnce(uid){
+  try {
+    if (!uid) return [];
+    const snap = await db.collection("accountPurchases").where("buyerId", "==", uid).get();
+    const purchases = (snap?.docs || []).map((d) => ({ id: d.id, ...(d.data() || {}) }));
+    if (!purchases.length) return [];
+
+    const needFallbackIds = purchases
+      .filter((p) => {
+        if (!p?.accountId) return false;
+        const s = p.accountSnapshot;
+        if (!s || typeof s !== "object") return true;
+        const hasDesc = typeof s.description === "string" && s.description.trim().length > 0;
+        const hasImages = Array.isArray(s.images) && s.images.some((x) => String(x || "").trim());
+        return !(hasDesc || hasImages);
+      })
+      .map((p) => p.accountId);
+
+    const fallbackMap = await fetchAccountsByIds(needFallbackIds);
+    const out = purchases.map((p) => purchaseToOrderLike(p, fallbackMap.get(p.accountId)));
+    return out.sort((a, b) => getOrderTimeMs(b) - getOrderTimeMs(a));
+  } catch (e) {
+    console.warn("fetchAccountPurchasesOnce failed:", e);
+    return [];
+  }
+}
+
 // نص زر التاريخ: إن كان الاختيار يدويًا لا نعرض "اليوم" حتى لو كان نفس يوم اليوم
 function getDateChipText(){
   if (DATE_MODE === 'range'){
@@ -262,8 +365,9 @@ function normOrderStatus(s){
 function formatStatusLabel(value){
   const raw = String(value || '').trim();
   if (!raw) return 'قيد المعالجة';
-  if (raw === 'تم_الشحن') return 'تم الشحن';
+  if (raw === 'تم_الشحن' || raw === 'تم الشحن' || raw === 'تم-الشحن') return 'تم بنجاح';
   const normalized = raw.toLowerCase();
+  if (normalized.includes('تم_الشحن') || normalized.includes('تم الشحن') || normalized.includes('shipped')) return 'تم بنجاح';
   if (normalized.includes('مكتمل') || normalized === 'completed' || normalized === 'success') return 'مكتمل';
   if (normalized === 'partial') return 'مكتمل جزئياً';
   if (normalized.includes('ملغي') || normalized === 'canceled' || normalized === 'cancelled') return 'ملغي';
@@ -358,6 +462,7 @@ firebase.auth().onAuthStateChanged(async user => {
     await syncOrdersMerge(user.uid);        // عند كل دخول: اجلب وادمج الطلبات الجديدة وتحديث حالاتها
     refreshRecentStatuses(user.uid);        // كتحسين: حدّث حديثة فقط (احتياطي)
     listenOrdersRealtime(user.uid);         // متابعة فورية لأي طلب جديد/معدل
+    listenPurchasesRealtime(user.uid);      // متابعة فورية لطلبات شراء الحسابات
   }
 });
 
@@ -446,9 +551,15 @@ async function loadOrdersCacheFirst(uid) {
   showOrdersSkeleton(1);
 
   try {
-    const fresh = await fetchOrdersFromFirebaseOnce(uid);
-    LS.replace(uid, fresh);
-    renderOrders(fresh);
+    const [ordersRes, purchasesRes] = await Promise.allSettled([
+      fetchOrdersFromFirebaseOnce(uid),
+      fetchAccountPurchasesOnce(uid)
+    ]);
+    const ordersFresh = ordersRes.status === 'fulfilled' ? (ordersRes.value || []) : [];
+    const purchasesFresh = purchasesRes.status === 'fulfilled' ? (purchasesRes.value || []) : [];
+    const combined = [...ordersFresh, ...purchasesFresh].sort((a, b) => getOrderTimeMs(b) - getOrderTimeMs(a));
+    LS.replace(uid, combined);
+    renderOrders(combined);
   } catch (e) {
     console.error(e);
     ordersList.querySelectorAll(".order-card.loading").forEach(n => n.remove());
@@ -489,18 +600,28 @@ async function fetchOrdersFromFirebaseOnce(uid) {
 // جلب جميع الطلبات ودمجها مع الكاش (يضمن ظهور الجديدة بعد كل دخول)
 async function syncOrdersMerge(uid) {
   try {
-    const doc = await db.collection('orders').doc(uid).get();
-    if (doc.exists) {
-      const data = doc.data() || {}; const byCode = data.byCode || {};
-      const fresh = Object.keys(byCode).map(k=>{ const entry=byCode[k]||{}; const pub=entry.public||{}; const priv=entry.private||{}; return { code: entry.code||k, ...pub, __pub: pub, __priv: priv, __fetchedAt: Date.now() }; });
-      LS.merge(uid, fresh); renderOrders(cacheToSortedArray(uid)); return;
+    let ordersFresh = [];
+    try {
+      const doc = await db.collection('orders').doc(uid).get();
+      if (doc.exists) {
+        const data = doc.data() || {}; const byCode = data.byCode || {};
+        ordersFresh = Object.keys(byCode).map(k=>{ const entry=byCode[k]||{}; const pub=entry.public||{}; const priv=entry.private||{}; return { code: entry.code||k, ...pub, __pub: pub, __priv: priv, __fetchedAt: Date.now() }; });
+      }
+    } catch {}
+
+    if (!ordersFresh.length) {
+      const snapshot = await db.collection('orders').where('userId','==',uid).get();
+      const promises = snapshot.docs.map(async (doc)=>{ const orderData=doc.data()||{}; const pubSnap=await doc.ref.collection('public').doc('main').get(); const pubData=pubSnap.exists?pubSnap.data():{}; return { code: orderData.code||doc.id, ...pubData, proof: orderData.proof||'', __fetchedAt: Date.now() }; });
+      ordersFresh = await Promise.all(promises);
     }
-  } catch(_){ }
-  try {
-    const snapshot = await db.collection('orders').where('userId','==',uid).get();
-    const promises = snapshot.docs.map(async (doc)=>{ const orderData=doc.data()||{}; const pubSnap=await doc.ref.collection('public').doc('main').get(); const pubData=pubSnap.exists?pubSnap.data():{}; return { code: orderData.code||doc.id, ...pubData, proof: orderData.proof||'', __fetchedAt: Date.now() }; });
-    const fresh = await Promise.all(promises); LS.merge(uid, fresh); renderOrders(cacheToSortedArray(uid));
-  }catch(e){ console.error('syncOrdersMerge error:', e); }
+
+    const purchasesFresh = await fetchAccountPurchasesOnce(uid);
+    const merged = [...(ordersFresh || []), ...(purchasesFresh || [])];
+    if (merged.length) LS.merge(uid, merged);
+    renderOrders(cacheToSortedArray(uid));
+  } catch (e) {
+    console.error('syncOrdersMerge error:', e);
+  }
 }
 
 /* ===================== تحديث حالة الطلبات الحديثة عند كل دخول ===================== */
@@ -515,6 +636,7 @@ async function refreshRecentStatuses(uid) {
 
   const recentCodes = codes.filter(code => {
     const o = cache.byCode[code];
+    if (o && o.__type === 'accountPurchase') return false;
     // نحدّث فقط إذا كان الطلب حديثًا (≤ 7 أيام)
     return isWithinDays(o?.timestamp, STATUS_REFRESH_WINDOW_DAYS);
   });
@@ -579,6 +701,141 @@ function renderOrders(orders) {
   drawOrdersPage();
 }
 
+function renderAccountPurchaseCard(order, ordersList){
+  if (!ordersList) return;
+  const code = order?.code;
+  if (!code) return;
+
+  const existing = document.getElementById(`order-${code}`);
+  if (existing) existing.remove();
+
+  const purchase = order?.__purchase || {};
+  const accountId = String(order?.accountId || purchase.accountId || "").trim();
+  const accountTitle = String(order?.accountTitle || purchase.accountTitle || order?.title || "حساب").trim();
+  const desc = String(order?.accountDescription || (purchase.accountSnapshot && purchase.accountSnapshot.description) || "").trim();
+  const images = Array.isArray(order?.accountImages) && order.accountImages.length
+    ? order.accountImages
+    : normalizeAccountImages((purchase.accountSnapshot && typeof purchase.accountSnapshot === "object") ? purchase.accountSnapshot : null);
+  const video = String(order?.accountVideo || (purchase.accountSnapshot && purchase.accountSnapshot.video) || "").trim();
+
+  const amountDisplay = formatAmountDisplay(null, order?.total ?? purchase.chargedPrice ?? purchase.price ?? null, order?.currency || "$");
+  const statusSource = order?.status || purchase.status;
+  const normalizedStatus = normOrderStatus(statusSource);
+  const statusText = formatPurchaseStatusLabel(statusSource);
+
+  let formattedDate = "";
+  try {
+    const ms = getOrderTimeMs(order);
+    formattedDate = ms
+      ? new Date(ms).toLocaleString("ar-EG", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })
+      : (order?.timestamp || "غير معروف");
+  } catch {
+    formattedDate = order?.timestamp || "غير معروف";
+  }
+
+  let statusClass = "";
+  if (normalizedStatus === "rejected") statusClass = "مرفوض";
+  else if (normalizedStatus === "approved") statusClass = "تم_الشحن";
+
+  const safeCode = escapeHtml(code);
+  const safeTitle = escapeHtml(accountTitle);
+  const safeAmount = escapeHtml(amountDisplay);
+  const safeStatus = escapeHtml(statusText);
+  const safeDateText = escapeHtml(formattedDate);
+
+  const firstImg = (images && images.length) ? String(images[0] || "").trim() : "";
+  const accountHref = accountId ? `account.html?id=${encodeURIComponent(accountId)}` : "";
+
+  const thumbsHtml = (images || []).slice(0, 8).map((u) => {
+    const url = String(u || "").trim();
+    if (!url) return "";
+    const safeUrl = escapeHtml(url);
+    return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer"><img src="${safeUrl}" alt="صورة الحساب" style="width:70px;height:70px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,0.12);"></a>`;
+  }).filter(Boolean).join("");
+
+  const basePrice = (typeof purchase.price === "number" && Number.isFinite(purchase.price)) ? purchase.price : null;
+  const chargedPrice = (typeof purchase.chargedPrice === "number" && Number.isFinite(purchase.chargedPrice)) ? purchase.chargedPrice : (typeof order?.total === "number" ? order.total : null);
+  const basePriceDisplay = basePrice != null ? escapeHtml(formatAmountDisplay(null, basePrice, "$")) : "";
+  const chargedPriceDisplay = chargedPrice != null ? escapeHtml(formatAmountDisplay(null, chargedPrice, "$")) : "";
+  const currentUid = (auth.currentUser || firebase.auth().currentUser)?.uid || "";
+  const buyerId = String(purchase.buyerId || "").trim();
+  const sellerId = String(purchase.accountOwnerId || purchase.ownerId || "").trim();
+  const isSellerView = !!(currentUid && sellerId && sellerId === currentUid && (!buyerId || buyerId !== currentUid));
+
+  const buyerMarkupPct = (typeof purchase.buyerMarkupPct === "number" && Number.isFinite(purchase.buyerMarkupPct)) ? purchase.buyerMarkupPct : null;
+  const sellerFeePct = (typeof purchase.sellerFeePct === "number" && Number.isFinite(purchase.sellerFeePct)) ? purchase.sellerFeePct : null;
+  const sellerNet = (typeof purchase.sellerNet === "number" && Number.isFinite(purchase.sellerNet)) ? purchase.sellerNet : null;
+  const sellerNetDisplay = sellerNet != null ? escapeHtml(formatAmountDisplay(null, sellerNet, "$")) : "";
+
+  const derivedPct = (() => {
+    if (basePrice == null || !Number.isFinite(basePrice) || basePrice <= 0) return null;
+    const target = isSellerView ? sellerNet : chargedPrice;
+    if (target == null || !Number.isFinite(Number(target))) return null;
+    const t = Number(target);
+    const pct = isSellerView
+      ? ((basePrice - t) / basePrice) * 100
+      : ((t - basePrice) / basePrice) * 100;
+    if (!Number.isFinite(pct)) return null;
+    return Math.round(pct * 100) / 100;
+  })();
+  const commissionPct = isSellerView ? (sellerFeePct ?? derivedPct) : (buyerMarkupPct ?? derivedPct);
+  const commissionLabel = isSellerView ? "عمولة البيع" : "عمولة الشراء";
+  const commissionPctText = (commissionPct != null && Number.isFinite(Number(commissionPct)))
+    ? escapeHtml(Math.round(Number(commissionPct) * 100) / 100)
+    : "";
+  const targetDisplay = isSellerView ? (sellerNetDisplay || chargedPriceDisplay) : chargedPriceDisplay;
+
+  const card = document.createElement("div");
+  card.className = "order-card";
+  card.id = `order-${code}`;
+
+  card.innerHTML = `
+    <div class="order-header" onclick="toggleDetails('${code}')">
+      <div style="display:flex;align-items:center;gap:10px;">
+        ${
+          firstImg
+            ? `<img src="${escapeHtml(firstImg)}" alt="صورة" style="width:48px;height:48px;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,0.12);">`
+            : `<div style="width:48px;height:48px;border-radius:12px;border:1px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.06);font-weight:800;">🛒</div>`
+        }
+        <div>
+          <strong>كود الطلب:</strong> ${safeCode}<br>
+          🛒 <strong>${safeTitle}</strong> | 💵 <strong>${safeAmount}</strong>
+        </div>
+      </div>
+      <div class="order-status ${statusClass}">${safeStatus}</div>
+      <i class="fas fa-chevron-down"></i>
+    </div>
+    <div class="order-details" id="details-${safeCode}" style="display:none;">
+      <p><strong>📌 النوع:</strong> شراء حساب</p>
+      ${accountId ? `<p><strong>🆔 معرف الإعلان:</strong> ${escapeHtml(accountId)}</p>` : ""}
+      ${desc ? `<p><strong>📝 الوصف:</strong> ${escapeHtmlWithBreaks(desc)}</p>` : `<p><strong>📝 الوصف:</strong> -</p>`}
+      ${
+        thumbsHtml
+          ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">${thumbsHtml}</div>`
+          : `<p><strong>🖼️ الصور:</strong> لا توجد</p>`
+      }
+      ${video ? `<p><strong>🎞️ فيديو:</strong> <a href="${escapeHtml(video)}" target="_blank" rel="noopener noreferrer">فتح</a></p>` : ""}
+      ${accountHref ? `<p><strong>🔗 الإعلان:</strong> <a href="${escapeHtml(accountHref)}" target="_blank" rel="noopener noreferrer">فتح تفاصيل الحساب</a></p>` : ""}
+      ${
+        basePriceDisplay || chargedPriceDisplay
+          ? `<p><strong>💵 السعر:</strong> ${basePriceDisplay || "-"}${
+            (commissionPctText && targetDisplay)
+              ? ` (${commissionLabel} ${commissionPctText}%)`
+              : ""
+          }${
+            targetDisplay
+              ? ` → ${targetDisplay}${isSellerView ? " (صافي)" : ""}`
+              : ""
+          }</p>`
+          : ""
+      }
+      <p><strong>📅 تاريخ الإرسال:</strong> ${safeDateText}</p>
+    </div>
+  `;
+
+  ordersList.appendChild(card);
+}
+
 function drawOrdersPage() {
   const ordersList = document.getElementById("ordersList");
   if (!ordersList) return;
@@ -634,6 +891,10 @@ function drawOrdersPage() {
   const slice = PAGINATION.orders.slice(start, end);
 
   slice.forEach(order => {
+    if (order && order.__type === "accountPurchase") {
+      renderAccountPurchaseCard(order, ordersList);
+      return;
+    }
     const {
       code,
       playerId,
@@ -896,6 +1157,42 @@ function listenOrdersRealtime(uid) {
   }
 }
 
+/* ===================== استماع فوري لطلبات شراء الحسابات ===================== */
+let _purchasesUnsub = null;
+function listenPurchasesRealtime(uid){
+  try { if (_purchasesUnsub) { _purchasesUnsub(); _purchasesUnsub = null; } } catch {}
+  try {
+    const q = db.collection("accountPurchases").where("buyerId", "==", uid);
+    _purchasesUnsub = q.onSnapshot(async (snap) => {
+      try {
+        const purchases = (snap?.docs || []).map((d) => ({ id: d.id, ...(d.data() || {}) }));
+        if (!purchases.length) return;
+        const needFallbackIds = purchases
+          .filter((p) => {
+            if (!p?.accountId) return false;
+            const s = p.accountSnapshot;
+            if (!s || typeof s !== "object") return true;
+            const hasDesc = typeof s.description === "string" && s.description.trim().length > 0;
+            const hasImages = Array.isArray(s.images) && s.images.some((x) => String(x || "").trim());
+            return !(hasDesc || hasImages);
+          })
+          .map((p) => p.accountId);
+        const fallbackMap = await fetchAccountsByIds(needFallbackIds);
+        const fresh = purchases.map((p) => purchaseToOrderLike(p, fallbackMap.get(p.accountId)));
+        const uidNow = (auth.currentUser || firebase.auth().currentUser)?.uid;
+        if (uidNow) {
+          LS.merge(uidNow, fresh);
+          renderOrders(cacheToSortedArray(uidNow));
+        }
+      } catch (e) {
+        console.warn("listenPurchasesRealtime callback failed:", e);
+      }
+    });
+  } catch (e) {
+    console.warn("listenPurchasesRealtime failed:", e);
+  }
+}
+
 function renderPaginationControls(total, page, totalPages, start, end) {
   const ordersList = document.getElementById('ordersList');
   if (!ordersList) return;
@@ -1084,5 +1381,3 @@ function toggleDetails(code) {
   d.style.display = isOpen ? 'none' : 'block';
   card.classList.toggle('open', !isOpen);
 }
-
-

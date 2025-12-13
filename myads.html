@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>اعلاناتي</title>
+  <link rel="icon" href="emp.png" type="image/png">
+
+  <!-- Firebase v10 compat -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <link rel="stylesheet" href="header.css">
+  <link rel="stylesheet" href="loader.css">
+  <script src="loader.js" defer></script>
+  <script src="header.js" defer></script>
+  <script src="myads.js" defer></script>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    body{margin:0;font-family:'Cairo',sans-serif;background:#05070f;color:#e6edff;}
+    .content-container{width:min(1100px,94vw);margin:86px auto 36px;background:rgba(8,10,20,0.9);border:1px solid rgba(255,255,255,0.08);border-radius:16px;box-shadow:0 16px 40px rgba(0,0,0,0.35);padding:18px;}
+    h2{margin:0 0 14px;display:flex;align-items:center;gap:10px;font-weight:800;}
+    h2 i{color:#7a7cd0;}
+    .muted{color:#9aa6c8;}
+    .ads-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px;}
+    .ad-card{background:#0f1628;border:1px solid rgba(255,255,255,0.10);border-radius:16px;overflow:hidden;box-shadow:0 10px 26px rgba(0,0,0,0.25);display:flex;flex-direction:column;}
+    .ad-thumb{width:100%;height:160px;object-fit:cover;background:#0b1020;}
+    .ad-body{padding:12px;display:flex;flex-direction:column;gap:10px;flex:1;}
+    .ad-title{font-weight:800;line-height:1.3;margin:0;font-size:1rem;}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+    .badge{padding:6px 10px;border-radius:999px;font-weight:800;font-size:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);}
+    .badge.pending{color:#fde68a;border-color:#a16207;background:rgba(161,98,7,0.16);}
+    .badge.approved{color:#bbf7d0;border-color:#16a34a;background:rgba(22,163,74,0.14);}
+    .badge.rejected{color:#fecaca;border-color:#ef4444;background:rgba(239,68,68,0.14);}
+    .badge.sold{color:#93c5fd;border-color:#2563eb;background:rgba(37,99,235,0.14);}
+    .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;}
+    .btn{border:none;border-radius:12px;padding:9px 12px;font-weight:800;cursor:pointer;}
+    .btn.primary{background:linear-gradient(135deg,#2f74e4,#3f86ff);color:#fff;}
+    .btn.ghost{background:#0b1020;color:#e6edff;border:1px solid rgba(255,255,255,0.12);}
+    .btn.danger{background:rgba(239,68,68,0.16);color:#fecaca;border:1px solid rgba(239,68,68,0.5);}
+    .btn[disabled]{opacity:.6;cursor:not-allowed;}
+    .empty{padding:24px;text-align:center;border:1px dashed rgba(255,255,255,0.16);border-radius:14px;background:rgba(255,255,255,0.04);}
+  </style>
+</head>
+<body>
+  <div id="headerContainer"></div>
+  <div id="sidebarContainer"></div>
+
+  <div id="preloader">
+    <div class="loader"></div>
+  </div>
+
+  <main class="content-container">
+    <h2><i class="fa-solid fa-bullhorn"></i> اعلاناتي</h2>
+    <div class="muted">هنا يمكنك متابعة إعلاناتك وحالتها، مع إمكانية حذف الإعلان.</div>
+    <div id="myAdsList" class="ads-list"></div>
+  </main>
+</body>
+</html>
+

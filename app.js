@@ -29,6 +29,8 @@
     categories: [],
     fees: null,
     userProfile: null,
+    adminUser: null,
+    adminUserMeta: null,
     adminTab: load('admin_tab', 'review'),
   };
   state.fees = getDefaultFees();
@@ -230,6 +232,11 @@
     adminTopupsList: document.getElementById('adminTopupsList'),
     adminWithdrawList: document.getElementById('adminWithdrawList'),
     adminPurchasesList: document.getElementById('adminPurchasesList'),
+    userLookupForm: document.getElementById('userLookupForm'),
+    userLookupQuery: document.getElementById('userLookupQuery'),
+    userLookupType: document.getElementById('userLookupType'),
+    userLookupStatus: document.getElementById('userLookupStatus'),
+    userLookupResult: document.getElementById('userLookupResult'),
     loader: document.getElementById('loader'),
     toast: document.getElementById('toast'),
   };
@@ -242,7 +249,14 @@
     const path = window.location.pathname.toLowerCase();
     return path.includes('admin');
   };
+  const isHomePage = () => {
+    const path = (window.location.pathname || '').toLowerCase();
+    if (!path || path === '/') return true;
+    const file = path.split('/').filter(Boolean).pop() || '';
+    return file === 'index.html';
+  };
   let db = null;
+  let adminUserPhoneIti = null;
 
   let toastTimer;
 
@@ -286,6 +300,55 @@ const firebaseConfig = {
     const looksSlug = !/\s/.test(t) && t.includes('-');
     const normalized = looksSlug ? t.replace(/-/g, ' ') : t;
     return normalized.replace(/\s+/g, ' ').trim();
+  }
+
+  function escapeHTML(value) {
+    const s = (value ?? '').toString();
+    return s.replace(/[&<>"']/g, (ch) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }[ch]));
+  }
+
+  function sortIntlCountriesAZ() {
+    try {
+      const data = window.intlTelInputGlobals && window.intlTelInputGlobals.getCountryData
+        ? window.intlTelInputGlobals.getCountryData()
+        : null;
+      if (data && Array.isArray(data)) {
+        data.sort((a, b) => (a?.name || '').localeCompare(b?.name || ''));
+      }
+    } catch (_) {}
+  }
+
+  function destroyAdminUserPhonePicker() {
+    if (adminUserPhoneIti && typeof adminUserPhoneIti.destroy === 'function') {
+      try { adminUserPhoneIti.destroy(); } catch (_) {}
+    }
+    adminUserPhoneIti = null;
+  }
+
+  function initAdminUserPhonePicker(value) {
+    try {
+      const input = document.getElementById('adminUserPhoneInput');
+      if (!input) { destroyAdminUserPhonePicker(); return; }
+      destroyAdminUserPhonePicker();
+      if (typeof window.intlTelInput !== 'function') return;
+      sortIntlCountriesAZ();
+      adminUserPhoneIti = window.intlTelInput(input, {
+        initialCountry: 'sy',
+        separateDialCode: true,
+        preferredCountries: [],
+      });
+      const v = (value ?? '').toString().trim();
+      if (v) {
+        try { adminUserPhoneIti.setNumber(v); } catch (_) {}
+      }
+      try { input.setAttribute('dir', 'ltr'); } catch (_) {}
+    } catch (_) {}
   }
 
   function save(key, value) {
@@ -807,7 +870,12 @@ const firebaseConfig = {
   }
 
   function injectReviewCTA() {
+    // الأزرار السريعة يجب أن تظهر فقط في الصفحة الرئيسية
+    if (!isHomePage()) return;
     if (isAdminPage() || isAuthPage()) return;
+    const hash = (window.location.hash || '').toLowerCase();
+    // اخفِ الأزرار في صفحات الـ inline داخل الرئيسية (wallet/settings/transfer...)
+    if (hash.startsWith('#/') && hash !== '#/' && hash !== '#/home') return;
     if (document.getElementById('quickFloatingActions')) return;
     const wrap = document.createElement('div');
     wrap.id = 'quickFloatingActions';
@@ -1135,7 +1203,7 @@ const firebaseConfig = {
       .catch(() => notify('تعذر إنشاء الحساب'));
   }
 
-  function handleWalletTopup(e) {
+  async function handleWalletTopup(e) {
     e.preventDefault();
     const user = getCurrentUser();
     if (!user) {
@@ -1164,6 +1232,29 @@ const firebaseConfig = {
     const reference = els.walletRefInput?.value?.trim() || '';
     const methodName = method?.name || method?.type || 'تحويل';
     const countryName = method?.country || method?.region || '';
+
+    // الأفضل إرسال الطلب عبر الباك-إند لإرسال إشعار تيليجرام + توحيد المصدر
+    if (ADMIN_ROUTER_BASE) {
+      try {
+        await sendAdminRequest({
+          action: 'topup:submit',
+          amount,
+          methodId,
+          methodName,
+          country: countryName || '',
+          reference,
+        });
+        notify('تم إرسال طلب الشحن للأدمن');
+        if (els.walletAmountInput) els.walletAmountInput.value = '';
+        if (els.walletRefInput) els.walletRefInput.value = '';
+        loadFirebaseData();
+      } catch (err) {
+        notify(err?.message || 'تعذر إرسال الطلب عبر الباك-إند');
+      }
+      return;
+    }
+
+    // fallback: ربط مباشر بفايرستور إن لم يتوفر باك-إند
     db.collection('topups').add({
       ownerId: user.uid,
       amount,
@@ -1239,8 +1330,8 @@ const firebaseConfig = {
       contactNumber = m[2] || '';
     }
 
-    // استخدم الباك اند إن توفر
-    if (state.isAdmin && ADMIN_ROUTER_BASE) {
+    // استخدم الباك اند إن توفر (يدعم إشعارات تيليجرام + إنشاء وثيقة خاصة)
+    if (ADMIN_ROUTER_BASE) {
       try {
         await sendAdminRequest({
           action: 'submit',
@@ -1825,6 +1916,7 @@ const firebaseConfig = {
       const priv = getAccountPrivate(acc.id);
       const contactVal = priv?.contact || '';
       const statusNorm = (acc.status == null) ? '' : String(acc.status).toLowerCase();
+      const ownerLabel = (acc.ownerWebuid || acc.ownerId || '').toString().trim();
       const allImages = getAccountImageUrls(acc);
       let catOptionsForAcc = getCategoryList().map((c) => {
         const key = c.id || c.key || c.slug;
@@ -1879,7 +1971,7 @@ const firebaseConfig = {
           <div class="meta">
             <span>الحالة الحالية: ${statusBadge(acc.status)}</span>
             <span>تم الإنشاء: ${created || '-'}</span>
-            <span>${acc.ownerId ? `المالك: ${acc.ownerId}` : ''}</span>
+            <span>${ownerLabel ? `المالك: ${ownerLabel}` : ''}</span>
             <span>${acc.reviewedBy ? `آخر مراجع: ${acc.reviewedBy}` : ''}</span>
           </div>
           <div class="meta">الصور: ${imagesPreview}</div>
@@ -1915,6 +2007,8 @@ const firebaseConfig = {
     els.adminPurchasesList.innerHTML = list.map((p) => {
       const sellerContact = (privatesById.get(p.accountId)?.contactNumber || privatesById.get(p.accountId)?.contact || '').trim();
       const buyerContact = (p.buyerPhone || p.buyerContact || '').trim();
+      const buyerLabel = (p.buyerWebuid || p.buyerId || '').toString().trim();
+      const ownerLabel = (p.sellerWebuid || p.accountOwnerId || p.ownerId || '').toString().trim();
       const acc = accountsById.get(p.accountId) || {};
       const thumb = (acc.images && acc.images[0]) || acc.image || '';
       return `
@@ -1927,8 +2021,8 @@ const firebaseConfig = {
               </div>
               <div class="purchase-meta">
                 <h3 style="margin:0;">${displayTitle(p.accountTitle || p.accountId || 'حساب')}</h3>
-                <div class="muted tiny wrap">المشتري: ${p.buyerId || '-'}</div>
-                <div class="muted tiny wrap">المالك: ${p.accountOwnerId || '-'}</div>
+                <div class="muted tiny wrap">المشتري: ${buyerLabel || '-'}</div>
+                <div class="muted tiny wrap">المالك: ${ownerLabel || '-'}</div>
                 ${p.buyerLevel ? `<div class="muted tiny">المستوى: ${p.buyerLevel}${p.buyerMarkupPct ? ` • زيادة ${p.buyerMarkupPct}%` : ''}</div>` : ''}
                 <div class="muted tiny">${p.createdAt ? new Date(p.createdAt).toLocaleString('ar-EG') : ''}</div>
               </div>
@@ -1982,6 +2076,242 @@ const firebaseConfig = {
         }
       });
     });
+  }
+
+  function setUserLookupStatus(text, isError = false) {
+    if (!els.userLookupStatus) return;
+    els.userLookupStatus.textContent = text || '—';
+    els.userLookupStatus.style.color = isError ? '#ef4444' : '';
+  }
+
+  function renderAdminUserPanel() {
+    if (!els.userLookupResult) return;
+    if (!state.isAdmin) {
+      destroyAdminUserPhonePicker();
+      els.userLookupResult.innerHTML = '<p class="muted">صلاحية الأدمن مطلوبة.</p>';
+      return;
+    }
+
+    const u = state.adminUser;
+    if (!u) {
+      destroyAdminUserPhonePicker();
+      els.userLookupResult.innerHTML = '<p class="muted">ابحث عن مستخدم عبر WebUID / UserUID / Email لعرض بياناته.</p>';
+      return;
+    }
+
+    const uid = (u.id || u.useruid || '').toString().trim();
+    const webuid = (u.webuid || u.webUid || '').toString().trim();
+    const username = (u.username || u.name || u.displayName || '').toString();
+    const email = (u.email || '').toString();
+    const phone = (u.phone || u.phoneNumber || u.contactNumber || u.contact || '').toString();
+    const phoneCode = (u.phoneCode || u.contactCode || '').toString();
+    const fullPhone = (() => {
+      const p = (phone || '').toString().trim();
+      if (!p) return '';
+      if (p.startsWith('+')) return p;
+      const c0 = (phoneCode || '').toString().trim();
+      if (!c0) return p;
+      const c = c0.startsWith('+') ? c0 : ('+' + c0);
+      return `${c}${p.replace(/\s+/g, '')}`;
+    })();
+    const balanceVal = Number(u.balance);
+    const balance = Number.isFinite(balanceVal) ? balanceVal : '';
+    const totalSpentVal = Number(u.totalspent ?? u.totalSpent);
+    const totalspent = Number.isFinite(totalSpentVal) ? totalSpentVal : '';
+    const normalizedLevel = normalizeBuyerLevel(u.levelCode || u.level || '');
+    const isBanned = u.isBanned === true;
+
+    els.userLookupResult.innerHTML = `
+      <article class="user-admin-card">
+        <div class="card-body">
+          <div class="actions" style="justify-content:space-between;align-items:center;">
+            <div>
+              <h3 style="margin:0;">معلومات المستخدم</h3>
+              <div class="muted tiny wrap">UserUID: ${escapeHTML(uid || '-')}</div>
+              <div class="muted tiny wrap">WebUID: ${escapeHTML(webuid || '-')}</div>
+            </div>
+            <span class="badge ${isBanned ? 'rejected' : 'approved'}">${isBanned ? 'محظور' : 'نشط'}</span>
+          </div>
+
+          <div class="grid two" style="margin-top:14px;">
+            <div class="field">
+              <label>WebUID
+                <input id="adminUserWebuidInput" type="text" value="${escapeHTML(webuid)}" placeholder="—">
+              </label>
+            </div>
+            <div class="field">
+              <label>الاسم
+                <input id="adminUserUsernameInput" type="text" value="${escapeHTML(username)}" placeholder="—">
+              </label>
+            </div>
+            <div class="field">
+              <label>Email
+                <input id="adminUserEmailInput" type="text" value="${escapeHTML(email)}" placeholder="—">
+              </label>
+            </div>
+            <div class="field">
+              <label>Phone
+                <div class="phone-field">
+                  <input id="adminUserPhoneInput" type="tel" value="${escapeHTML(fullPhone)}" placeholder="—" dir="ltr">
+                </div>
+              </label>
+            </div>
+            <div class="field">
+              <label>Balance
+                <input id="adminUserBalanceInput" type="number" step="0.01" value="${escapeHTML(balance)}" placeholder="—">
+              </label>
+            </div>
+            <div class="field">
+              <label>Total Spent
+                <input id="adminUserTotalSpentInput" type="number" step="0.01" value="${escapeHTML(totalspent)}" placeholder="—">
+              </label>
+            </div>
+            <div class="field">
+              <label>الرتبة
+                <select id="adminUserLevelSelect">
+                  <option value="customer" ${normalizedLevel === 'customer' ? 'selected' : ''}>زبون</option>
+                  <option value="trader" ${normalizedLevel === 'trader' ? 'selected' : ''}>تاجر</option>
+                  <option value="vip" ${normalizedLevel === 'vip' ? 'selected' : ''}>VIP</option>
+                </select>
+              </label>
+            </div>
+            <div class="field">
+              <label>الحظر
+                <select id="adminUserBanSelect">
+                  <option value="0" ${!isBanned ? 'selected' : ''}>غير محظور</option>
+                  <option value="1" ${isBanned ? 'selected' : ''}>محظور</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn primary" type="button" data-user-admin-action="save">حفظ التعديلات</button>
+            <button class="btn ${isBanned ? 'ghost' : 'danger'}" type="button" data-user-admin-action="toggle-ban">${isBanned ? 'إلغاء الحظر' : 'حظر'}</button>
+            <button class="btn ghost" type="button" data-user-admin-action="refresh">تحديث</button>
+          </div>
+        </div>
+      </article>
+    `;
+    initAdminUserPhonePicker(fullPhone);
+  }
+
+  async function handleUserLookupSubmit(e) {
+    e.preventDefault();
+    if (!state.isAdmin) { openResponseModal('صلاحية الأدمن مطلوبة.'); return; }
+    const query = (els.userLookupQuery?.value || '').toString().trim();
+    const by = (els.userLookupType?.value || 'auto').toString().trim();
+    if (!query) { setUserLookupStatus('أدخل قيمة البحث', true); openResponseModal('أدخل WebUID أو UserUID أو Email للبحث', 'تنبيه'); return; }
+    setUserLookupStatus('...جاري البحث');
+    try {
+      const res = await sendAdminRequest({ action: 'admin:user:get', query, by });
+      state.adminUser = res.user || null;
+      state.adminUserMeta = res.meta || null;
+      setUserLookupStatus('—');
+      openResponseModal('تم جلب بيانات المستخدم', 'نجاح');
+      renderAdminUserPanel();
+    } catch (err) {
+      state.adminUser = null;
+      state.adminUserMeta = null;
+      setUserLookupStatus(err?.message || 'تعذر جلب بيانات المستخدم', true);
+      renderAdminUserPanel();
+    }
+  }
+
+  async function handleAdminUserPanelClick(e) {
+    const btn = e.target.closest('button[data-user-admin-action]');
+    if (!btn) return;
+    if (!state.isAdmin) { openResponseModal('صلاحية الأدمن مطلوبة.'); return; }
+    const action = btn.dataset.userAdminAction;
+    const userId = (state.adminUser?.id || '').toString().trim();
+    if (!userId) return;
+
+    const root = els.userLookupResult;
+    const q = (sel) => root ? root.querySelector(sel) : null;
+
+    try {
+      if (action === 'refresh') {
+        setUserLookupStatus('...جاري التحديث');
+        const res = await sendAdminRequest({ action: 'admin:user:get', query: userId, by: 'uid' });
+        state.adminUser = res.user || null;
+        state.adminUserMeta = res.meta || null;
+        setUserLookupStatus('—');
+        openResponseModal('تم تحديث بيانات المستخدم', 'نجاح');
+        renderAdminUserPanel();
+        return;
+      }
+
+      if (action === 'toggle-ban') {
+        const next = !(state.adminUser?.isBanned === true);
+        setUserLookupStatus('...جاري التحديث');
+        const res = await sendAdminRequest({ action: 'admin:user:update', userId, patch: { isBanned: next } });
+        state.adminUser = res.user || state.adminUser;
+        setUserLookupStatus('—');
+        openResponseModal(next ? 'تم حظر المستخدم' : 'تم إلغاء حظر المستخدم', 'نجاح');
+        renderAdminUserPanel();
+        return;
+      }
+
+      if (action === 'save') {
+        const current = state.adminUser || {};
+        const webuid = (q('#adminUserWebuidInput')?.value || '').toString().trim();
+        const username = (q('#adminUserUsernameInput')?.value || '').toString();
+        const email = (q('#adminUserEmailInput')?.value || '').toString();
+        let phone = (q('#adminUserPhoneInput')?.value || '').toString().trim();
+        if (adminUserPhoneIti && typeof adminUserPhoneIti.getNumber === 'function') {
+          const full = adminUserPhoneIti.getNumber();
+          if (full && typeof full === 'string') phone = full.trim();
+        }
+        const levelCode = (q('#adminUserLevelSelect')?.value || '').toString().trim();
+        const isBanned = (q('#adminUserBanSelect')?.value || '0') === '1';
+
+        const balanceRaw = (q('#adminUserBalanceInput')?.value || '').toString().trim();
+        const totalSpentRaw = (q('#adminUserTotalSpentInput')?.value || '').toString().trim();
+        const balance = balanceRaw === '' ? null : Number(balanceRaw);
+        const totalspent = totalSpentRaw === '' ? null : Number(totalSpentRaw);
+
+        const patch = {};
+        const curWebuid = (current.webuid || current.webUid || '').toString().trim();
+        const curUsername = (current.username || current.name || current.displayName || '').toString();
+        const curEmail = (current.email || '').toString();
+        const curPhone = (current.phone || current.phoneNumber || current.contactNumber || current.contact || '').toString().trim();
+        const curLevel = normalizeBuyerLevel(current.levelCode || current.level || '');
+        const curBanned = current.isBanned === true;
+
+        if (webuid !== curWebuid) patch.webuid = webuid;
+        if (username !== curUsername) patch.username = username;
+        if (email !== curEmail) patch.email = email;
+        if (phone !== curPhone) patch.phone = phone;
+        if (levelCode && levelCode !== curLevel) patch.levelCode = levelCode;
+        if (isBanned !== curBanned) patch.isBanned = isBanned;
+
+        if (balance != null && Number.isFinite(balance)) {
+          const curBal = Number(current.balance);
+          if (!Number.isFinite(curBal) || Math.round(curBal * 100) / 100 !== Math.round(balance * 100) / 100) patch.balance = Math.round(balance * 100) / 100;
+        }
+        if (totalspent != null && Number.isFinite(totalspent)) {
+          const curSpent = Number(current.totalspent ?? current.totalSpent);
+          if (!Number.isFinite(curSpent) || Math.round(curSpent * 100) / 100 !== Math.round(totalspent * 100) / 100) patch.totalspent = Math.round(totalspent * 100) / 100;
+        }
+
+        if (!Object.keys(patch).length) {
+          setUserLookupStatus('—');
+          openResponseModal('لا توجد تغييرات للحفظ', 'تنبيه');
+          return;
+        }
+
+        setUserLookupStatus('...جاري الحفظ');
+        const res = await sendAdminRequest({ action: 'admin:user:update', userId, patch });
+        state.adminUser = res.user || state.adminUser;
+        setUserLookupStatus('—');
+        openResponseModal('تم حفظ التعديلات بنجاح', 'نجاح');
+        renderAdminUserPanel();
+        return;
+      }
+    } catch (err) {
+      openResponseModal(err?.message || 'حدث خطأ');
+      setUserLookupStatus(err?.message || 'حدث خطأ', true);
+    }
   }
 
   function renderAdminTopups() {
@@ -2501,6 +2831,8 @@ const firebaseConfig = {
     if (els.currencyAdminList) els.currencyAdminList.addEventListener('click', handleCurrencyAdminClick);
     if (els.feesForm) els.feesForm.addEventListener('submit', handleSaveFees);
     if (els.levelForm) els.levelForm.addEventListener('submit', handleLevelSubmit);
+    if (els.userLookupForm) els.userLookupForm.addEventListener('submit', handleUserLookupSubmit);
+    if (els.userLookupResult) els.userLookupResult.addEventListener('click', handleAdminUserPanelClick);
     if (els.adminWithdrawList) els.adminWithdrawList.addEventListener('click', handleWithdrawAction);
     if (els.adminTabNav) {
       els.adminTabNav.addEventListener('click', (e) => {
@@ -2659,6 +2991,7 @@ const firebaseConfig = {
       renderAdminQueue();
       renderAdminManageList();
       renderAdminPurchases();
+      renderAdminUserPanel();
     }
     if (els.sortSelect) els.sortSelect.value = state.sort;
     renderWallet();
@@ -2691,6 +3024,8 @@ const firebaseConfig = {
     firebase.auth().onAuthStateChanged(async (user) => {
       state.firebaseUser = user;
       state.isAdmin = false;
+      state.adminUser = null;
+      state.adminUserMeta = null;
       if (user) {
         try {
           const token = await user.getIdTokenResult();

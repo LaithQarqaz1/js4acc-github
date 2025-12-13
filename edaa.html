@@ -927,7 +927,7 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
       }
     }
     /* ========================= إعداد عام ========================= */
-  const WORKER_BASE = "https://js4acc.laithqarqaz1.workers.dev/";
+  const WORKER_BASE = "https://edaaandsahb.laithqarqaz66.workers.dev/";
   const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
   // رفع الإثبات مباشرة (بدون Worker)
   const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
@@ -1677,46 +1677,38 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
         const payAmount = Number.isFinite(payAmountRaw) ? Number(payAmountRaw.toFixed(2)) : NaN;
         if (!Number.isFinite(payAmount) || payAmount <= 0) throw new Error('أدخل مبلغ صحيح.');
 
-        const usdAddedRaw = computeUsdFromCur(payAmount);
-        if (!isPositiveNumber(usdAddedRaw)) throw new Error('تعذر حساب مبلغ الدولار. تحقق من سعر الصرف للطريقة.');
-        const usdAdded = Number(usdAddedRaw.toFixed(2));
-
-        const depCode = generateDepositCode();
         const methodId = method?.id || "";
         const methodName = method?.data?.name || method?.name || "";
-        const curCode = (fxCurrency || method?.data?.currencyCode || method?.data?.currency || 'USD').toString().toUpperCase();
+        if (!methodId) throw new Error('اختر طريقة الإيداع أولاً.');
 
-        const now = firebase.firestore.FieldValue.serverTimestamp();
-        const payload = {
-          code: depCode,
-          userId: user.uid,
-          methodId,
-          methodName,
-          amountCurrency: payAmount,
-          currency: curCode,
-          ...(isPositiveNumber(fxRatePerJOD) ? { ratePerJOD: Number(fxRatePerJOD) } : {}),
-          ...(isPositiveNumber(fxRatePerUSD) ? { ratePerUSD: Number(fxRatePerUSD) } : {}),
-          ...(isPositiveNumber(usdPerJOD) ? { usdPerJOD: Number(usdPerJOD) } : {}),
-          amountUSD: usdAdded,
-          addedAmount: usdAdded,
-          addedCurrency: "USD",
-          added: usdAdded,
-          addedUSD: usdAdded,
-          computedAt: now,
-          client_payAmount: payAmount,
-          proofUrl: uploadedProofUrl,
-          status: "pending",
-          createdAt: now
-        };
+        const idToken = await getIdTokenOrThrow();
+        const guardToken = (window.crypto && typeof window.crypto.randomUUID === 'function')
+          ? window.crypto.randomUUID()
+          : (String(Date.now()) + '-' + Math.random().toString(16).slice(2));
 
-        await db.collection('depositRequests').doc(depCode).set(payload);
+        const res = await fetch(`${WORKER}/deposit/submit`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + idToken, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            methodId,
+            methodName,
+            payAmount,
+            proofUrl: uploadedProofUrl,
+            guardToken
+          })
+        });
+
+        const data = await res.json().catch(()=>({}));
+        if(!res.ok || !data.success) throw new Error(data.error || 'فشل تقديم طلب الإيداع');
+
+        try { await ensureConfirmCss(idToken); } catch(_){ }
 
         showDepositConfirm({
-          code: depCode,
-          paid: `${payAmount.toFixed(2)} ${curCode}`,
-          addedUSD: `${usdAdded.toFixed(2)} USD`,
+          code: data.depositCode || '',
+          paid: `${Number(data.amountCurrency || payAmount).toFixed(2)} ${(data.currency || fxCurrency || 'USD').toString().toUpperCase()}`,
+          addedUSD: `${Number(data.amountUSD || data.addedAmount || 0).toFixed(2)} USD`,
           fx: (rateLine && rateLine.textContent && rateLine.textContent !== '—') ? String(rateLine.textContent) : '',
-          extra: (isPositiveNumber(usdPerJOD) ? `1 JOD = ${Number(usdPerJOD).toFixed(4)} USD` : '')
+          extra: (isPositiveNumber(data.usdPerJOD) ? `1 JOD = ${Number(data.usdPerJOD).toFixed(4)} USD` : '')
         });
         try { closeModalFn(); } catch(_){ }
       }catch(err){
@@ -1767,8 +1759,6 @@ body:not(.dark-mode) .btn-outline { background:#f3f4f6; color:#111827; border-co
   
 </body>
 </html>
-
-
 
 
 

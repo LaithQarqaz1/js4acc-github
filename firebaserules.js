@@ -26,8 +26,8 @@ service cloud.firestore {
         && !('reviewedAt' in request.resource.data)
         && !('reviewedBy' in request.resource.data);
 
-      // تعديل/حذف: أدمن يمكنه كل شيء، المالك يمكنه التعديل بدون تغيير الحالة
-      allow update, delete: if request.auth != null && (
+      // تعديل: أدمن يمكنه كل شيء، المالك يمكنه التعديل بدون تغيير الحالة
+      allow update: if request.auth != null && (
         request.auth.token.admin == true ||
         (
           request.resource.data.ownerId == request.auth.uid &&
@@ -35,13 +35,23 @@ service cloud.firestore {
           request.resource.data.status == resource.data.status
         )
       );
+
+      // حذف: الأدمن أو مالك الإعلان
+      allow delete: if request.auth != null && (
+        request.auth.token.admin == true ||
+        request.auth.uid == resource.data.ownerId
+      );
     }
 
     // بيانات حساسة لكل إعلان (مخفية عن العملاء)
     match /accountPrivate/{accId} {
       // إنشاء مسموح للمالك فقط، القراءة والتعديل والحذف للأدمن فقط
       allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-      allow read, update, delete: if request.auth != null && request.auth.token.admin == true;
+      allow read, update: if request.auth != null && request.auth.token.admin == true;
+      allow delete: if request.auth != null && (
+        request.auth.token.admin == true ||
+        request.auth.uid == resource.data.ownerId
+      );
     }
 
     // طلبات شراء الحسابات
@@ -230,6 +240,12 @@ service cloud.firestore {
     match /config/currency {
       allow get, list: if true;
       allow write, update, delete: if false;
+    }
+
+    /* طرق الدفع الموحدة (config/paymentMethods) */
+    match /config/paymentMethods {
+      allow get, list: if true;
+      allow create, update, delete: if request.auth != null && request.auth.token.admin == true;
     }
 
     /* 🧾 states — قراءة فقط */

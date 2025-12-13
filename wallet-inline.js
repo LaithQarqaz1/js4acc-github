@@ -286,7 +286,16 @@
         var balances = resolveBalances(data);
         var method = data.methodName || data.method || '';
         var titleBase = kind === 'withdraw' ? 'طلب سحب' : 'طلب إيداع';
+        try{
+          var codeUpper = String(code || '').toUpperCase();
+          if (codeUpper.indexOf('BUY-') === 0) titleBase = 'شراء حساب';
+          else if (codeUpper.indexOf('SELL-') === 0) titleBase = 'صافي بيع حساب';
+          else if (codeUpper.indexOf('REFUND-') === 0 || codeUpper.indexOf('REF-') === 0) titleBase = 'استرجاع مبلغ';
+        }catch(_){ }
         var title = method ? titleBase + ' - ' + method : titleBase;
+        try{
+          if (method && method.toString().trim() === titleBase) title = titleBase;
+        }catch(_){ }
         var metaHtml = buildMetaParts(data, kind);
         var ts = data.timestamp || data.createdAt || data.created_at || data.computedAt || '';
         var shortDate = formatShortDate(ts);
