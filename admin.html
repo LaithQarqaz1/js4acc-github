@@ -257,6 +257,43 @@
       .purchase-thumb{width:96px;height:96px;max-width:96px;max-height:96px;flex:0 0 96px;}
       .purchase-actions{justify-content:center;}
     }
+
+    /* طلبات السحب/الإيداع: كروت أكبر بدون مساحة صورة فارغة */
+    #admin-withdraw .cards,
+    #admin-topups .cards{
+      grid-template-columns:1fr;
+      gap:18px;
+    }
+    #admin-withdraw .card,
+    #admin-topups .card{
+      display:block;
+    }
+    #admin-withdraw .card-body,
+    #admin-topups .card-body{
+      padding:18px 20px;
+      gap:10px;
+    }
+    #admin-withdraw .badge,
+    #admin-topups .badge{
+      min-width:110px;
+      height:54px;
+      padding:0 16px;
+      justify-content:center;
+      border-radius:16px;
+      font-size:14px;
+    }
+    #admin-withdraw .price-tag,
+    #admin-topups .price-tag{
+      padding:10px 14px;
+      border-radius:14px;
+      font-size:15px;
+    }
+    @media(max-width:640px){
+      #admin-withdraw .card-body,
+      #admin-topups .card-body{padding:14px 14px;}
+      #admin-withdraw .badge,
+      #admin-topups .badge{min-width:92px;height:48px;font-size:13px;}
+    }
   </style>
 </head>
 <body>
@@ -682,8 +719,23 @@
     <section id="admin-topups" class="panel admin-section" data-admin-section="topups">
       <div class="panel-header">
         <div>
-          <p class="eyebrow">طلبات الشحن</p>
-          <h2>مراجعة طلبات الرصيد</h2>
+          <p class="eyebrow">طلبات الإيداع</p>
+          <h2>مراجعة طلبات الإيداع</h2>
+        </div>
+        <div style="margin-inline-start:auto;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+          <div class="field" style="min-width:180px;">
+            <label class="muted tiny" for="adminTopupsStatusFilter">تصفية حسب الحالة</label>
+            <select id="adminTopupsStatusFilter">
+              <option value="pending" selected>بانتظار</option>
+              <option value="approved">مقبول</option>
+              <option value="rejected">مرفوض</option>
+              <option value="all">كل الحالات</option>
+            </select>
+          </div>
+          <div class="field" style="min-width:220px;">
+            <label class="muted tiny" for="adminTopupsCodeQuery">بحث بكود الطلب</label>
+            <input id="adminTopupsCodeQuery" type="text" placeholder="اكتب كود الطلب">
+          </div>
         </div>
       </div>
       <div id="adminTopupsList" class="cards"></div>
@@ -694,6 +746,21 @@
         <div>
           <p class="eyebrow">السحب</p>
           <h2>طلبات السحب النقدي</h2>
+        </div>
+        <div style="margin-inline-start:auto;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+          <div class="field" style="min-width:180px;">
+            <label class="muted tiny" for="adminWithdrawStatusFilter">تصفية حسب الحالة</label>
+            <select id="adminWithdrawStatusFilter">
+              <option value="pending" selected>بانتظار</option>
+              <option value="approved">مقبول</option>
+              <option value="rejected">مرفوض</option>
+              <option value="all">كل الحالات</option>
+            </select>
+          </div>
+          <div class="field" style="min-width:220px;">
+            <label class="muted tiny" for="adminWithdrawCodeQuery">بحث بكود الطلب</label>
+            <input id="adminWithdrawCodeQuery" type="text" placeholder="اكتب كود الطلب">
+          </div>
         </div>
       </div>
       <div id="adminWithdrawList" class="cards"></div>
