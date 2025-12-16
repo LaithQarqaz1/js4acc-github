@@ -1260,7 +1260,7 @@ const ADMIN_TABS = [
   { key: 'currencies', label: 'العملات', icon: 'fa-solid fa-coins' },
   { key: 'fees', label: 'الرسوم', icon: 'fa-solid fa-percent' },
   { key: 'levels', label: 'ترقية رتبة', icon: 'fa-solid fa-arrow-up-wide-short' },
-  { key: 'users', label: 'المستخدمين', icon: 'fa-solid fa-users' },
+  { key: 'users', label: 'Users / Promote Admin', icon: 'fa-solid fa-users' },
   { key: 'purchases', label: 'المشتريات', icon: 'fa-solid fa-cart-shopping' },
   { key: 'topups', label: 'طلبات الايداع', icon: 'fa-solid fa-file-invoice-dollar' },
   { key: 'withdraw', label: 'طلبات السحب', icon: 'fa-solid fa-hand-holding-dollar' },
@@ -1795,3 +1795,4 @@ function wirePageBalanceBox(){
     }
   }catch(_){ }
 })();
+

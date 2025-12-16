@@ -684,6 +684,25 @@
           <h2>بحث + تعديل + حظر مستخدم</h2>
         </div>
       </div>
+      <form id="adminPromoteForm" class="grid two">
+        <div class="field">
+          <label for="adminPromoteQuery">UID / WebUID / Email</label>
+          <input id="adminPromoteQuery" type="text" placeholder="ex: uid or webuid" required>
+        </div>
+        <div class="field">
+          <label for="adminPromoteType">نوع البحث</label>
+          <select id="adminPromoteType">
+            <option value="auto" selected>تلقائي</option>
+            <option value="uid">UserUID</option>
+            <option value="webuid">WebUID</option>
+            <option value="email">Email</option>
+          </select>
+        </div>
+        <div class="field submit full">
+          <button class="btn primary" type="submit">ترقية إلى أدمن</button>
+          <p class="tiny muted" id="adminPromoteStatus">-</p>
+        </div>
+      </form>
       <form id="userLookupForm" class="grid two">
         <div class="field">
           <label for="userLookupQuery">WebUID / UserUID / Email</label>

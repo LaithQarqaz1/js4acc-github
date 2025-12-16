@@ -263,6 +263,10 @@
     adminWithdrawStatusFilter: document.getElementById('adminWithdrawStatusFilter'),
     adminWithdrawCodeQuery: document.getElementById('adminWithdrawCodeQuery'),
     adminPurchasesList: document.getElementById('adminPurchasesList'),
+    adminPromoteForm: document.getElementById('adminPromoteForm'),
+    adminPromoteQuery: document.getElementById('adminPromoteQuery'),
+    adminPromoteType: document.getElementById('adminPromoteType'),
+    adminPromoteStatus: document.getElementById('adminPromoteStatus'),
     userLookupForm: document.getElementById('userLookupForm'),
     userLookupQuery: document.getElementById('userLookupQuery'),
     userLookupType: document.getElementById('userLookupType'),
@@ -2165,9 +2169,15 @@ const firebaseConfig = {
     });
   }
 
+  function setAdminPromoteStatus(text, isError = false) {
+    if (!els.adminPromoteStatus) return;
+    els.adminPromoteStatus.textContent = text || '-';
+    els.adminPromoteStatus.style.color = isError ? '#ef4444' : '';
+  }
+
   function setUserLookupStatus(text, isError = false) {
     if (!els.userLookupStatus) return;
-    els.userLookupStatus.textContent = text || '—';
+    els.userLookupStatus.textContent = text || '-';
     els.userLookupStatus.style.color = isError ? '#ef4444' : '';
   }
 
@@ -2281,6 +2291,25 @@ const firebaseConfig = {
       </article>
     `;
     initAdminUserPhonePicker(fullPhone);
+  }
+
+  async function handleAdminPromoteSubmit(e) {
+    e.preventDefault();
+    if (!state.isAdmin) { openResponseModal('Admin privilege required.'); return; }
+    const query = (els.adminPromoteQuery?.value || '').toString().trim();
+    const by = (els.adminPromoteType?.value || 'auto').toString().trim();
+    if (!query) { setAdminPromoteStatus('Enter UID / WebUID / Email', true); return; }
+
+    setAdminPromoteStatus('Promoting...');
+    try {
+      const payload = { action: 'admin:promote', query, by };
+      if (by === 'uid') payload.uid = query;
+      const res = await sendAdminRequest(payload);
+      setAdminPromoteStatus('Promoted to admin', false);
+      openResponseModal('Promoted ' + (res?.uid || query) + ' to admin', 'Done');
+    } catch (err) {
+      setAdminPromoteStatus(err?.message || 'Promotion failed', true);
+    }
   }
 
   async function handleUserLookupSubmit(e) {
@@ -3070,6 +3099,7 @@ const firebaseConfig = {
     if (els.currencyAdminList) els.currencyAdminList.addEventListener('click', handleCurrencyAdminClick);
     if (els.feesForm) els.feesForm.addEventListener('submit', handleSaveFees);
     if (els.levelForm) els.levelForm.addEventListener('submit', handleLevelSubmit);
+    if (els.adminPromoteForm) els.adminPromoteForm.addEventListener('submit', handleAdminPromoteSubmit);
     if (els.userLookupForm) els.userLookupForm.addEventListener('submit', handleUserLookupSubmit);
     if (els.userLookupResult) els.userLookupResult.addEventListener('click', handleAdminUserPanelClick);
     if (els.adminWithdrawList) els.adminWithdrawList.addEventListener('click', handleWithdrawAction);
