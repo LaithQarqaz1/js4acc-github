@@ -494,11 +494,45 @@
       }
 
       async function fetchFromDepositRequests(uid){
+        // ✅ NEW: read per-user map first (userDepositRequests/{uid}.byCode)
+        try{
+          const doc = await db.collection('userDepositRequests').doc(uid).get();
+          if (doc && doc.exists){
+            const data = doc.data() || {};
+            const byCode = (data.byCode || data.requests || data.depositRequests || {}) || {};
+            if (byCode && typeof byCode === 'object'){
+              let arr = Object.keys(byCode).map(function(codeKey){
+                const entry = byCode[codeKey] || {};
+                const item = Object.assign({ id: codeKey }, entry);
+                if (!item.code) item.code = codeKey;
+                item.__kind = ensureKind(item, 'deposit');
+                return item;
+              });
+              arr = arr.filter(function(x){
+                const c = String(getCode(x) || '').toUpperCase();
+                return c.startsWith('DEP') || c.startsWith('AUT');
+              });
+              arr.sort(function(a,b){
+                const taDate = asDate(a && (a.createdAt || a.computedAt || a.timestamp));
+                const tbDate = asDate(b && (b.createdAt || b.computedAt || b.timestamp));
+                const ta = taDate && !isNaN(taDate.getTime()) ? taDate.getTime() : 0;
+                const tb = tbDate && !isNaN(tbDate.getTime()) ? tbDate.getTime() : 0;
+                return tb - ta;
+              });
+              if (arr.length) return arr;
+            }
+          }
+        }catch(_){ /* fallback to legacy */ }
+
+        // legacy: collection depositRequests (وثيقة لكل طلب)
         const baseRef = db.collection('depositRequests').where('userId','==',uid);
         try{
           const snap = await baseRef.orderBy('createdAt','desc').get();
           let arr = snap.docs.map(function(d){ return docToItem(d, 'deposit'); });
-          arr = arr.filter(x => String(getCode(x)).toUpperCase().startsWith('DEP'));
+          arr = arr.filter(function(x){
+            const c = String(getCode(x) || '').toUpperCase();
+            return c.startsWith('DEP') || c.startsWith('AUT');
+          });
           return arr;
         }catch(e){
           const msg = String(e && e.message || e || '');
@@ -506,7 +540,10 @@
             try{
               const snap2 = await baseRef.get();
               let arr = snap2.docs.map(function(d){ return docToItem(d, 'deposit'); });
-              arr = arr.filter(x => String(getCode(x)).toUpperCase().startsWith('DEP'));
+              arr = arr.filter(function(x){
+                const c = String(getCode(x) || '').toUpperCase();
+                return c.startsWith('DEP') || c.startsWith('AUT');
+              });
               arr.sort(function(a,b){
                 const taDate = asDate(a && (a.createdAt || a.timestamp));
                 const tbDate = asDate(b && (b.createdAt || b.timestamp));

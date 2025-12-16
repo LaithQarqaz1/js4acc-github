@@ -177,6 +177,15 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ✅ تخزين الإيداع الجديد: مستند لكل مستخدم يحتوي Map للطلبات داخل byCode
+    match /userDepositRequests/{userId} {
+      // المالك يقرأ فقط مستنده، والأدمن يمكنه list عند الحاجة
+      allow get: if request.auth != null && request.auth.uid == userId;
+      allow list: if request.auth != null && request.auth.token.admin == true;
+      // منع أي كتابة من طرف العميل (الكتابة تتم عبر الباكند/التيليجرام)
+      allow create, update, delete: if false;
+    }
+
     /* 🛒 الطلبات */
     match /orders/{orderId} {
       // السماح بقراءة وثيقة الطلب نفسها (get/list/queries) للمالك فقط
@@ -244,7 +253,7 @@ service cloud.firestore {
 
     /* طرق الدفع الموحدة (config/paymentMethods) */
     match /config/paymentMethods {
-      allow get, list: if true;
+      allow read: if true;
       allow create, update, delete: if request.auth != null && request.auth.token.admin == true;
     }
 

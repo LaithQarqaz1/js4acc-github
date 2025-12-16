@@ -20,6 +20,7 @@
     withdrawMethods: [],
     currencies: [],
     topups: [],
+    depositRequests: [],
     withdrawRequests: [],
     walletTotals: { totalUSD: 0, count: 0 },
     selectedGame: null,
@@ -32,6 +33,10 @@
     adminUser: null,
     adminUserMeta: null,
     adminTab: load('admin_tab', 'review'),
+    dataLoading: false,
+    dataError: '',
+    dataUpdatedAt: 0,
+    dataSource: '',
   };
   state.fees = getDefaultFees();
 
@@ -58,6 +63,25 @@
       try { return window.formatCurrencyFromJOD(n); } catch(_){}
     }
     return n.toFixed(2) + ' $';
+  }
+
+  function normalizeRequestStatus(raw) {
+    const text = (raw == null ? '' : String(raw)).trim();
+    const lower = text.toLowerCase();
+    if (!text) return { key: 'pending', label: 'pending' };
+    if (lower === 'approved' || lower === 'accept' || lower === 'accepted' || lower === 'done' || lower === 'completed') {
+      return { key: 'approved', label: text };
+    }
+    if (lower === 'rejected' || lower === 'reject' || lower === 'canceled' || lower === 'cancelled') {
+      return { key: 'rejected', label: text };
+    }
+    if (lower === 'pending' || lower === 'review' || lower === 'in_review' || lower === 'processing') {
+      return { key: 'pending', label: text };
+    }
+    if (/مقبول|مقبولة/.test(text)) return { key: 'approved', label: text };
+    if (/مرفوض|مرفوضة/.test(text)) return { key: 'rejected', label: text };
+    if (/قيد/.test(text)) return { key: 'pending', label: text };
+    return { key: 'pending', label: text };
   }
 
   function currenciesToMap(list){
@@ -231,7 +255,13 @@
     walletRefInput: document.getElementById('walletRefInput'),
     walletHistory: document.getElementById('walletHistory'),
     adminTopupsList: document.getElementById('adminTopupsList'),
+    adminTopupsStatusFilter: document.getElementById('adminTopupsStatusFilter'),
+    adminTopupsCodeQuery: document.getElementById('adminTopupsCodeQuery'),
+    adminTopupsRefreshBtn: document.getElementById('adminTopupsRefreshBtn'),
+    adminTopupsLoadStatus: document.getElementById('adminTopupsLoadStatus'),
     adminWithdrawList: document.getElementById('adminWithdrawList'),
+    adminWithdrawStatusFilter: document.getElementById('adminWithdrawStatusFilter'),
+    adminWithdrawCodeQuery: document.getElementById('adminWithdrawCodeQuery'),
     adminPurchasesList: document.getElementById('adminPurchasesList'),
     userLookupForm: document.getElementById('userLookupForm'),
     userLookupQuery: document.getElementById('userLookupQuery'),
@@ -398,15 +428,20 @@ const firebaseConfig = {
       throw new Error('ADMIN_ROUTER_BASE غير مضبوط');
     }
     const token = await getIdTokenSafe();
-    const headers = { 'Content-Type': 'application/json' };
+    const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' };
     if (token) headers.Authorization = `Bearer ${token}`;
     const res = await fetch(`${ADMIN_ROUTER_BASE}/accounts`, {
       method: 'POST',
+      cache: 'no-store',
       headers,
     body: JSON.stringify(body || {})
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.ok === false) {
+    const rawErr = data.error || data.message;
+    if (rawErr === 'unknown_action') {
+      throw new Error('السيرفر (Cloudflare Worker) لا يدعم هذا الإجراء حالياً. حدّث/أعد نشر آخر نسخة من الـ Worker ثم جرّب مرة أخرى.');
+    }
     const msg = data.error || data.message || 'تعذر تنفيذ طلب الأدمن';
     const detail = data && data.details;
     const statusInfo = detail && detail.status ? ` (الحالة الحالية: ${detail.status})` : '';
@@ -1094,6 +1129,13 @@ const firebaseConfig = {
     els.adminAuthStatus.style.color = isError ? '#f87171' : 'var(--muted,#9aa6c8)';
   }
 
+  function setAdminTopupsLoadStatus(text, isError = false) {
+    if (!els.adminTopupsLoadStatus) return;
+    const value = (text == null || text === '') ? '—' : String(text);
+    els.adminTopupsLoadStatus.textContent = value;
+    els.adminTopupsLoadStatus.style.color = isError ? '#f87171' : 'var(--muted,#9aa6c8)';
+  }
+
   function handleAdminAuthLogin(e) {
     e.preventDefault();
     if (!els.adminAuthEmail || !els.adminAuthPassword) return;
@@ -1389,11 +1431,10 @@ const firebaseConfig = {
       notify('اضبط ADMIN_ROUTER_BASE للعمليات الإدارية');
       return;
     }
-    const account = state.accounts.find((a) => a.id === id);
-    if (!account) return;
-
     // إعلانات
     if (action === 'approve' || action === 'reject' || action === 'delete') {
+      const account = state.accounts.find((a) => a.id === id);
+      if (!account) return;
       try {
         if (action === 'delete') {
           await sendAdminRequest({ action: 'admin:delete', accountId: id });
@@ -1446,6 +1487,25 @@ const firebaseConfig = {
       } catch (err) {
         notify(err?.message || 'تعذر تحديث الطلب');
       }
+      return;
+    }
+
+    // طلبات الإيداع (depositRequests / userDepositRequests)
+    if (action === 'deposit-approve' || action === 'deposit-reject') {
+      const newStatus = action === 'deposit-approve' ? 'accepted' : 'rejected';
+      let userId = (btn.dataset.userId || '').toString().trim();
+      if (!userId) {
+        const hit = (state.depositRequests || []).find((d) => ((d.id || d.code || '') === id));
+        userId = (hit?.userId || hit?.uid || '').toString().trim();
+      }
+      try {
+        await sendAdminRequest({ action: 'deposit:status', depositCode: id, userId, status: newStatus });
+        notify(action === 'deposit-approve' ? 'تم قبول الإيداع وإضافة الرصيد' : 'تم رفض الإيداع');
+        loadFirebaseData();
+      } catch (err) {
+        notify(err?.message || 'تعذر تحديث الإيداع');
+      }
+      return;
     }
   }
 
@@ -2343,40 +2403,186 @@ const firebaseConfig = {
 
   function renderAdminTopups() {
     if (!els.adminTopupsList) return;
-    const pending = state.topups.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-    if (!pending.length) {
-      els.adminTopupsList.innerHTML = '<p class="muted">لا توجد طلبات شحن.</p>';
+    const statusFilter = (els.adminTopupsStatusFilter?.value || 'pending').toString().trim().toLowerCase();
+    const codeQuery = (els.adminTopupsCodeQuery?.value || '').toString().trim().toLowerCase();
+
+    const countLike = (v) => {
+      if (!v) return 0;
+      if (Array.isArray(v)) return v.length;
+      if (typeof v === 'object') return Object.keys(v).length;
+      return 0;
+    };
+    const totalRaw = countLike(state.depositRequests) + countLike(state.topups);
+    if (state.dataLoading && totalRaw === 0) {
+      els.adminTopupsList.innerHTML = '<p class="muted">...جاري جلب الطلبات</p>';
       return;
     }
-    els.adminTopupsList.innerHTML = pending.map((t) => `
-      <article class="card">
-        <div class="card-body">
-          <div class="actions" style="justify-content: space-between;">
-            <span class="badge ${t.status || 'pending'}">${t.status || 'pending'}</span>
-            <span class="price-tag">${formatPriceCurrency(t.amount || 0)}</span>
+    if (state.dataError && totalRaw === 0) {
+      els.adminTopupsList.innerHTML = `<p class="muted">${escapeHTML(`تعذر جلب الطلبات: ${state.dataError}`)}</p>`;
+      return;
+    }
+
+    const toMs = (v) => {
+      if (v == null) return 0;
+      if (typeof v === 'number' && Number.isFinite(v)) return v;
+      if (typeof v === 'string') {
+        const parsed = Date.parse(v);
+        return Number.isFinite(parsed) ? parsed : 0;
+      }
+      if (v instanceof Date) return v.getTime();
+      if (typeof v?.toMillis === 'function') {
+        try { return v.toMillis(); } catch { return 0; }
+      }
+      if (typeof v?.seconds === 'number') return v.seconds * 1000;
+      return 0;
+    };
+
+    const toArray = (value) => {
+      if (!value) return [];
+      if (Array.isArray(value)) return value;
+      if (typeof value === 'object') {
+        return Object.keys(value).map((id) => ({ id, ...(value[id] || {}) }));
+      }
+      return [];
+    };
+
+    const merged = [
+      ...toArray(state.depositRequests).map((d) => ({ ...d, __kind: 'depositRequest' })),
+      ...toArray(state.topups).map((t) => ({ ...t, __kind: 'topup' })),
+    ].sort((a, b) => (toMs(b.createdAt) - toMs(a.createdAt)));
+
+    const filtered = merged.filter((item) => {
+      const statusInfo = normalizeRequestStatus(item.status);
+      if (statusFilter && statusFilter !== 'all' && statusInfo.key !== statusFilter) return false;
+      if (codeQuery) {
+        const code = (item.id || item.code || '').toString().toLowerCase();
+        if (!code.includes(codeQuery)) return false;
+      }
+      return true;
+    });
+
+    if (!filtered.length) {
+      const emptyText = codeQuery
+        ? 'لا توجد نتائج لهذا الكود.'
+        : statusFilter === 'approved'
+          ? 'لا توجد طلبات مقبولة.'
+          : statusFilter === 'rejected'
+            ? 'لا توجد طلبات مرفوضة.'
+            : statusFilter === 'pending'
+              ? 'لا توجد طلبات بانتظار المراجعة.'
+              : 'لا توجد طلبات.';
+      els.adminTopupsList.innerHTML = `<p class="muted">${emptyText}</p>`;
+      return;
+    }
+
+    els.adminTopupsList.innerHTML = filtered.map((item) => {
+      const isDepositRequest = item.__kind === 'depositRequest';
+      const statusInfo = normalizeRequestStatus(item.status);
+      const createdMs = toMs(item.createdAt);
+      const created = createdMs ? new Date(createdMs).toLocaleString('ar-EG') : '';
+
+      const code = (item.id || item.code || '').toString();
+      const userId = (isDepositRequest ? item.userId : item.ownerId) || '';
+      const methodName = (item.methodName || '').toString();
+
+      const amountUSD = isDepositRequest
+        ? Number(item.amountUSD ?? item.addedUSD ?? item.creditedUSD ?? item.addedAmount ?? item.added ?? item.amountJOD ?? item.amount ?? 0)
+        : Number(item.amount ?? item.amountUSD ?? item.usd ?? 0);
+      const amountCurrency = isDepositRequest ? Number(item.amountCurrency ?? item.client_payAmount ?? item.payAmount ?? NaN) : NaN;
+      const currencyCode = isDepositRequest ? (item.currency || '').toString().trim().toUpperCase() : '';
+
+      const currencyLabel = (Number.isFinite(amountCurrency) && currencyCode)
+        ? `${(Math.round(amountCurrency * 100) / 100).toFixed(2)} ${currencyCode}`
+        : '';
+
+      const proofUrl = isDepositRequest ? (item.proofUrl || item.proof || '') : '';
+      const proofLooksImage = (() => {
+        const u = (proofUrl || '').toString().trim();
+        if (!u) return false;
+        if (/\.(png|jpe?g|webp|gif|bmp|svg)(\?|#|$)/i.test(u)) return true;
+        if (/(?:i\.ibb\.co|imgbb\.com|i\.imgur\.com)/i.test(u)) return true;
+        return false;
+      })();
+      const reference = !isDepositRequest ? (item.reference || '-') : '';
+      const country = !isDepositRequest ? (item.country || '') : '';
+
+      return `
+        <article class="card request-card ${isDepositRequest ? 'request-card--deposit' : 'request-card--topup'}">
+          <div class="card-body">
+            <div class="actions" style="justify-content: space-between; align-items: flex-start;">
+              <span class="badge ${statusInfo.key}">${statusInfo.label}</span>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+                <span class="price-tag">${formatPriceCurrency(amountUSD || 0)}</span>
+                ${currencyLabel ? `<span class="muted tiny">${currencyLabel}</span>` : ''}
+              </div>
+            </div>
+            <h3>${methodName || (isDepositRequest ? 'طلب إيداع' : '')}</h3>
+            <div class="muted tiny">الكود: ${code || '-'}</div>
+            <div class="muted tiny">المستخدم: ${userId || '-'}</div>
+            ${country ? `<div class="muted tiny">${country}</div>` : ''}
+            ${!isDepositRequest ? `<p class="muted tiny">مرجع: ${reference}</p>` : ''}
+            ${isDepositRequest ? `
+              ${proofUrl
+                ? (proofLooksImage
+                  ? `<div class="proof-preview"><img src="${escapeHTML(proofUrl)}" alt="إثبات" loading="lazy" decoding="async" referrerpolicy="no-referrer"></div>`
+                  : `<div class="actions"><a class="btn ghost small" href="${escapeHTML(proofUrl)}" target="_blank" rel="noopener">فتح الإثبات</a></div>`
+                )
+                : `<span class="muted tiny">لا يوجد إثبات</span>`
+              }
+              <div class="actions" style="gap:8px;flex-wrap:wrap;">
+                ${state.isAdmin && statusInfo.key === 'pending' && code && userId ? `
+                  <button class="btn primary small" data-action="deposit-approve" data-id="${escapeHTML(code)}" data-user-id="${escapeHTML(userId)}">قبول</button>
+                  <button class="btn ghost small" data-action="deposit-reject" data-id="${escapeHTML(code)}" data-user-id="${escapeHTML(userId)}">رفض</button>
+                ` : ''}
+              </div>
+            ` : `
+              <div class="actions" style="gap:8px;flex-wrap:wrap;">
+                ${state.isAdmin && statusInfo.key === 'pending' ? `
+                  <button class="btn primary small" data-action="topup-approve" data-id="${item.id}">تأكيد الشحن</button>
+                  <button class="btn ghost small" data-action="topup-reject" data-id="${item.id}">رفض</button>
+                ` : ''}
+              </div>
+            `}
+            <div class="muted tiny">${created}</div>
           </div>
-          <h3>${t.methodName || ''}</h3>
-          <div class="muted tiny">${t.country || ''}</div>
-          <p class="muted tiny">مرجع: ${t.reference || '-'}</p>
-          <div class="actions">
-            <button class="btn primary small" data-action="topup-approve" data-id="${t.id}">تأكيد الشحن</button>
-            <button class="btn ghost small" data-action="topup-reject" data-id="${t.id}">رفض</button>
-          </div>
-        </div>
-      </article>
-    `).join('');
+        </article>
+      `;
+    }).join('');
   }
 
   function renderAdminWithdraws() {
     if (!els.adminWithdrawList) return;
-    const list = (state.withdrawRequests || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-    if (!list.length) {
-      els.adminWithdrawList.innerHTML = '<p class="muted">لا توجد طلبات سحب.</p>';
+    const statusFilter = (els.adminWithdrawStatusFilter?.value || 'pending').toString().trim().toLowerCase();
+    const codeQuery = (els.adminWithdrawCodeQuery?.value || '').toString().trim().toLowerCase();
+    const list = (state.withdrawRequests || []).slice().sort((a, b) => (Number(b.createdAt || 0) - Number(a.createdAt || 0)));
+
+    const filtered = list.filter((w) => {
+      const statusInfo = normalizeRequestStatus(w.status);
+      if (statusFilter && statusFilter !== 'all' && statusInfo.key !== statusFilter) return false;
+      if (codeQuery) {
+        const code = (w.id || w.code || '').toString().toLowerCase();
+        if (!code.includes(codeQuery)) return false;
+      }
+      return true;
+    });
+
+    if (!filtered.length) {
+      const emptyText = codeQuery
+        ? 'لا توجد نتائج لهذا الكود.'
+        : statusFilter === 'approved'
+          ? 'لا توجد طلبات سحب مقبولة.'
+          : statusFilter === 'rejected'
+            ? 'لا توجد طلبات سحب مرفوضة.'
+            : statusFilter === 'pending'
+              ? 'لا توجد طلبات سحب بانتظار المراجعة.'
+              : 'لا توجد طلبات سحب.';
+      els.adminWithdrawList.innerHTML = `<p class="muted">${emptyText}</p>`;
       return;
     }
-    els.adminWithdrawList.innerHTML = list.map((w) => {
-      const status = (w.status || 'pending').toLowerCase();
-      const isPending = status === 'pending';
+
+    els.adminWithdrawList.innerHTML = filtered.map((w) => {
+      const statusInfo = normalizeRequestStatus(w.status);
+      const isPending = statusInfo.key === 'pending';
       const usd = formatPriceCurrency(w.amountUSD ?? w.debitedUSD ?? 0);
       const amountCurrency = Number(w.amountCurrency);
       const currencyLabel = Number.isFinite(amountCurrency)
@@ -2390,13 +2596,14 @@ const firebaseConfig = {
         <article class="card">
           <div class="card-body">
             <div class="actions" style="justify-content: space-between;">
-              <span class="badge ${status}">${status || 'pending'}</span>
+              <span class="badge ${statusInfo.key}">${statusInfo.label || statusInfo.key}</span>
               <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
                 <span class="price-tag">${usd}</span>
                 ${currencyLabel ? `<span class="muted tiny">${currencyLabel}</span>` : ''}
               </div>
             </div>
             <h3>${w.methodName || 'طريقة سحب'}</h3>
+            <div class="muted tiny">الكود: ${code || '-'}</div>
             <div class="muted tiny">${typeLabel}</div>
             <div class="muted tiny">${w.countryName || w.countryId || ''}</div>
             <div class="muted tiny">المستخدم: ${w.userId || '-'}</div>
@@ -2819,6 +3026,9 @@ const firebaseConfig = {
     state.adminTab = tab;
     save('admin_tab', tab);
     renderAdminTabs();
+    if (tab === 'topups' || tab === 'withdraw' || tab === 'purchases') {
+      loadFirebaseData();
+    }
   }
 
   function renderAdminTabs() {
@@ -2843,6 +3053,7 @@ const firebaseConfig = {
     if (els.addAccountForm) els.addAccountForm.addEventListener('submit', handleAddAccount);
     if (els.adminList) els.adminList.addEventListener('click', handleAdminAction);
     if (els.adminList) els.adminList.addEventListener('click', handleOpenAccountImages);
+    if (els.adminTopupsList) els.adminTopupsList.addEventListener('click', handleAdminAction);
     if (els.adminManageList) els.adminManageList.addEventListener('click', handleAdminManageClick);
     if (els.adminManageList) els.adminManageList.addEventListener('click', handleOpenAccountImages);
     if (els.adminManageStatus) els.adminManageStatus.addEventListener('change', renderAdminManageList);
@@ -2862,6 +3073,11 @@ const firebaseConfig = {
     if (els.userLookupForm) els.userLookupForm.addEventListener('submit', handleUserLookupSubmit);
     if (els.userLookupResult) els.userLookupResult.addEventListener('click', handleAdminUserPanelClick);
     if (els.adminWithdrawList) els.adminWithdrawList.addEventListener('click', handleWithdrawAction);
+    if (els.adminTopupsStatusFilter) els.adminTopupsStatusFilter.addEventListener('change', renderAdminTopups);
+    if (els.adminTopupsCodeQuery) els.adminTopupsCodeQuery.addEventListener('input', renderAdminTopups);
+    if (els.adminTopupsRefreshBtn) els.adminTopupsRefreshBtn.addEventListener('click', () => { loadFirebaseData(); });
+    if (els.adminWithdrawStatusFilter) els.adminWithdrawStatusFilter.addEventListener('change', renderAdminWithdraws);
+    if (els.adminWithdrawCodeQuery) els.adminWithdrawCodeQuery.addEventListener('input', renderAdminWithdraws);
     if (els.adminTabNav) {
       els.adminTabNav.addEventListener('click', (e) => {
         const btn = e.target.closest('.admin-tab-btn');
@@ -3000,6 +3216,13 @@ const firebaseConfig = {
     if (els.walletMethodSelect) {
       els.walletMethodSelect.addEventListener('change', renderMethodInfo);
     }
+
+    if (isAdminPage()) {
+      window.addEventListener('focus', () => { if (state.isAdmin) loadFirebaseData(); });
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && state.isAdmin) loadFirebaseData();
+      });
+    }
   }
 
   function renderAll() {
@@ -3069,92 +3292,130 @@ const firebaseConfig = {
   }
 
   async function loadFirebaseData() {
+    if (state.dataLoading) return;
+    state.dataLoading = true;
+    state.dataError = '';
+    state.dataSource = '';
+    if (els.adminTopupsRefreshBtn) els.adminTopupsRefreshBtn.disabled = true;
+    setAdminTopupsLoadStatus('...جاري جلب الطلبات');
+    try { renderAdminTopups(); } catch {}
+
     const user = getCurrentUser();
-    // لوحة الأدمن عبر الراوتر الخلفي
-    if (state.isAdmin && ADMIN_ROUTER_BASE) {
-      try {
-        const snapshot = await sendAdminRequest({ action: 'admin:snapshot' });
-        state.games = snapshot.games || [];
-        state.accounts = snapshot.accounts || [];
-        state.accountPrivate = snapshot.accountPrivate || [];
-        state.topups = snapshot.topups || [];
-        state.categories = snapshot.categories || [];
-        state.purchases = snapshot.purchases || [];
-        state.currencies = snapshot.currencies || [];
-        state.withdrawRequests = snapshot.withdrawRequests || [];
-        state.withdrawMethods = flattenDepositMethods(snapshot.withdrawMethods || []);
-        state.depositMethods = flattenDepositMethods(snapshot.depositMethods || snapshot.paymentMethods);
-        state.walletTotals = snapshot.walletTotals || { totalUSD: 0, count: 0 };
-        state.paymentMethods = state.depositMethods;
-        const mergedMap = currenciesToMap(state.currencies);
-        try { if (typeof applyRatesMap === 'function') applyRatesMap(mergedMap, { base: 'USD' }); } catch {}
-        renderPaymentMethods();
-        renderCurrencyAdminList();
-        renderWithdrawMethods();
-        renderDepositMethods();
-        renderWalletHistory();
-        renderAdminTopups();
-        renderAdminWithdraws();
-        renderAdminPurchases();
-        renderCategoryAdminList();
-        renderWalletTotals();
-        await loadFeesConfig();
-        await loadWallet();
-        renderAll();
-        renderAdminTabs();
-        hideLoader();
-        return;
-      } catch (e) {
-        notify('تعذر جلب بيانات الأدمن');
-        hideLoader();
-        return;
-      }
-    }
-
-    // المستخدمون العاديون عبر الراوتر الخلفي (لتجاوز قيود القواعد)
-    if (!state.isAdmin && ADMIN_ROUTER_BASE) {
-      try {
-        const snapshot = await sendAdminRequest({ action: 'public:snapshot' });
-        state.games = snapshot.games || [];
-        state.accounts = snapshot.accounts || [];
-        state.topups = snapshot.topups || [];
-        state.categories = snapshot.categories || [];
-        state.currencies = snapshot.currencies || [];
-        state.withdrawMethods = flattenDepositMethods(snapshot.withdrawMethods || []);
-        state.withdrawRequests = snapshot.withdrawRequests || [];
-        state.depositMethods = flattenDepositMethods(snapshot.depositMethods || snapshot.paymentMethods);
-        state.walletTotals = snapshot.walletTotals || { totalUSD: 0, count: 0 };
-        state.paymentMethods = state.depositMethods;
-        const mergedMap = currenciesToMap(state.currencies);
-        try { if (typeof applyRatesMap === 'function') applyRatesMap(mergedMap, { base: 'USD' }); } catch {}
-        renderPaymentMethods();
-        renderCurrencyAdminList();
-        renderWalletHistory();
-        renderWithdrawMethods();
-        renderDepositMethods();
-        renderWalletTotals();
-        renderAdminTopups();
-        renderAdminWithdraws();
-        renderAdminPurchases();
-        renderCategoryAdminList();
-        await loadFeesConfig();
-        await loadWallet();
-        renderAll();
-        renderAdminTabs();
-        hideLoader();
-        return;
-      } catch (err) {
-        console.warn('public snapshot failed, fallback to Firebase', err);
-      }
-    }
-
-    if (!db) return;
     try {
+      // لوحة الأدمن عبر الراوتر الخلفي
+      if (state.isAdmin && ADMIN_ROUTER_BASE) {
+        try {
+          const snapshot = await sendAdminRequest({ action: 'admin:snapshot' });
+          state.games = snapshot.games || [];
+          state.accounts = snapshot.accounts || [];
+          state.accountPrivate = snapshot.accountPrivate || [];
+          state.topups = snapshot.topups || [];
+          state.depositRequests = snapshot.depositRequests || [];
+          state.categories = snapshot.categories || [];
+          state.purchases = snapshot.purchases || [];
+          state.currencies = snapshot.currencies || [];
+          state.withdrawRequests = snapshot.withdrawRequests || [];
+          state.withdrawMethods = flattenDepositMethods(snapshot.withdrawMethods || []);
+          state.depositMethods = flattenDepositMethods(snapshot.depositMethods || snapshot.paymentMethods);
+          state.walletTotals = snapshot.walletTotals || { totalUSD: 0, count: 0 };
+          state.paymentMethods = state.depositMethods;
+          const mergedMap = currenciesToMap(state.currencies);
+          try { if (typeof applyRatesMap === 'function') applyRatesMap(mergedMap, { base: 'USD' }); } catch {}
+          renderPaymentMethods();
+          renderCurrencyAdminList();
+          renderWithdrawMethods();
+          renderDepositMethods();
+          renderWalletHistory();
+          renderAdminTopups();
+          renderAdminWithdraws();
+          renderAdminPurchases();
+          renderCategoryAdminList();
+          renderWalletTotals();
+          await loadFeesConfig();
+          await loadWallet();
+          state.dataUpdatedAt = Date.now();
+          state.dataSource = 'router-admin';
+          setAdminTopupsLoadStatus(`آخر تحديث: ${new Date(state.dataUpdatedAt).toLocaleTimeString('ar-EG')}`);
+          renderAll();
+          renderAdminTabs();
+          hideLoader();
+          return;
+        } catch (e) {
+          const msg = e?.message || 'تعذر جلب بيانات الأدمن';
+          state.dataError = msg;
+          setAdminTopupsLoadStatus(msg, true);
+          try { renderAdminTopups(); } catch {}
+          notify('تعذر جلب بيانات الأدمن');
+          hideLoader();
+          return;
+        }
+      }
+
+      // المستخدمون العاديون عبر الراوتر الخلفي (لتجاوز قيود القواعد)
+      if (!state.isAdmin && ADMIN_ROUTER_BASE) {
+        try {
+          const snapshot = await sendAdminRequest({ action: 'public:snapshot' });
+          state.games = snapshot.games || [];
+          state.accounts = snapshot.accounts || [];
+          state.topups = snapshot.topups || [];
+          state.depositRequests = snapshot.depositRequests || [];
+          state.categories = snapshot.categories || [];
+          state.currencies = snapshot.currencies || [];
+          state.withdrawMethods = flattenDepositMethods(snapshot.withdrawMethods || []);
+          state.withdrawRequests = snapshot.withdrawRequests || [];
+          state.depositMethods = flattenDepositMethods(snapshot.depositMethods || snapshot.paymentMethods);
+          state.walletTotals = snapshot.walletTotals || { totalUSD: 0, count: 0 };
+          state.paymentMethods = state.depositMethods;
+          const mergedMap = currenciesToMap(state.currencies);
+          try { if (typeof applyRatesMap === 'function') applyRatesMap(mergedMap, { base: 'USD' }); } catch {}
+          renderPaymentMethods();
+          renderCurrencyAdminList();
+          renderWalletHistory();
+          renderWithdrawMethods();
+          renderDepositMethods();
+          renderWalletTotals();
+          renderAdminTopups();
+          renderAdminWithdraws();
+          renderAdminPurchases();
+          renderCategoryAdminList();
+          await loadFeesConfig();
+          await loadWallet();
+          state.dataUpdatedAt = Date.now();
+          state.dataSource = 'router-public';
+          setAdminTopupsLoadStatus(`آخر تحديث: ${new Date(state.dataUpdatedAt).toLocaleTimeString('ar-EG')}`);
+          renderAll();
+          renderAdminTabs();
+          hideLoader();
+          return;
+        } catch (err) {
+          console.warn('public snapshot failed, fallback to Firebase', err);
+        }
+      }
+
+      if (!db) {
+        const msg = state.dataError || 'تعذر جلب البيانات: Firebase غير جاهز';
+        state.dataError = msg;
+        setAdminTopupsLoadStatus(msg, true);
+        try { renderAdminTopups(); } catch {}
+        return;
+      }
+
       const topupsPromise = user
         ? state.isAdmin
           ? db.collection('topups').get()
           : db.collection('topups').where('ownerId', '==', user.uid).get()
         : Promise.resolve({ docs: [] });
+      // ✅ NEW: depositRequests (legacy) + userDepositRequests/{uid}.byCode (map)
+      const depositRequestsLegacyPromise = user
+        ? state.isAdmin
+          ? db.collection('depositRequests').get()
+          : db.collection('depositRequests').where('userId', '==', user.uid).get()
+        : Promise.resolve({ docs: [] });
+      const userDepositRequestsPromise = user
+        ? state.isAdmin
+          ? db.collection('userDepositRequests').get()
+          : db.collection('userDepositRequests').doc(user.uid).get()
+        : Promise.resolve(null);
       const privatePromise = state.isAdmin
         ? db.collection('accountPrivate').get()
         : Promise.resolve({ docs: [] });
@@ -3169,10 +3430,12 @@ const firebaseConfig = {
 
       const paymentMethodsDocPromise = db.collection('config').doc('paymentMethods').get().catch(() => null);
 
-      let [gamesSnap, accountsSnap, topupsSnap, currencyDoc, categoriesSnap, privatesSnap, purchasesSnap, profileSnap, paymentMethodsDoc] = await Promise.all([
+      let [gamesSnap, accountsSnap, topupsSnap, depositRequestsSnap, userDepositRequestsSnap, currencyDoc, categoriesSnap, privatesSnap, purchasesSnap, profileSnap, paymentMethodsDoc] = await Promise.all([
         db.collection('games').get(),
         db.collection('accounts').get(),
         topupsPromise,
+        depositRequestsLegacyPromise.catch(() => ({ docs: [] })),
+        userDepositRequestsPromise.catch(() => null),
         db.collection('config').doc('currency').get(),
         db.collection('categories').get(),
         privatePromise,
@@ -3185,6 +3448,38 @@ const firebaseConfig = {
       state.accountPrivate = privatesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       state.purchases = purchasesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       state.topups = topupsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const legacyDepositRequests = depositRequestsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const flattenUserDepositDoc = (docId, data) => {
+        const byCode = (data && (data.byCode || data.requests || data.depositRequests)) || {};
+        if (!byCode || typeof byCode !== 'object') return [];
+        return Object.keys(byCode).map((code) => {
+          const entry = byCode[code] || {};
+          const out = { id: code, ...entry };
+          if (!out.code) out.code = code;
+          if (!out.userId && docId) out.userId = docId;
+          return out;
+        });
+      };
+      let mapDepositRequests = [];
+      try {
+        if (state.isAdmin) {
+          const docs = userDepositRequestsSnap?.docs || [];
+          mapDepositRequests = docs.flatMap((d) => flattenUserDepositDoc(d.id, d.data()));
+        } else if (userDepositRequestsSnap && userDepositRequestsSnap.exists) {
+          mapDepositRequests = flattenUserDepositDoc(user.uid, userDepositRequestsSnap.data());
+        }
+      } catch (_) { mapDepositRequests = []; }
+      const mergeByCode = (a, b) => {
+        const map = {};
+        [].concat(a || [], b || []).forEach((item) => {
+          if (!item) return;
+          const code = (item.code || item.id || '').toString();
+          if (!code) return;
+          map[code] = { ...(map[code] || {}), ...item, code };
+        });
+        return Object.keys(map).map((k) => map[k]);
+      };
+      state.depositRequests = mergeByCode(legacyDepositRequests, mapDepositRequests);
       state.categories = categoriesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       state.userProfile = profileSnap && profileSnap.exists ? { id: profileSnap.id, ...profileSnap.data() } : null;
       const paymentData = paymentMethodsDoc && paymentMethodsDoc.exists ? (paymentMethodsDoc.data() || {}) : {};
@@ -3211,11 +3506,21 @@ const firebaseConfig = {
       renderAdminPurchases();
       renderCategoryAdminList();
       await loadFeesConfig();
+      state.dataUpdatedAt = Date.now();
+      state.dataSource = 'firebase';
+      setAdminTopupsLoadStatus(`آخر تحديث: ${new Date(state.dataUpdatedAt).toLocaleTimeString('ar-EG')}`);
       renderAll();
       hideLoader();
     } catch (e) {
+      const msg = e?.message || 'تعذر جلب البيانات من Firebase';
+      state.dataError = msg;
+      setAdminTopupsLoadStatus(msg, true);
+      try { renderAdminTopups(); } catch {}
       notify('تعذر جلب البيانات من Firebase');
       hideLoader();
+    } finally {
+      state.dataLoading = false;
+      if (els.adminTopupsRefreshBtn) els.adminTopupsRefreshBtn.disabled = false;
     }
   }
 

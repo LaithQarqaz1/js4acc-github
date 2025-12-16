@@ -1662,17 +1662,16 @@ function wirePageBalanceBox(){
   } catch {}
 })();
 
-// Override support/contact links to the latest provided ones
 (function(){
   try{
     var links = {
-      whatsapp: 'https://wa.me/967739086790',
-      whatsapp2: 'https://wa.me/962780282492',
+      whatsapp: 'https://wa.me/962780282492',
+      whatsapp2: 'https://wa.me/967739086790',
       whatsappChannel: 'https://whatsapp.com/channel/0029Vb6l0yn4Crfqgo85e33I',
       telegram: 'https://t.me/js_4card',
       facebook: 'https://instagram.com/js4accounts',
       email: 'mailto:',
-      instagram: 'https://instagram.com/js4accounts'
+      instagram: 'https://instagram.com/js4accs'
     };
 
     function applySupportLinks(){

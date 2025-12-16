@@ -252,6 +252,25 @@ select {
   gap: 6px;
 }
 
+/* Admin request cards (deposits/topups) */
+.request-card {
+  grid-template-rows: auto;
+}
+.request-card .proof-preview {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(0,0,0,0.22);
+  max-height: 240px;
+}
+.request-card .proof-preview img {
+  width: 100%;
+  height: auto;
+  max-height: 240px;
+  object-fit: contain;
+  display: block;
+}
+
 .price-tag {
   display: inline-block;
   padding: 6px 10px;

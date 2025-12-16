@@ -736,6 +736,10 @@
             <label class="muted tiny" for="adminTopupsCodeQuery">بحث بكود الطلب</label>
             <input id="adminTopupsCodeQuery" type="text" placeholder="اكتب كود الطلب">
           </div>
+          <div style="display:flex;flex-direction:column;gap:6px;min-width:120px;">
+            <button class="btn ghost" type="button" id="adminTopupsRefreshBtn">تحديث</button>
+            <span class="tiny muted" id="adminTopupsLoadStatus">—</span>
+          </div>
         </div>
       </div>
       <div id="adminTopupsList" class="cards"></div>
