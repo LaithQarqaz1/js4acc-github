@@ -1364,6 +1364,9 @@ const firebaseConfig = {
       image,
       images: [...newAccountImages],
       description,
+      contact,
+      contactCode,
+      contactNumber,
       status: 'pending',
       createdAt: Date.now(),
     };
@@ -1375,6 +1378,10 @@ const firebaseConfig = {
     if (m) {
       contactCode = m[1].startsWith('+') ? m[1] : ('+' + m[1]);
       contactNumber = m[2] || '';
+    }
+    if (!contactCode) {
+      notify('أدخل رقم الهاتف مع رمز الدولة (مثال: +971 5XXXXXXXX)');
+      return;
     }
 
     // استخدم الباك اند إن توفر (يدعم إشعارات تيليجرام + إنشاء وثيقة خاصة)
@@ -1409,6 +1416,8 @@ const firebaseConfig = {
       db.collection('accountPrivate').doc(docRef.id).set({
         ownerId: user.uid,
         contact,
+        contactCode,
+        contactNumber,
         accountId: docRef.id,
         createdAt: Date.now(),
       }).catch(() => {});
