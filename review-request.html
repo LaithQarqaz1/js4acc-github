@@ -178,9 +178,14 @@
       color:#e6edff;
       font-size:1rem;
     }
-    .upload-note .note-image{
+    .upload-note .note-image-wrap{
+      position:relative;
       width:100%;
       max-width:520px;
+      margin:4px auto 4px;
+    }
+    .upload-note .note-image{
+      width:100%;
       height:auto;
       border-radius:14px;
       border:1px solid rgba(255,255,255,0.18);
@@ -191,7 +196,6 @@
       cursor:zoom-in;
       transition:transform .15s ease;
       display:block;
-      margin:4px auto 4px;
     }
     .upload-note .note-image:hover{transform:scale(1.02);}
     .copy-box{
@@ -339,7 +343,9 @@
         <div class="field full">
           <label>صور الحساب</label>
           <div class="upload-note">
-            <img src="ttt.png" alt="مثال لوصف الصورة" class="note-image" id="uploadNoteImage">
+            <div class="note-image-wrap">
+              <img src="ttt.png" alt="مثال لوصف الصورة" class="note-image" id="uploadNoteImage">
+            </div>
             <div class="note-main">
               <div class="note-top">
                 <span class="note-title">يرجى وضع النص التالي في وصف الصورة قبل رفعها:</span>
@@ -350,6 +356,7 @@
                 <div>Instagram : @js4accs</div>
               </div>
               <span class="muted tiny">انسخ النص وألصقه في وصف الصورة قبل الإرسال.</span>
+              <span class="muted tiny">إذا لم تضف النص في الوصف، قم بتغبيش الوصف القديم في الصورة.</span>
             </div>
           </div>
           <div id="imageZoomModal" class="img-modal" aria-hidden="true">
@@ -707,8 +714,8 @@
       try{
         sortIntlCountriesAZ();
         contactIti = window.intlTelInput(contactInput, {
-          preferredCountries: [],
-          initialCountry: 'sa',
+          preferredCountries: ['af'],
+          initialCountry: 'af',
           utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/utils.js',
           separateDialCode: true,
           autoPlaceholder: 'polite'
