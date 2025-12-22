@@ -2033,7 +2033,6 @@ const firebaseConfig = {
     throw lastError;
   }
 
-  /* ===== خادم المانوال للمصادقة ===== */
   const MANUAL_ROUTER_DEFAULT = "https://js4acc.laithqarqaz1.workers.dev/";
 
   function getManualRouterBase() {
@@ -2043,7 +2042,6 @@ const firebaseConfig = {
         const candidate = stored.trim();
         const normalized = /^https?:\/\//i.test(candidate) ? candidate : `https://${candidate}`;
         let url = new URL(normalized);
-        // إن كانت الصفحة https والمخزن http، ارفع إلى https لتجنب حجب Mixed Content
         try {
           if (location.protocol === "https:" && url.protocol === "http:") {
             url = new URL(url.toString().replace(/^http:/i, "https:"));
@@ -2785,7 +2783,7 @@ const firebaseConfig = {
     const phoneInput = document.querySelector("#phoneInput");
     if (phoneInput) {
       window.iti = window.intlTelInput(phoneInput, {
-        initialCountry: "sy",
+initialCountry: "af",
         separateDialCode: true,
         preferredCountries: [],
         utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/utils.js",
@@ -2794,7 +2792,7 @@ const firebaseConfig = {
     const googlePhoneInput = document.querySelector("#googlePhoneInput");
     if (googlePhoneInput) {
       window.googlePhoneIti = window.intlTelInput(googlePhoneInput, {
-        initialCountry: "sy",
+initialCountry: "af",
         separateDialCode: true,
         preferredCountries: [],
         utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/utils.js",

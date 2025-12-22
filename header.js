@@ -1515,7 +1515,6 @@ function wirePageBalanceBox(){
     const contacts = [
       { href: 'https://instagram.com/js4accounts', iconURL: 'https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png', class: 'instagram', label: 'Instagram' },
       { href: 'https://wa.me/962780282492', iconURL: 'https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg', class: 'whatsapp', label: 'WhatsApp' },
-      { href: 'https://wa.me/967739086790', iconURL: 'https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg', class: 'whatsapp second', label: 'WhatsApp 2' },
       { href: 'https://whatsapp.com/channel/0029Vb6l0yn4Crfqgo85e33I', iconURL: 'https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg', class: 'whatsapp channel', label: 'WhatsApp Channel' },
       { href: 'https://t.me/js_4card', iconURL: 'https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg', class: 'telegram', label: 'Telegram' },
     ];
@@ -1666,7 +1665,6 @@ function wirePageBalanceBox(){
   try{
     var links = {
       whatsapp: 'https://wa.me/962780282492',
-      whatsapp2: 'https://wa.me/967739086790',
       whatsappChannel: 'https://whatsapp.com/channel/0029Vb6l0yn4Crfqgo85e33I',
       telegram: 'https://t.me/js_4card',
       facebook: 'https://instagram.com/js4accounts',

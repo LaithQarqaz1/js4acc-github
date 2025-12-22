@@ -348,6 +348,42 @@ const firebaseConfig = {
     }[ch]));
   }
 
+  function openContactLink(raw, label) {
+    const value = (raw || '').toString().trim();
+    if (!value) {
+      notify(`لا يوجد رقم ${label || ''}`.trim());
+      return;
+    }
+    const compact = value.replace(/\s+/g, '');
+    const lower = compact.toLowerCase();
+    if (/^https?:\/\//i.test(compact)) {
+      window.open(compact, '_blank');
+      return;
+    }
+    if (lower.startsWith('wa.me/') || lower.includes('whatsapp.com/')) {
+      window.open(`https://${compact.replace(/^https?:\/\//i, '')}`, '_blank');
+      return;
+    }
+    if (lower.startsWith('t.me/') || lower.startsWith('telegram.me/')) {
+      window.open(`https://${compact.replace(/^https?:\/\//i, '')}`, '_blank');
+      return;
+    }
+    if (compact.startsWith('@')) {
+      window.open(`https://t.me/${compact.slice(1)}`, '_blank');
+      return;
+    }
+    if (lower.startsWith('tel:')) {
+      window.open(compact, '_blank');
+      return;
+    }
+    const digits = value.replace(/[^0-9]/g, '');
+    if (digits) {
+      window.open(`https://wa.me/${digits}`, '_blank');
+      return;
+    }
+    notify(`لا يوجد رقم ${label || ''}`.trim());
+  }
+
   function sortIntlCountriesAZ() {
     try {
       const data = window.intlTelInputGlobals && window.intlTelInputGlobals.getCountryData
@@ -1432,6 +1468,11 @@ const firebaseConfig = {
   }
 
   async function handleAdminAction(e) {
+    const contactBtn = e.target.closest('button[data-contact]');
+    if (contactBtn) {
+      openContactLink(contactBtn.dataset.contact, contactBtn.dataset.contactLabel);
+      return;
+    }
     const btn = e.target.closest('button[data-action][data-id]');
     if (!btn) return;
     const action = btn.dataset.action;
@@ -1899,7 +1940,7 @@ const firebaseConfig = {
         const more = images.length > 1 ? `<span class="more">${images.length} صور</span>` : '';
         const created = acc.createdAt ? new Date(acc.createdAt).toLocaleString('ar-EG') : '';
         const priv = getAccountPrivate(acc.id);
-        const contact = priv?.contact || '';
+        const contact = (priv?.contactNumber || priv?.contact || '').toString().trim();
         const selectedCat = acc.category || '';
         const buyerPriceInfo = getDisplayPrice(acc);
         const buyerPriceTag = buyerPriceInfo?.final ? formatPriceCurrency(buyerPriceInfo.final) : '';
@@ -1937,11 +1978,11 @@ const firebaseConfig = {
                 ${statusBadge(acc.status)}
               </div>
               <h3>${titleText}</h3>
-              <div class="muted tiny">${contact}</div>
               <p class="muted">${acc.description || ''}</p>
               <div class="muted tiny">${created}</div>
               ${categoryPicker}
               <div class="actions">
+                <button class="btn ghost small" type="button" data-contact="${escapeHTML(contact)}" data-contact-label="البائع">تواصل مع البائع</button>
                 <button class="btn primary small" data-action="approve" data-id="${acc.id}">موافقة</button>
                 <button class="btn ghost small" data-action="reject" data-id="${acc.id}">رفض</button>
                 <button class="btn danger small" data-action="delete" data-id="${acc.id}">حذف</button>
