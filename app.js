@@ -7,6 +7,11 @@
   const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
   const IMGBB_API_KEY = '2b029ac6f8b085f387494cc99a7e5da7'; // مفاتيح الرفع العامة
   const newAccountImages = [];
+  const SNAPSHOT_COOLDOWN_MS = 8000;
+  const PUBLIC_SNAPSHOT_COOLDOWN_MS = 12000;
+  const SNAPSHOT_FAIL_COOLDOWN_MS = 5000;
+  const FEES_COOLDOWN_MS = 120000;
+  const REQUEST_TIMEOUT_MS = 15000;
 
   const state = {
     accounts: [],
@@ -34,9 +39,16 @@
     adminUserMeta: null,
     adminTab: load('admin_tab', 'review'),
     dataLoading: false,
+    dataReloadPending: false,
     dataError: '',
     dataUpdatedAt: 0,
     dataSource: '',
+    lastSnapshotAt: 0,
+    lastSnapshotAdmin: null,
+    lastSnapshotUid: '',
+    lastSnapshotFailAt: 0,
+    lastFeesAt: 0,
+    feesLoading: false,
   };
   state.fees = getDefaultFees();
 
@@ -63,6 +75,221 @@
       try { return window.formatCurrencyFromJOD(n); } catch(_){}
     }
     return n.toFixed(2) + ' $';
+  }
+
+  function toNumberSafe(value) {
+    if (value == null) return NaN;
+    if (typeof value === 'number') return value;
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
+    const parsed = parseFloat(String(value).replace(/[^0-9.-]/g, ''));
+    return Number.isFinite(parsed) ? parsed : NaN;
+  }
+
+  function getProfitFromPurchase(purchase) {
+    if (!purchase) return null;
+    const charged = toNumberSafe(purchase.chargedPrice ?? purchase.chargeAmount ?? purchase.price);
+    let sellerNet = toNumberSafe(purchase.sellerNet);
+    if (!Number.isFinite(sellerNet)) {
+      const price = toNumberSafe(purchase.price);
+      const sellerFeePct = toNumberSafe(purchase.sellerFeePct);
+      if (Number.isFinite(price) && Number.isFinite(sellerFeePct)) {
+        sellerNet = Math.round(price * (1 - sellerFeePct / 100) * 100) / 100;
+      }
+    }
+    if (!Number.isFinite(charged) || !Number.isFinite(sellerNet)) return null;
+    return Math.round((charged - sellerNet) * 100) / 100;
+  }
+
+  function buildAccountProfitMap(purchases) {
+    const bestByAccount = new Map();
+    (purchases || []).forEach((p) => {
+      const accId = (p.accountId || p.account_id || p.account || '').toString().trim();
+      if (!accId) return;
+      const status = (p.status || '').toString().toLowerCase();
+      const isCompleted = status === 'completed' || status === 'approved' || p.paid === true;
+      const ts = Number(p.paidAt || p.createdAt || 0);
+      const prev = bestByAccount.get(accId);
+      if (!prev) {
+        bestByAccount.set(accId, { p, isCompleted, ts });
+        return;
+      }
+      if (isCompleted && !prev.isCompleted) {
+        bestByAccount.set(accId, { p, isCompleted, ts });
+        return;
+      }
+      if (isCompleted === prev.isCompleted && ts >= prev.ts) {
+        bestByAccount.set(accId, { p, isCompleted, ts });
+      }
+    });
+    const profitMap = new Map();
+    bestByAccount.forEach(({ p }, accId) => {
+      const profit = getProfitFromPurchase(p);
+      if (Number.isFinite(profit)) profitMap.set(accId, profit);
+    });
+    return profitMap;
+  }
+
+  function updateAdminProfitTotal() {
+    const el = document.getElementById('adminProfitTotal');
+    if (!el) return;
+    if (!state.isAdmin) {
+      el.textContent = '—';
+      return;
+    }
+    const total = (state.purchases || []).reduce((sum, p) => {
+      const status = (p.status || '').toString().toLowerCase();
+      const isCompleted = status === 'completed' || status === 'approved' || p.paid === true;
+      if (!isCompleted) return sum;
+      const profit = getProfitFromPurchase(p);
+      if (!Number.isFinite(profit)) return sum;
+      return sum + profit;
+    }, 0);
+    el.textContent = formatPriceCurrency(total);
+  }
+
+  function getPurchaseTimeMs(purchase) {
+    if (!purchase) return 0;
+    const raw = purchase.paidAt ?? purchase.createdAt ?? purchase.timestamp ?? 0;
+    if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+    if (raw && typeof raw.toDate === 'function') {
+      try { return raw.toDate().getTime(); } catch { return 0; }
+    }
+    const parsed = Date.parse(raw);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function toYmd(dateObj) {
+    const d = dateObj instanceof Date ? dateObj : new Date(dateObj);
+    if (!Number.isFinite(d.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  function getRangeMs(fromStr, toStr) {
+    const parse = (val, endOfDay) => {
+      if (!val) return null;
+      const parts = val.split('-').map((n) => Number(n));
+      if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return null;
+      const [y, m, d] = parts;
+      const date = new Date(y, (m || 1) - 1, d || 1);
+      if (!Number.isFinite(date.getTime())) return null;
+      if (endOfDay) {
+        date.setHours(23, 59, 59, 999);
+      } else {
+        date.setHours(0, 0, 0, 0);
+      }
+      return date.getTime();
+    };
+    return {
+      from: parse(fromStr, false),
+      to: parse(toStr, true),
+    };
+  }
+
+  function applyProfitRangePreset(preset) {
+    if (!els.adminProfitFrom || !els.adminProfitTo) return;
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (!preset) {
+      els.adminProfitFrom.value = '';
+      els.adminProfitTo.value = '';
+      return;
+    }
+    if (preset === 'today') {
+      const v = toYmd(today);
+      els.adminProfitFrom.value = v;
+      els.adminProfitTo.value = v;
+      return;
+    }
+    const days = Number(preset);
+    if (!Number.isFinite(days) || days <= 0) return;
+    const from = new Date(today);
+    from.setDate(from.getDate() - (days - 1));
+    els.adminProfitFrom.value = toYmd(from);
+    els.adminProfitTo.value = toYmd(today);
+  }
+
+  function renderAdminProfitPage() {
+    if (!els.adminProfitList) return;
+    if (!state.isAdmin) {
+      els.adminProfitList.innerHTML = '<p class="muted">صلاحية الأدمن مطلوبة.</p>';
+      if (els.adminProfitTotalBig) els.adminProfitTotalBig.textContent = '—';
+      if (els.adminProfitCount) els.adminProfitCount.textContent = '';
+      return;
+    }
+    const hasFreshData = !!state.dataUpdatedAt;
+    const hasPurchases = (state.purchases || []).length > 0;
+    if (state.dataLoading) {
+      els.adminProfitList.innerHTML = '<div class=\"inline-loader\"><div class=\"spinner\"></div></div>';
+      if (els.adminProfitTotalBig) els.adminProfitTotalBig.textContent = '...';
+      if (els.adminProfitCount) els.adminProfitCount.textContent = 'جاري التحميل';
+      return;
+    }
+    if (!hasFreshData && !hasPurchases) {
+      if (state.dataError) {
+        els.adminProfitList.innerHTML = '<p class=\"muted\">تعذر تحميل الأرباح. حاول التحديث.</p>';
+        if (els.adminProfitTotalBig) els.adminProfitTotalBig.textContent = '--';
+        if (els.adminProfitCount) els.adminProfitCount.textContent = '';
+        return;
+      }
+      els.adminProfitList.innerHTML = '<div class=\"inline-loader\"><div class=\"spinner\"></div></div>';
+      if (els.adminProfitTotalBig) els.adminProfitTotalBig.textContent = '...';
+      if (els.adminProfitCount) els.adminProfitCount.textContent = 'جاري التحميل';
+      return;
+    }
+    const list = (state.purchases || []).filter((p) => {
+      const status = (p.status || '').toString().toLowerCase();
+      return status === 'completed' || status === 'approved' || p.paid === true;
+    });
+    const range = getRangeMs(els.adminProfitFrom?.value || '', els.adminProfitTo?.value || '');
+    const filtered = list.filter((p) => {
+      const ts = getPurchaseTimeMs(p);
+      if (!ts) return false;
+      if (range.from && ts < range.from) return false;
+      if (range.to && ts > range.to) return false;
+      return true;
+    });
+    const accountsById = new Map();
+    (state.accounts || []).forEach((acc) => { if (acc && acc.id) accountsById.set(acc.id, acc); });
+    let totalProfit = 0;
+    const rows = filtered.map((p) => {
+      const profit = getProfitFromPurchase(p);
+      if (!Number.isFinite(profit)) return null;
+      totalProfit += profit;
+      const acc = accountsById.get(p.accountId) || {};
+      const title = displayTitle(p.accountTitle || acc.title || p.accountId || 'حساب');
+      const charged = toNumberSafe(p.chargedPrice ?? p.chargeAmount ?? p.price);
+      const sellerNet = toNumberSafe(p.sellerNet);
+      const buyerLabel = (p.buyerWebuid || p.buyerId || '').toString().trim();
+      const sellerLabel = (p.sellerWebuid || p.accountOwnerId || p.ownerId || '').toString().trim();
+      const ts = getPurchaseTimeMs(p);
+      const dateText = ts ? new Date(ts).toLocaleString('ar-EG') : 'غير معروف';
+      return `
+        <article class="card profit-card">
+          <div class="card-body">
+            <div class="profit-head">
+              <h3>${title}</h3>
+              <span class="profit-amount">${formatPriceCurrency(profit)}</span>
+            </div>
+            <div class="muted tiny">رقم الحساب: ${p.accountId || '-'}</div>
+            ${buyerLabel ? `<div class="muted tiny">المشتري: ${buyerLabel}</div>` : ''}
+            ${sellerLabel ? `<div class="muted tiny">البائع: ${sellerLabel}</div>` : ''}
+            ${Number.isFinite(charged) ? `<div class="muted tiny">المبلغ المدفوع: ${formatPriceCurrency(charged)}</div>` : ''}
+            ${Number.isFinite(sellerNet) ? `<div class="muted tiny">صافي البائع: ${formatPriceCurrency(sellerNet)}</div>` : ''}
+            <div class="muted tiny">التاريخ: ${dateText}</div>
+          </div>
+        </article>
+      `;
+    }).filter(Boolean);
+    if (els.adminProfitTotalBig) els.adminProfitTotalBig.textContent = formatPriceCurrency(totalProfit);
+    if (els.adminProfitCount) {
+      const suffix = (els.adminProfitFrom?.value || els.adminProfitTo?.value) ? 'ضمن الفترة المحددة' : 'لكل الفترات';
+      els.adminProfitCount.textContent = `${rows.length} عملية • ${suffix}`;
+    }
+    els.adminProfitList.innerHTML = rows.length
+      ? rows.join('')
+      : '<p class="muted">لا توجد أرباح ضمن هذه الفترة.</p>';
   }
 
   function normalizeRequestStatus(raw) {
@@ -208,8 +435,10 @@
     withdrawBankInput: document.getElementById('withdrawBankInput'),
     withdrawAccountNameInput: document.getElementById('withdrawAccountNameInput'),
     withdrawAccountNumberInput: document.getElementById('withdrawAccountNumberInput'),
-    withdrawWalletInput: document.getElementById('withdrawWalletInput'),
     withdrawMethodNoteInput: document.getElementById('withdrawMethodNoteInput'),
+    withdrawLogoInput: document.getElementById('withdrawLogoInput'),
+    withdrawLogoFileInput: document.getElementById('withdrawLogoFileInput'),
+    withdrawLogoUploadBtn: document.getElementById('withdrawLogoUploadBtn'),
     withdrawMethodsList: document.getElementById('withdrawMethodsList'),
     depositMethodForm: document.getElementById('depositMethodForm'),
     depositCountryIdInput: document.getElementById('depositCountryIdInput'),
@@ -263,6 +492,12 @@
     adminWithdrawStatusFilter: document.getElementById('adminWithdrawStatusFilter'),
     adminWithdrawCodeQuery: document.getElementById('adminWithdrawCodeQuery'),
     adminPurchasesList: document.getElementById('adminPurchasesList'),
+    adminProfitList: document.getElementById('adminProfitList'),
+    adminProfitTotalBig: document.getElementById('adminProfitTotalBig'),
+    adminProfitCount: document.getElementById('adminProfitCount'),
+    adminProfitRange: document.getElementById('adminProfitRange'),
+    adminProfitFrom: document.getElementById('adminProfitFrom'),
+    adminProfitTo: document.getElementById('adminProfitTo'),
     adminPromoteForm: document.getElementById('adminPromoteForm'),
     adminPromoteQuery: document.getElementById('adminPromoteQuery'),
     adminPromoteType: document.getElementById('adminPromoteType'),
@@ -456,6 +691,33 @@ const firebaseConfig = {
   }
 
   const ADMIN_ROUTER_BASE = (window.ADMIN_ROUTER_BASE || window.ROUTER_BASE || window.BACKEND_BASE || 'https://js4acc.laithqarqaz1.workers.dev/').toString().replace(/\/+$/, '');
+  const ADMIN_ACTIONS = new Set([
+    'withdraw:status',
+    'withdraw:method:add',
+    'withdraw:method:delete',
+    'withdraw:country:delete',
+    'deposit:status',
+    'deposit:method:add',
+    'deposit:method:delete',
+    'deposit:country:delete',
+    'topup:status',
+    'purchase:review',
+    'purchase:delete',
+    'fees:set',
+    'category:add',
+    'category:delete',
+    'currency:add',
+    'currency:delete',
+    'method:add',
+    'method:delete',
+  ]);
+
+  function isAdminAction(action) {
+    const key = (action || '').toString();
+    if (!key) return false;
+    if (key.startsWith('admin:')) return true;
+    return ADMIN_ACTIONS.has(key);
+  }
 
   async function getIdTokenSafe() {
     const user = getCurrentUser();
@@ -463,20 +725,50 @@ const firebaseConfig = {
     try { return await user.getIdToken(); } catch { return ''; }
   }
 
-  async function sendAdminRequest(body) {
+  
+  async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+      if (typeof AbortController === 'undefined') {
+        return fetch(url, options);
+      }
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch(url, { ...options, signal: controller.signal });
+      } finally {
+        clearTimeout(id);
+      }
+    }
+  
+    async function sendAdminRequest(body) {
     if (!ADMIN_ROUTER_BASE) {
       throw new Error('ADMIN_ROUTER_BASE غير مضبوط');
     }
+    const action = body && body.action ? body.action : '';
+    const requiresAdmin = isAdminAction(action);
+    if (requiresAdmin && !state.isAdmin) {
+      throw new Error('صلاحية الأدمن مطلوبة');
+    }
     const token = await getIdTokenSafe();
-    const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' };
-    if (token) headers.Authorization = `Bearer ${token}`;
-    const res = await fetch(`${ADMIN_ROUTER_BASE}/accounts`, {
-      method: 'POST',
-      cache: 'no-store',
-      headers,
-    body: JSON.stringify(body || {})
-  });
-  const data = await res.json().catch(() => ({}));
+    if (requiresAdmin && !token) {
+      throw new Error('صلاحية الأدمن مطلوبة');
+    }
+        const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' };
+        if (token) headers.Authorization = `Bearer ${token}`;
+        let res;
+        try {
+          res = await fetchWithTimeout(`${ADMIN_ROUTER_BASE}/accounts`, {
+            method: 'POST',
+            cache: 'no-store',
+            headers,
+            body: JSON.stringify(body || {})
+          });
+        } catch (err) {
+          if (err && err.name === 'AbortError') {
+            throw new Error('انتهت مهلة الاتصال');
+          }
+          throw err;
+        }
+        const data = await res.json().catch(() => ({}));
   if (!res.ok || data.ok === false) {
     const rawErr = data.error || data.message;
     if (rawErr === 'unknown_action') {
@@ -1049,34 +1341,45 @@ const firebaseConfig = {
     renderWalletHistory();
   }
 
-  async function loadFeesConfig() {
-    if (!ADMIN_ROUTER_BASE) {
-      state.fees = state.fees || getDefaultFees();
+  async function loadFeesConfig(opts = {}) {
+    const options = opts || {};
+    const force = !!options.force;
+    const now = Date.now();
+    if (!force && state.lastFeesAt && now - state.lastFeesAt < FEES_COOLDOWN_MS) {
       renderFeesForm();
       return;
     }
+    if (state.feesLoading) return;
+    state.feesLoading = true;
     try {
-      const res = await fetch(`${ADMIN_ROUTER_BASE}/accounts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'fees:get' })
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.ok === false) {
-        throw new Error(data.error || data.message || 'تعذر جلب الرسوم');
+      if (!ADMIN_ROUTER_BASE) {
+        state.fees = state.fees || getDefaultFees();
+      } else {
+        const res = await fetchWithTimeout(`${ADMIN_ROUTER_BASE}/accounts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'fees:get' })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) {
+          throw new Error(data.error || data.message || 'А?А?АЬА? А?Б?А? А?Б?А?А?Б?Б?');
+        }
+        const fees = data.fees || {};
+        state.fees = {
+          buyerMarkup: {
+            customer: Number(fees?.buyerMarkup?.customer) || 0,
+            trader: Number(fees?.buyerMarkup?.trader) || 0,
+            vip: Number(fees?.buyerMarkup?.vip) || 0,
+          },
+          sellerFee: Number(fees?.sellerFee) || 0,
+        };
       }
-      const fees = data.fees || {};
-      state.fees = {
-        buyerMarkup: {
-          customer: Number(fees?.buyerMarkup?.customer) || 0,
-          trader: Number(fees?.buyerMarkup?.trader) || 0,
-          vip: Number(fees?.buyerMarkup?.vip) || 0,
-        },
-        sellerFee: Number(fees?.sellerFee) || 0,
-      };
     } catch (err) {
       console.warn('fees config load failed', err);
       state.fees = state.fees || getDefaultFees();
+    } finally {
+      state.feesLoading = false;
+      state.lastFeesAt = Date.now();
     }
     renderFeesForm();
     renderListings();
@@ -1330,7 +1633,7 @@ const firebaseConfig = {
         notify('تم إرسال طلب الشحن للأدمن');
         if (els.walletAmountInput) els.walletAmountInput.value = '';
         if (els.walletRefInput) els.walletRefInput.value = '';
-        loadFirebaseData();
+        loadFirebaseData({ force: true });
       } catch (err) {
         notify(err?.message || 'تعذر إرسال الطلب عبر الباك-إند');
       }
@@ -1352,7 +1655,7 @@ const firebaseConfig = {
       notify('تم إرسال طلب الشحن للأدمن');
       if (els.walletAmountInput) els.walletAmountInput.value = '';
       if (els.walletRefInput) els.walletRefInput.value = '';
-      loadFirebaseData();
+      loadFirebaseData({ force: true });
     }).catch(() => notify('تعذر إرسال الطلب'));
   }
 
@@ -1441,7 +1744,7 @@ const firebaseConfig = {
         newAccountImages.splice(0, newAccountImages.length);
         renderAccountImagesPreview();
         if (els.imageInput) els.imageInput.value = '';
-        loadFirebaseData();
+        loadFirebaseData({ force: true });
       } catch (err) {
         notify(err?.message || 'تعذر الحفظ عبر الباك اند');
       }
@@ -1463,7 +1766,7 @@ const firebaseConfig = {
       newAccountImages.splice(0, newAccountImages.length);
       renderAccountImagesPreview();
       if (els.imageInput) els.imageInput.value = '';
-      loadFirebaseData();
+      loadFirebaseData({ force: true });
     }).catch(() => notify('تعذر الحفظ، تحقق من الاتصال'));
   }
 
@@ -1493,7 +1796,7 @@ const firebaseConfig = {
         if (action === 'delete') {
           await sendAdminRequest({ action: 'admin:delete', accountId: id });
           notify('تم حذف الإعلان');
-          loadFirebaseData();
+          loadFirebaseData({ force: true });
           return;
         }
         const status = action === 'approve' ? 'approved' : 'rejected';
@@ -1513,7 +1816,7 @@ const firebaseConfig = {
             category: nextCategory
           });
           notify('تمت الموافقة');
-          loadFirebaseData();
+          loadFirebaseData({ force: true });
           return;
         }
         await sendAdminRequest({
@@ -1522,7 +1825,7 @@ const firebaseConfig = {
           status
         });
         notify(action === 'approve' ? 'تمت الموافقة' : 'تم الرفض');
-        loadFirebaseData();
+        loadFirebaseData({ force: true });
       } catch (err) {
         notify(err?.message || 'تعذر التحديث');
       }
@@ -1537,7 +1840,7 @@ const firebaseConfig = {
       try {
         await sendAdminRequest({ action: 'topup:status', topupId: id, status: newStatus });
         notify(action === 'topup-approve' ? 'تمت إضافة الرصيد' : 'تم رفض الطلب');
-        loadFirebaseData();
+        loadFirebaseData({ force: true });
       } catch (err) {
         notify(err?.message || 'تعذر تحديث الطلب');
       }
@@ -1555,7 +1858,7 @@ const firebaseConfig = {
       try {
         await sendAdminRequest({ action: 'deposit:status', depositCode: id, userId, status: newStatus });
         notify(action === 'deposit-approve' ? 'تم قبول الإيداع وإضافة الرصيد' : 'تم رفض الإيداع');
-        loadFirebaseData();
+        loadFirebaseData({ force: true });
       } catch (err) {
         notify(err?.message || 'تعذر تحديث الإيداع');
       }
@@ -1580,7 +1883,7 @@ const firebaseConfig = {
       try {
         await sendAdminRequest({ action: 'admin:delete', accountId: id });
         notify('تم حذف الإعلان');
-        loadFirebaseData();
+        loadFirebaseData({ force: true });
       } catch (err) {
         notify(err?.message || 'تعذر الحذف');
       }
@@ -1616,7 +1919,7 @@ const firebaseConfig = {
           contact
         });
         notify('تم حفظ التعديلات');
-        loadFirebaseData();
+        loadFirebaseData({ force: true });
       } catch (err) {
         notify(err?.message || 'تعذر الحفظ');
       }
@@ -1653,7 +1956,7 @@ const firebaseConfig = {
     }).then(() => {
       notify('تمت إضافة الطريقة');
       els.addMethodForm.reset();
-      loadFirebaseData();
+      loadFirebaseData({ force: true });
     }).catch((err) => notify(err?.message || 'تعذر الإضافة'));
   }
 
@@ -1666,7 +1969,7 @@ const firebaseConfig = {
       return;
     }
     sendAdminRequest({ action: 'method:delete', id })
-      .then(() => { notify('تم حذف الطريقة'); loadFirebaseData(); })
+      .then(() => { notify('تم حذف الطريقة'); loadFirebaseData({ force: true }); })
       .catch((err) => notify(err?.message || 'تعذر الحذف'));
   }
 
@@ -1719,7 +2022,7 @@ const firebaseConfig = {
     sendAdminRequest(payload).then(() => {
       notify('تم حفظ طريقة الإيداع');
       if (els.depositMethodForm) els.depositMethodForm.reset();
-      loadFirebaseData();
+      loadFirebaseData({ force: true });
     }).catch((err) => notify(err?.message || 'تعذر الحفظ'));
   }
 
@@ -1730,7 +2033,7 @@ const firebaseConfig = {
       if (!methodId) return;
       if (!confirm('سيتم حذف طريقة الإيداع. متابعة؟')) return;
       sendAdminRequest({ action: 'deposit:method:delete', methodId })
-        .then(() => { notify('تم حذف الطريقة'); loadFirebaseData(); })
+        .then(() => { notify('تم حذف الطريقة'); loadFirebaseData({ force: true }); })
         .catch((err) => notify(err?.message || 'تعذر الحذف'));
     }
   }
@@ -2010,6 +2313,7 @@ const firebaseConfig = {
       els.adminManageList.innerHTML = '<p class="muted">صلاحية الأدمن مطلوبة.</p>';
       return;
     }
+    const profitByAccount = buildAccountProfitMap(state.purchases || []);
     const statusFilterRaw = (els.adminManageStatus && els.adminManageStatus.value) || 'all';
     const statusFilter = String(statusFilterRaw || 'all').toLowerCase();
     const queryRaw = (els.adminManageQuery && els.adminManageQuery.value) || '';
@@ -2019,6 +2323,9 @@ const firebaseConfig = {
         if (statusFilter === 'all') return true;
         const st = (a && a.status != null) ? String(a.status).toLowerCase() : '';
         if (statusFilter === 'sold') return st === 'sold' || st === 'completed';
+        if (statusFilter === 'sold-profit') {
+          return (st === 'sold' || st === 'completed') && profitByAccount.has(a.id);
+        }
         return st === statusFilter;
       })
       .filter((a) => {
@@ -2041,6 +2348,11 @@ const firebaseConfig = {
       const contactVal = priv?.contact || '';
       const statusNorm = (acc.status == null) ? '' : String(acc.status).toLowerCase();
       const ownerLabel = (acc.ownerWebuid || acc.ownerId || '').toString().trim();
+      const isSoldStatus = statusNorm === 'sold' || statusNorm === 'completed';
+      const profit = isSoldStatus ? profitByAccount.get(acc.id) : null;
+      const profitLine = (isSoldStatus && Number.isFinite(profit))
+        ? `<span>ربح العمولة: ${formatPriceCurrency(profit)}</span>`
+        : '';
       const allImages = getAccountImageUrls(acc);
       let catOptionsForAcc = getCategoryList().map((c) => {
         const key = c.id || c.key || c.slug;
@@ -2097,6 +2409,7 @@ const firebaseConfig = {
             <span>تم الإنشاء: ${created || '-'}</span>
             <span>${ownerLabel ? `المالك: ${ownerLabel}` : ''}</span>
             <span>${acc.reviewedBy ? `آخر مراجع: ${acc.reviewedBy}` : ''}</span>
+            ${profitLine}
           </div>
           <div class="meta">الصور: ${imagesPreview}</div>
           <div class="meta" style="align-items:center;gap:8px;display:flex;flex-wrap:wrap;">فيديو: ${videoPreview}</div>
@@ -2117,7 +2430,7 @@ const firebaseConfig = {
     }
     const list = (state.purchases || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     if (!list.length) {
-      els.adminPurchasesList.innerHTML = '<p class="muted">لا توجد طلبات شراء.</p>';
+      els.adminPurchasesList.innerHTML = '<div class="inline-loader"><div class="spinner"></div></div>';
       return;
     }
     const privatesById = new Map();
@@ -2194,7 +2507,7 @@ const firebaseConfig = {
           } else {
             throw new Error(res.error || 'تعذر التحديث');
           }
-          await loadAdminSnapshot();
+          await loadFirebaseData({ force: true });
           renderAdminPurchases();
         } catch (err) {
           openResponseModal(err?.message || 'خطأ أثناء التحديث', 'تنبيه');
@@ -2210,13 +2523,14 @@ const firebaseConfig = {
         try {
           await sendAdminRequest({ action: 'purchase:delete', purchaseId: id });
           openResponseModal('تم حذف الطلب', 'نجاح');
-          await loadAdminSnapshot();
+          await loadFirebaseData({ force: true });
           renderAdminPurchases();
         } catch (err) {
           openResponseModal(err?.message || 'تعذر حذف الطلب', 'تنبيه');
         }
       });
     });
+    updateAdminProfitTotal();
   }
 
   function setAdminPromoteStatus(text, isError = false) {
@@ -2796,7 +3110,7 @@ const firebaseConfig = {
       const rateLine = rateUsd ? `1 USD = ${rateUsd}` : '';
       const rateJodLine = rateJod ? `1 JOD = ${rateJod}` : '';
       const typeLabel = (m.methodType || m.type) === 'bank' ? 'بنك' : (m.methodType || m.type) === 'wallet' ? 'محفظة' : 'أخرى';
-      const infoLine = [m.bank, m.accountName, m.accountNumber, m.wallet].filter(Boolean).join(' • ');
+      const infoLine = [m.bank, m.accountName, m.accountNumber].filter(Boolean).join(' • ');
       const note = (m.note || '').trim();
       return `
         <article class="card">
@@ -2864,7 +3178,6 @@ const firebaseConfig = {
     } else {
       if (els.withdrawBankInput) els.withdrawBankInput.required = type === 'bank';
       if (els.withdrawAccountNumberInput) els.withdrawAccountNumberInput.required = type === 'bank';
-      if (els.withdrawWalletInput) els.withdrawWalletInput.required = type === 'wallet';
     }
   }
 
@@ -2946,7 +3259,6 @@ const firebaseConfig = {
     const ratePerUSD = Number(els.withdrawRateUsdInput?.value || 0);
     const note = (els.withdrawMethodNoteInput?.value || '').trim();
     const isBank = methodType === 'bank';
-    const isWallet = methodType === 'wallet';
     if (!methodName || !currencyCode) {
       notify('أكمل بيانات الطريقة والعملة');
       return;
@@ -2960,10 +3272,6 @@ const firebaseConfig = {
       notify('أدخل بيانات البنك ورقم الحساب');
       return;
     }
-    if (isWallet && !els.withdrawWalletInput?.value) {
-      notify('أدخل معرف المحفظة');
-      return;
-    }
     const label = '';
     sendAdminRequest({
       action: 'withdraw:method:add',
@@ -2974,14 +3282,14 @@ const firebaseConfig = {
       bank: (els.withdrawBankInput?.value || '').trim(),
       accountName: (els.withdrawAccountNameInput?.value || '').trim(),
       accountNumber: (els.withdrawAccountNumberInput?.value || '').trim(),
-      wallet: (els.withdrawWalletInput?.value || '').trim(),
       note,
+      logoUrl: (els.withdrawLogoInput?.value || '').trim(),
       country: label,
       region: label
     }).then(() => {
       notify('تم حفظ طريقة السحب');
       if (els.withdrawMethodForm) els.withdrawMethodForm.reset();
-      loadFirebaseData();
+      loadFirebaseData({ force: true });
     }).catch((err) => notify(err?.message || 'تعذر حفظ طريقة السحب'));
   }
 
@@ -2992,7 +3300,7 @@ const firebaseConfig = {
       if (!methodId) return;
       if (!confirm('سيتم حذف طريقة السحب. متابعة؟')) return;
       sendAdminRequest({ action: 'withdraw:method:delete', methodId })
-        .then(() => { notify('تم حذف الطريقة'); loadFirebaseData(); })
+        .then(() => { notify('تم حذف الطريقة'); loadFirebaseData({ force: true }); })
         .catch((err) => notify(err?.message || 'تعذر الحذف'));
     }
   }
@@ -3071,7 +3379,7 @@ const firebaseConfig = {
     sendAdminRequest({ action: 'category:add', name, key }).then(() => {
       notify('تمت إضافة القسم');
       if (els.addCategoryForm) els.addCategoryForm.reset();
-      loadFirebaseData();
+      loadFirebaseData({ force: true });
     }).catch((err) => notify(err?.message || 'تعذر إضافة القسم'));
   }
 
@@ -3083,7 +3391,7 @@ const firebaseConfig = {
     if (!id) return;
     if (!confirm('سيتم حذف القسم ولن يظهر في القوائم. متأكد؟')) return;
     sendAdminRequest({ action: 'category:delete', id })
-      .then(() => { notify('تم حذف القسم'); loadFirebaseData(); })
+      .then(() => { notify('تم حذف القسم'); loadFirebaseData({ force: true }); })
       .catch((err) => notify(err?.message || 'تعذر الحذف'));
   }
 
@@ -3155,9 +3463,27 @@ const firebaseConfig = {
     if (els.adminWithdrawList) els.adminWithdrawList.addEventListener('click', handleWithdrawAction);
     if (els.adminTopupsStatusFilter) els.adminTopupsStatusFilter.addEventListener('change', renderAdminTopups);
     if (els.adminTopupsCodeQuery) els.adminTopupsCodeQuery.addEventListener('input', renderAdminTopups);
-    if (els.adminTopupsRefreshBtn) els.adminTopupsRefreshBtn.addEventListener('click', () => { loadFirebaseData(); });
+    if (els.adminTopupsRefreshBtn) els.adminTopupsRefreshBtn.addEventListener('click', () => { loadFirebaseData({ force: true }); });
     if (els.adminWithdrawStatusFilter) els.adminWithdrawStatusFilter.addEventListener('change', renderAdminWithdraws);
     if (els.adminWithdrawCodeQuery) els.adminWithdrawCodeQuery.addEventListener('input', renderAdminWithdraws);
+    if (els.adminProfitRange) {
+      els.adminProfitRange.addEventListener('change', () => {
+        applyProfitRangePreset(els.adminProfitRange.value);
+        renderAdminProfitPage();
+      });
+    }
+    if (els.adminProfitFrom) {
+      els.adminProfitFrom.addEventListener('change', () => {
+        if (els.adminProfitRange) els.adminProfitRange.value = '';
+        renderAdminProfitPage();
+      });
+    }
+    if (els.adminProfitTo) {
+      els.adminProfitTo.addEventListener('change', () => {
+        if (els.adminProfitRange) els.adminProfitRange.value = '';
+        renderAdminProfitPage();
+      });
+    }
     if (els.adminTabNav) {
       els.adminTabNav.addEventListener('click', (e) => {
         const btn = e.target.closest('.admin-tab-btn');
@@ -3192,6 +3518,16 @@ const firebaseConfig = {
       multi: false,
       onAfterUpload: (urls) => {
         if (els.depositLogoInput) els.depositLogoInput.value = urls[0] || '';
+        notify('تم رفع الشعار');
+      },
+    });
+    bindUpload({
+      fileInput: els.withdrawLogoFileInput,
+      button: els.withdrawLogoUploadBtn,
+      targetInput: els.withdrawLogoInput,
+      multi: false,
+      onAfterUpload: (urls) => {
+        if (els.withdrawLogoInput) els.withdrawLogoInput.value = urls[0] || '';
         notify('تم رفع الشعار');
       },
     });
@@ -3322,6 +3658,7 @@ const firebaseConfig = {
       renderAdminQueue();
       renderAdminManageList();
       renderAdminPurchases();
+      renderAdminProfitPage();
       renderAdminUserPanel();
     }
     if (els.sortSelect) els.sortSelect.value = state.sort;
@@ -3371,16 +3708,37 @@ const firebaseConfig = {
     });
   }
 
-  async function loadFirebaseData() {
-    if (state.dataLoading) return;
+  async function loadFirebaseData(opts = {}) {
+    const options = opts || {};
+    const force = !!options.force;
+    const user = getCurrentUser();
+    const uid = user?.uid || '';
+    const roleChanged = state.lastSnapshotAdmin !== state.isAdmin || state.lastSnapshotUid !== uid;
+    const forceRefresh = force || roleChanged;
+    const now = Date.now();
+    const minInterval = state.isAdmin ? SNAPSHOT_COOLDOWN_MS : PUBLIC_SNAPSHOT_COOLDOWN_MS;
+    const failTooSoon = state.lastSnapshotFailAt && now - state.lastSnapshotFailAt < SNAPSHOT_FAIL_COOLDOWN_MS;
+    if (state.dataLoading) {
+      if (forceRefresh) state.dataReloadPending = true;
+      return;
+    }
+    if (!forceRefresh && failTooSoon) {
+      return;
+    }
+    if (!forceRefresh && state.lastSnapshotAt && now - state.lastSnapshotAt < minInterval) {
+      return;
+    }
     state.dataLoading = true;
+    state.dataReloadPending = false;
+    state.lastSnapshotAt = now;
+    state.lastSnapshotAdmin = state.isAdmin;
+    state.lastSnapshotUid = uid;
     state.dataError = '';
     state.dataSource = '';
     if (els.adminTopupsRefreshBtn) els.adminTopupsRefreshBtn.disabled = true;
     setAdminTopupsLoadStatus('...جاري جلب الطلبات');
     try { renderAdminTopups(); } catch {}
 
-    const user = getCurrentUser();
     try {
       // لوحة الأدمن عبر الراوتر الخلفي
       if (state.isAdmin && ADMIN_ROUTER_BASE) {
@@ -3409,9 +3767,10 @@ const firebaseConfig = {
           renderAdminTopups();
           renderAdminWithdraws();
           renderAdminPurchases();
+          updateAdminProfitTotal();
           renderCategoryAdminList();
           renderWalletTotals();
-          await loadFeesConfig();
+          await loadFeesConfig({ force: forceRefresh });
           await loadWallet();
           state.dataUpdatedAt = Date.now();
           state.dataSource = 'router-admin';
@@ -3423,6 +3782,8 @@ const firebaseConfig = {
         } catch (e) {
           const msg = e?.message || 'تعذر جلب بيانات الأدمن';
           state.dataError = msg;
+          state.lastSnapshotFailAt = Date.now();
+          state.lastSnapshotAt = 0;
           setAdminTopupsLoadStatus(msg, true);
           try { renderAdminTopups(); } catch {}
           notify('تعذر جلب بيانات الأدمن');
@@ -3457,8 +3818,9 @@ const firebaseConfig = {
           renderAdminTopups();
           renderAdminWithdraws();
           renderAdminPurchases();
+          updateAdminProfitTotal();
           renderCategoryAdminList();
-          await loadFeesConfig();
+          await loadFeesConfig({ force: forceRefresh });
           await loadWallet();
           state.dataUpdatedAt = Date.now();
           state.dataSource = 'router-public';
@@ -3584,8 +3946,9 @@ const firebaseConfig = {
       renderWalletHistory();
       renderAdminTopups();
       renderAdminPurchases();
+      updateAdminProfitTotal();
       renderCategoryAdminList();
-      await loadFeesConfig();
+      await loadFeesConfig({ force: forceRefresh });
       state.dataUpdatedAt = Date.now();
       state.dataSource = 'firebase';
       setAdminTopupsLoadStatus(`آخر تحديث: ${new Date(state.dataUpdatedAt).toLocaleTimeString('ar-EG')}`);
@@ -3594,13 +3957,21 @@ const firebaseConfig = {
     } catch (e) {
       const msg = e?.message || 'تعذر جلب البيانات من Firebase';
       state.dataError = msg;
+      state.lastSnapshotFailAt = Date.now();
+      state.lastSnapshotAt = 0;
       setAdminTopupsLoadStatus(msg, true);
       try { renderAdminTopups(); } catch {}
       notify('تعذر جلب البيانات من Firebase');
       hideLoader();
     } finally {
       state.dataLoading = false;
+      renderAdminPurchases();
+      renderAdminProfitPage();
       if (els.adminTopupsRefreshBtn) els.adminTopupsRefreshBtn.disabled = false;
+      if (state.dataReloadPending) {
+        state.dataReloadPending = false;
+        setTimeout(() => loadFirebaseData({ force: true }), 0);
+      }
     }
   }
 

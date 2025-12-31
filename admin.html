@@ -212,15 +212,17 @@
     #adminPurchasesList.cards{grid-template-columns:1fr;gap:18px;}
     .purchase-card{
       width:100%;
-      min-height:340px;
+      min-height:0;
       background:rgba(255,255,255,0.03);
       border:1px solid rgba(255,255,255,0.08);
       border-radius:18px;
       box-shadow:0 18px 44px rgba(0,0,0,0.4);
       overflow:hidden;
+      display:block;
+      grid-template-rows:auto;
     }
-    .purchase-card .card-body{display:flex;flex-direction:column;gap:16px;width:100%;box-sizing:border-box;padding:20px;}
-    .purchase-header{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;}
+    .purchase-card .card-body{display:flex;flex-direction:column;gap:12px;width:100%;box-sizing:border-box;padding:16px;}
+    .purchase-header{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;}
     .purchase-left{display:flex;gap:12px;align-items:flex-start;flex:1;min-width:0;}
     .purchase-thumb{
       width:96px;height:96px;max-width:96px;max-height:96px;
@@ -228,24 +230,92 @@
       background:#0f1628;border:1px solid rgba(255,255,255,0.12);
     }
     .purchase-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
-    .purchase-meta{display:flex;flex-direction:column;gap:4px;min-width:200px;}
+    .purchase-meta{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1;}
     .purchase-meta .wrap{word-break:break-all;white-space:normal;}
-    .purchase-pricing{display:flex;flex-direction:column;gap:6px;align-items:flex-end;min-width:170px;}
+    .purchase-pricing{display:flex;flex-direction:column;gap:6px;align-items:flex-end;min-width:150px;}
     .purchase-card .contact-line{color:#9aa6c8;font-size:12px;}
     .purchase-lines{
-      display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;
-      border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;
-      color:#cfd8ff;font-size:13px;
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+      column-gap:12px;
+      row-gap:6px;
+      border-top:1px solid rgba(255,255,255,0.08);
+      padding-top:8px;
+      color:#cfd8ff;
+      font-size:13px;
     }
-    .purchase-lines div{flex:1;min-width:180px;}
+    .purchase-lines div{min-width:0;}
     .purchase-actions{
-      display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-start;
+      display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start;align-items:center;
       padding:10px;border-top:1px solid rgba(255,255,255,0.08);
       background:rgba(0,0,0,0.06);border-radius:12px;
     }
-    .purchase-actions .btn{min-width:150px;text-align:center;}
+    .purchase-actions .btn{min-width:0;text-align:center;flex:1 1 160px;}
     .purchase-actions .btn.primary{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;border:none;}
     .purchase-actions .btn.danger{background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;border:none;}
+    .inline-loader{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:12px;
+      padding:24px;
+      color:#9aa6c8;
+    }
+    .inline-loader .spinner{
+      width:28px;
+      height:28px;
+      border-radius:50%;
+      border:3px solid rgba(255,255,255,0.14);
+      border-top-color:var(--primary);
+      animation:spin 1s linear infinite;
+    }
+    .profit-summary{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      padding:12px 14px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.04);
+      margin-bottom:12px;
+    }
+    .profit-summary .label{color:#9aa6c8;font-size:12px;}
+    .profit-summary .value{font-size:20px;font-weight:800;color:#8ff0d0;}
+    .profit-card{
+      display:block;
+      grid-template-rows:auto;
+      min-height:0;
+    }
+    .profit-card .card-body{
+      padding:14px 16px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .profit-card .profit-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .profit-card .profit-amount{
+      font-weight:800;
+      color:#8ff0d0;
+    }
+    .profit-filters{
+      margin-inline-start:auto;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:flex-end;
+    }
+    @media(max-width:640px){
+      .profit-summary{padding:10px 12px;}
+      .profit-summary .value{font-size:18px;}
+    }
     @media(max-width:900px){
       .purchase-header{flex-direction:column;}
       .purchase-pricing{align-items:flex-start;}
@@ -253,8 +323,10 @@
     }
     @media(max-width:620px){
       #adminPurchasesList.cards{grid-template-columns:1fr;}
-      .purchase-card{min-height:680px;}
+      .purchase-card{min-height:0;}
       .purchase-thumb{width:96px;height:96px;max-width:96px;max-height:96px;flex:0 0 96px;}
+      .purchase-lines{flex-direction:column;gap:6px;}
+      .purchase-actions .btn{flex:1 1 100%;}
       .purchase-actions{justify-content:center;}
     }
 
@@ -273,7 +345,7 @@
       padding:18px 20px;
       gap:10px;
     }
-    #admin-withdraw .badge,
+#admin-withdraw .badge,
     #admin-topups .badge{
       min-width:110px;
       height:54px;
@@ -281,6 +353,51 @@
       justify-content:center;
       border-radius:16px;
       font-size:14px;
+    }
+    /* طرق الإيداع/السحب: كروت مرتبة بدون فراغ الصورة وبدون تمدد مزعج */
+    #admin-deposit-methods .cards,
+    #admin-withdraw-methods .cards{
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap:12px;
+      align-items: stretch;
+    }
+    #admin-deposit-methods .card,
+    #admin-withdraw-methods .card{
+      display:flex;
+      flex-direction:column;
+      grid-template-rows:none;
+      min-height:0;
+    }
+    #admin-deposit-methods .card-body,
+    #admin-withdraw-methods .card-body{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      padding:14px 16px;
+    }
+    #admin-deposit-methods .card .actions,
+    #admin-withdraw-methods .card .actions{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+    }
+    #admin-deposit-methods .card h3,
+    #admin-withdraw-methods .card h3{
+      margin:0;
+      font-size:15px;
+      line-height:1.5;
+    }
+    #admin-deposit-methods .card .muted.tiny,
+    #admin-withdraw-methods .card .muted.tiny{
+      line-height:1.5;
+    }
+    #admin-deposit-methods .card .btn.danger.small,
+    #admin-withdraw-methods .card .btn.danger.small{
+      min-height:32px;
+      padding:6px 10px;
+      border-radius:10px;
+      font-size:12px;
     }
     #admin-withdraw .price-tag,
     #admin-topups .price-tag{
@@ -372,6 +489,7 @@
               <option value="pending">بانتظار</option>
               <option value="rejected">مرفوض</option>
               <option value="sold">تم البيع</option>
+              <option value="sold-profit">أرباح المبيعات</option>
             </select>
           </div>
         </div>
@@ -497,7 +615,7 @@
           <input id="depositWalletInput" type="text" placeholder="معرف المحفظة أو الوسيط">
         </div>
         <div class="field">
-          <label for="depositLogoFileInput">شعار الطريقة (رفع عبر imgbb)</label>
+          <label for="depositLogoFileInput">شعار الطريقة</label>
           <label id="depositLogoDropZone" class="dropzone" for="depositLogoFileInput">
             <div class="icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -573,9 +691,29 @@
           <label for="withdrawAccountNumberInput">رقم الحساب</label>
           <input id="withdrawAccountNumberInput" type="text" placeholder="رقم الحساب">
         </div>
-        <div class="field withdraw-wallet-fields">
-          <label for="withdrawWalletInput">المعرّف / المحفظة</label>
-          <input id="withdrawWalletInput" type="text" placeholder="معرف المحفظة أو الوسيط">
+        <div class="field">
+          <label for="withdrawLogoFileInput">شعار الطريقة</label>
+          <label id="withdrawLogoDropZone" class="dropzone" for="withdrawLogoFileInput">
+            <div class="icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M7.75 18h-1.5A3.75 3.75 0 0 1 2.5 14.25c0-1.78 1.3-3.28 3.02-3.6a4.5 4.5 0 0 1 8.83-1.1 3.75 3.75 0 0 1 5.15 3.38A3.75 3.75 0 0 1 15.75 18h-1.5" />
+                <g transform="translate(-0.9 0)">
+                  <g transform="translate(12 12) scale(0.82) translate(-12 -12)">
+                    <path d="M9 16.5 12 13.5 15 16.5" />
+                    <path d="M12 13.5v6" />
+                  </g>
+                </g>
+              </svg>
+            </div>
+            <div class="text">
+              <strong>اسحب وأفلت أو اختر الشعار</strong>
+              <span class="muted tiny">يدعم PNG / JPG</span>
+            </div>
+            <input id="withdrawLogoFileInput" type="file" accept="image/*" style="display:none;">
+          </label>
+          <button class="btn ghost" type="button" id="withdrawLogoUploadBtn" style="margin-top:8px;">رفع الشعار</button>
+          <input id="withdrawLogoInput" type="hidden">
+          <p class="tiny muted">يفضل رفع الصورة بوضوح وتباين جيد.</p>
         </div>
         <div class="field full">
           <label for="withdrawMethodNoteInput">ملاحظات</label>
@@ -733,6 +871,43 @@
         </div>
       </div>
       <div id="adminPurchasesList" class="cards"></div>
+    </section>
+
+    <section id="admin-profits" class="panel admin-section" data-admin-section="profits">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">أرباح المبيعات</p>
+          <h2>إجمالي الربح من بيع الحسابات</h2>
+        </div>
+        <div class="profit-filters">
+          <div class="field" style="min-width:160px;">
+            <label class="muted tiny" for="adminProfitRange">الفترة</label>
+            <select id="adminProfitRange">
+              <option value="">كل الوقت</option>
+              <option value="today">اليوم</option>
+              <option value="7">آخر 7 أيام</option>
+              <option value="30">آخر 30 يومًا</option>
+              <option value="90">آخر 90 يومًا</option>
+            </select>
+          </div>
+          <div class="field" style="min-width:160px;">
+            <label class="muted tiny" for="adminProfitFrom">من</label>
+            <input id="adminProfitFrom" type="date">
+          </div>
+          <div class="field" style="min-width:160px;">
+            <label class="muted tiny" for="adminProfitTo">إلى</label>
+            <input id="adminProfitTo" type="date">
+          </div>
+        </div>
+      </div>
+      <div class="profit-summary">
+        <div>
+          <div class="label">إجمالي الربح للفترة المحددة</div>
+          <div class="value" id="adminProfitTotalBig">—</div>
+        </div>
+        <div class="muted tiny" id="adminProfitCount">—</div>
+      </div>
+      <div id="adminProfitList" class="cards"></div>
     </section>
 
     <section id="admin-topups" class="panel admin-section" data-admin-section="topups">

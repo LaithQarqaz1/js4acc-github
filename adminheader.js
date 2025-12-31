@@ -1262,6 +1262,7 @@ const ADMIN_TABS = [
   { key: 'levels', label: 'ترقية رتبة', icon: 'fa-solid fa-arrow-up-wide-short' },
   { key: 'users', label: 'Users / Promote Admin', icon: 'fa-solid fa-users' },
   { key: 'purchases', label: 'المشتريات', icon: 'fa-solid fa-cart-shopping' },
+  { key: 'profits', label: 'أرباح المبيعات', icon: 'fa-solid fa-chart-line' },
   { key: 'topups', label: 'طلبات الايداع', icon: 'fa-solid fa-file-invoice-dollar' },
   { key: 'withdraw', label: 'طلبات السحب', icon: 'fa-solid fa-hand-holding-dollar' },
   { key: 'wallet', label: 'الرصيد الكلي', icon: 'fa-solid fa-sack-dollar' }
@@ -1297,6 +1298,11 @@ logoutLi.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i><a href="#">
 ul.appendChild(logoutLi);
 
 sidebar.appendChild(ul);
+
+const profitBox = document.createElement('div');
+profitBox.className = 'sidebar-profit';
+profitBox.innerHTML = '<div class="label">إجمالي الربح</div><div class="value" id="adminProfitTotal">—</div>';
+sidebar.appendChild(profitBox);
 
 ul.addEventListener('click', (e) => {
   const btn = e.target && e.target.closest ? e.target.closest('.admin-tab-btn') : null;

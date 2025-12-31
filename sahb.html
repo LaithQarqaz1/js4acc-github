@@ -411,9 +411,9 @@
       <!-- بيانات المستلم: إعادة حقل الرقم/المعرّف -->
       <div class="form" id="recipientForm">
         <div class="field">
-          <label for="recipientId">رقم/معرّف المستلم</label>
+          <label for="recipientId">المعرّف / المحفظة</label>
           <input type="text" id="recipientId" placeholder="مثال: 077xxxxxxx أو ID12345"/>
-          <div id="recipientIdErr" class="error" style="display:none;">أدخل رقمًا/معرّفًا صالحًا (3 أحرف على الأقل).</div>
+          <div id="recipientIdErr" class="error" style="display:none;">أدخل معرّفًا/محفظة صالحة (3 أحرف على الأقل).</div>
         </div>
         <div class="field">
           <label for="recipientName">اسم المستلم</label>
@@ -764,7 +764,7 @@ const WORKER = (WORKER_BASE || '').replace(/\/+$/, '');
 
     async function handleSubmitWithdraw(method){
       if(!amountsValid()) return alert('أدخل قيمة صحيحة بالدولار.');
-      if(!recipientValid()) return alert('أدخل رقم/معرّف واسم مستخدم صحيحين (٣ أحرف على الأقل).');
+      if(!recipientValid()) return alert('أدخل معرّف/محفظة واسم مستخدم صحيحين (٣ أحرف على الأقل).');
 
       try {
         submitWithdrawBtn.disabled = true;
