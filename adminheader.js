@@ -1259,6 +1259,7 @@ const ADMIN_TABS = [
   { key: 'withdraw-methods', label: 'طرق السحب', icon: 'fa-solid fa-money-bill-transfer' },
   { key: 'currencies', label: 'العملات', icon: 'fa-solid fa-coins' },
   { key: 'fees', label: 'الرسوم', icon: 'fa-solid fa-percent' },
+  { key: 'referrals', label: 'الإحالة', icon: 'fa-solid fa-user-plus' },
   { key: 'levels', label: 'ترقية رتبة', icon: 'fa-solid fa-arrow-up-wide-short' },
   { key: 'users', label: 'Users / Promote Admin', icon: 'fa-solid fa-users' },
   { key: 'purchases', label: 'المشتريات', icon: 'fa-solid fa-cart-shopping' },

@@ -70,9 +70,11 @@
         <button class="btn primary" id="purchaseBtn">شراء الحساب بالرصيد</button>
       </div>
       <div class="muted tiny" id="purchaseStatus"></div>
-      <div>
+        <div>
         <h2 id="title"></h2>
         <div class="price" id="price"></div>
+        <div class="muted tiny" id="priceNote"></div>
+        <div class="muted tiny" id="discountNote"></div>
         <p class="muted" id="desc"></p>
       </div>
     </section>
@@ -109,6 +111,7 @@
     const titleEl = document.getElementById('title');
     const priceEl = document.getElementById('price');
     const priceNoteEl = document.getElementById('priceNote');
+    const discountNoteEl = document.getElementById('discountNote');
     const descEl = document.getElementById('desc');
     const downloadBtn = null;
     const copyLinkBtn = null;
@@ -123,6 +126,8 @@
     let currentUser = null;
     let buyerLevel = 'customer';
     const feesConfig = getDefaultFees();
+    const referralConfig = getDefaultReferralConfig();
+    let referralState = { referredBy: '', referralInviteeUsed: false, referralCount: 0, referralCredits: 0 };
     firebase.auth().onAuthStateChanged((u) => { currentUser = u; loadUserLevel().then(refreshPrice); });
 
     const fullOverlay = document.createElement('div');
@@ -141,6 +146,15 @@
 
     function getDefaultFees(){
       return { buyerMarkup: { customer: 0, trader: 0, vip: 0 }, sellerFee: 0 };
+    }
+    function getDefaultReferralConfig(){
+      return { enabled: false, discountPct: 0, mode: 'after', minReferrals: 1, maxReferrals: 0 };
+    }
+    function normalizeReferralMode(value){
+      const v = (value || '').toString().trim().toLowerCase();
+      if (v === 'per' || v === 'per_referral' || v === 'per-referral') return 'per';
+      if (v === 'after' || v === 'threshold' || v === 'count') return 'after';
+      return 'after';
     }
     function displayTitle(raw){
       const t = (raw ?? '').toString();
@@ -164,6 +178,12 @@
         if (snap && snap.exists){
           const data = snap.data() || {};
           buyerLevel = normalizeLevel(data.level || data.type || data.role);
+          referralState = {
+            referredBy: (data.referredBy || data.referred_by || '').toString().trim(),
+            referralInviteeUsed: data.referralInviteeUsed === true || data.referral_invitee_used === true,
+            referralCount: Number(data.referralCount || data.referralsCount || 0) || 0,
+            referralCredits: Number(data.referralCredits || data.referral_credits || 0) || 0,
+          };
         }
       }catch(_){ buyerLevel = 'customer'; }
     }
@@ -185,6 +205,26 @@
       }catch(_){ /* ignore */ }
     }
 
+    async function loadReferralConfig(){
+      if (!ADMIN_ROUTER_BASE) return;
+      try{
+        const res = await fetch(`${ADMIN_ROUTER_BASE}/accounts`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ action:'referrals:get' })
+        });
+        const data = await res.json().catch(()=>({}));
+        if (res.ok && data?.referrals){
+          const cfg = data.referrals || {};
+          referralConfig.enabled = cfg.enabled === true || cfg.enabled === 1 || cfg.enabled === '1' || cfg.enabled === 'true';
+          referralConfig.discountPct = Number(cfg.discountPct ?? cfg.discount ?? cfg.percent ?? 0) || 0;
+          referralConfig.mode = normalizeReferralMode(cfg.mode || cfg.type);
+          referralConfig.minReferrals = Math.max(1, Number(cfg.minReferrals ?? cfg.min ?? 1) || 1);
+          referralConfig.maxReferrals = Math.max(0, Number(cfg.maxReferrals ?? cfg.max ?? 0) || 0);
+        }
+      }catch(_){ /* ignore */ }
+    }
+
     const basePriceRef = { value: null };
     function formatPrice(val){
       const num = Number(val);
@@ -199,10 +239,35 @@
       const final = Math.max(0, Math.round(Number(base || 0) * (1 + pct/100) * 100) / 100);
       return { pct, final };
     }
+
+    function getReferralDiscountPct(){
+      if (!referralConfig.enabled) return 0;
+      const pct = Number(referralConfig.discountPct) || 0;
+      if (pct <= 0) return 0;
+      if (referralState.referredBy && !referralState.referralInviteeUsed) return pct;
+      const mode = normalizeReferralMode(referralConfig.mode);
+      if (mode === 'after'){
+        const min = Math.max(1, Number(referralConfig.minReferrals) || 1);
+        if (Number(referralState.referralCount || 0) >= min) return pct;
+      } else if (mode === 'per') {
+        if (Number(referralState.referralCredits || 0) > 0) return pct;
+      }
+      return 0;
+    }
+
+    function applyReferralDiscount(amount){
+      const pct = getReferralDiscountPct();
+      const base = Number(amount || 0);
+      if (!pct || !Number.isFinite(base)) return { final: base, pct: 0, amount: 0 };
+      const final = Math.max(0, Math.round(base * (1 - pct/100) * 100) / 100);
+      const diff = Math.max(0, Math.round((base - final) * 100) / 100);
+      return { final, pct, amount: diff };
+    }
     function refreshPrice(){
       if (basePriceRef.value == null) return;
       const applied = applyPriceMarkup(basePriceRef.value);
-      priceEl.textContent = formatPrice(applied.final);
+      const discounted = applyReferralDiscount(applied.final);
+      priceEl.textContent = formatPrice(discounted.final);
       if (priceNoteEl){
         if (applied.pct){
           const lvl = buyerLevel === 'vip' ? 'VIP' : (buyerLevel === 'trader' ? 'تجار' : 'زبائن');
@@ -213,9 +278,18 @@
           priceNoteEl.textContent = '';
         }
       }
+      if (discountNoteEl){
+        if (discounted.pct){
+          discountNoteEl.style.display = 'block';
+          discountNoteEl.textContent = `خصم إحالة -${discounted.pct}%`;
+        } else {
+          discountNoteEl.style.display = 'none';
+          discountNoteEl.textContent = '';
+        }
+      }
       try {
         if (priceEl) {
-          priceEl.dataset.priceUsd = Number(applied.final);
+          priceEl.dataset.priceUsd = Number(discounted.final);
           priceEl.dataset.priceBase = 'USD';
         }
       } catch {}
@@ -362,6 +436,7 @@
     window.addEventListener('currency:rates:change', refreshPrice);
 
     loadFeesConfig().then(refreshPrice);
+    loadReferralConfig().then(refreshPrice);
     loadUserLevel().then(refreshPrice);
     loadAccount();
   </script>

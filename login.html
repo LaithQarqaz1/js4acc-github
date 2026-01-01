@@ -1924,6 +1924,49 @@ const firebaseConfig = {
     hasLower: document.getElementById("hasLower"),
     hasSymbol: document.getElementById("hasSymbol")
   };
+  const REFERRAL_KEY = "referral:code";
+  let referralCache = "";
+
+  function captureReferralFromUrl() {
+    try {
+      const url = new URL(window.location.href);
+      const raw = (url.searchParams.get("ref") || url.searchParams.get("referral") || url.searchParams.get("invite") || "").trim();
+      if (!raw) return "";
+      referralCache = raw;
+      try { sessionStorage.setItem(REFERRAL_KEY, raw); } catch (_) {}
+      let changed = false;
+      ["ref", "referral", "invite"].forEach((key) => {
+        if (url.searchParams.has(key)) { url.searchParams.delete(key); changed = true; }
+      });
+      if (changed) history.replaceState({}, document.title, url.toString());
+      return raw;
+    } catch (_) {}
+    return "";
+  }
+
+  function getReferralCode() {
+    if (referralCache) return referralCache;
+    try {
+      const stored = sessionStorage.getItem(REFERRAL_KEY);
+      if (stored) referralCache = stored.trim();
+    } catch (_) {}
+    return referralCache || "";
+  }
+
+  function clearReferralCode() {
+    referralCache = "";
+    try { sessionStorage.removeItem(REFERRAL_KEY); } catch (_) {}
+  }
+
+  function resolveInitialForm() {
+    const ref = captureReferralFromUrl();
+    if (ref) return "register";
+    try {
+      const hash = (location.hash || "").toLowerCase();
+      if (hash.includes("register") || hash.includes("signup")) return "register";
+    } catch (_) {}
+    return "login";
+  }
   if (loginForm) {
     loginForm.addEventListener("submit", (ev) => {
       ev.preventDefault();
@@ -1939,7 +1982,7 @@ const firebaseConfig = {
 
   const showResetBtn = document.getElementById("showReset");
   if (showResetBtn) showResetBtn.onclick = () => switchForm("reset");
-  document.addEventListener('DOMContentLoaded',()=>switchForm('login'));
+  document.addEventListener('DOMContentLoaded', () => switchForm(resolveInitialForm()));
   const toggleRegisterBtn = document.getElementById("toggleRegister");
   if (toggleRegisterBtn) toggleRegisterBtn.onclick = () => switchForm("register");
   if (registerPasswordInput) {
@@ -2174,6 +2217,20 @@ const firebaseConfig = {
         provider: 'google'
       }, { merge: true });
     } catch (_) {}
+    if (googleFlowState.entry === 'register') {
+      const referralCode = getReferralCode();
+      const syncPayload = {
+        idToken,
+        username: googleFlowState.profile.username || user.displayName || '',
+        phone: googleFlowState.profile.phone || '',
+        email: user.email || '',
+        displayName: googleFlowState.profile.username || user.displayName || ''
+      };
+      if (referralCode) syncPayload.referralCode = referralCode;
+      const result = await callManualAuth("sync", syncPayload, targetErrorEl);
+      if (referralCode) clearReferralCode();
+      return { result, idToken };
+    }
     return { result: { emailVerified: user.emailVerified, sessionKey: '' }, idToken };
   }
 
@@ -2569,13 +2626,17 @@ const firebaseConfig = {
       try { await updateProfile(user, { displayName: username }); } catch (_) {}
       const idToken = await getIdToken(user, true);
 
-      const syncResult = await callManualAuth("sync", {
+      const referralCode = getReferralCode();
+      const syncPayload = {
         idToken,
         username,
         phone,
         email,
         displayName: username
-      }, msg);
+      };
+      if (referralCode) syncPayload.referralCode = referralCode;
+      const syncResult = await callManualAuth("sync", syncPayload, msg);
+      if (referralCode) clearReferralCode();
       const sessionKey = syncResult.sessionKey || "";
       const ttlSeconds = Number(syncResult.ttlSeconds) || 0;
       if (sessionKey) {

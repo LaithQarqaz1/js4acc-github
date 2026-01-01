@@ -1309,6 +1309,13 @@ settingsLi.innerHTML = '<i class="fa-solid fa-gear"></i><a href="#">الإعدا
 settingsLi.onclick = () => navigateHomeHash('#/settings','settings');
 settingsLi.style.display = 'none';
 ul.appendChild(settingsLi);
+// Referral
+const referralLi = document.createElement('li');
+referralLi.id = 'referralBtn';
+referralLi.innerHTML = '<i class="fa-solid fa-user-plus"></i><a href="#">\u0627\u0644\u0625\u062d\u0627\u0644\u0629</a>';
+referralLi.onclick = () => navigateHomeHash('#/settings','settings');
+referralLi.style.display = 'none';
+ul.appendChild(referralLi);
 // تسجيل الدخول / الخروج
 const loginLi = document.createElement('li');
 loginLi.id = 'loginSidebarBtn';
@@ -1399,6 +1406,7 @@ try {
     const transferBtn = document.getElementById('transferBtn');
     const myAdsBtn = document.getElementById('myAdsBtn');
     const settingsBtn = document.getElementById('settingsBtn');
+    const referralBtn = document.getElementById('referralBtn');
     const logoutBtn = document.getElementById('logoutBtn');
 
     if (user) {
@@ -1412,6 +1420,7 @@ try {
       if (transferBtn) transferBtn.style.display = 'flex';
       if (myAdsBtn) myAdsBtn.style.display = 'flex';
       if (settingsBtn) settingsBtn.style.display = 'flex';
+      if (referralBtn) referralBtn.style.display = 'flex';
       if (logoutBtn) logoutBtn.style.display = 'flex';
       const cached = readCachedBalance(user.uid); if (cached != null) { try { window.__BAL_BASE__ = cached; } catch {}; setHeaderBalance((typeof window.formatCurrencyFromJOD === 'function') ? window.formatCurrencyFromJOD(cached) : (Number(cached).toFixed(2) + ' $')); broadcastBalance(cached); }
       const docRef = firebase.firestore().collection('users').doc(user.uid);
@@ -1436,6 +1445,7 @@ try {
       if (transferBtn) transferBtn.style.display = 'none';
       if (myAdsBtn) myAdsBtn.style.display = 'none';
       if (settingsBtn) settingsBtn.style.display = 'none';
+      if (referralBtn) referralBtn.style.display = 'none';
       if (logoutBtn) logoutBtn.style.display = 'none';
       broadcastBalance(null);
     }

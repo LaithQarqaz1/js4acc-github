@@ -788,6 +788,48 @@
       </form>
     </section>
 
+    <section id="admin-referrals" class="panel admin-section" data-admin-section="referrals">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">الإحالة</p>
+          <h2>إعدادات نظام الإحالة والخصومات</h2>
+        </div>
+      </div>
+      <p class="muted">اضبط نسبة الخصم ونوع تطبيقها على المدعوين والداعين، وحدد الحد الأدنى والحد الأقصى للإحالات.</p>
+      <form id="referralsForm" class="grid two">
+        <div class="field">
+          <label for="referralEnabledInput">تفعيل الإحالة</label>
+          <select id="referralEnabledInput">
+            <option value="1">مفعّل</option>
+            <option value="0">معطّل</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="referralDiscountInput">نسبة الخصم (%)</label>
+          <input id="referralDiscountInput" type="number" min="0" max="100" step="0.1" placeholder="0">
+        </div>
+        <div class="field">
+          <label for="referralModeInput">طريقة الخصم</label>
+          <select id="referralModeInput">
+            <option value="after">بعد عدد إحالات محدد</option>
+            <option value="per">خصم لكل إحالة</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="referralMinInput">الحد الأدنى للإحالات</label>
+          <input id="referralMinInput" type="number" min="1" step="1" placeholder="1">
+        </div>
+        <div class="field">
+          <label for="referralMaxInput">الحد الأقصى للإحالات (0 = بلا حد)</label>
+          <input id="referralMaxInput" type="number" min="0" step="1" placeholder="0">
+        </div>
+        <div class="field submit full">
+          <button class="btn primary" type="submit">حفظ الإعدادات</button>
+          <p id="referralStatus" class="tiny muted">-</p>
+        </div>
+      </form>
+    </section>
+
     <section id="admin-levels" class="panel admin-section" data-admin-section="levels">
       <div class="panel-header">
         <div>

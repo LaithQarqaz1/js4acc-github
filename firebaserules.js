@@ -123,14 +123,14 @@ service cloud.firestore {
                     && request.resource.data.useruid == userId
                     && request.resource.data.level is string
                     && request.resource.data.level == "زبون"
-                    && !request.resource.data.keys().hasAny(['webuid']);
+                    && !request.resource.data.keys().hasAny(['webuid','referredBy','referredByWebuid','referralCount','referralCredits','referralInviteeUsed','referredAt','referralUpdatedAt']);
 
       // تحديث لصاحب الوثيقة + منع تعديل الحقول الثابتة (ومنها webuid)
       allow update: if request.auth != null
                     && request.auth.uid == userId
                     && !request.resource.data.diff(resource.data)
                          .changedKeys()
-                         .hasAny(['authkey','balance','level','totalspent','username','useruid','webuid'])
+                         .hasAny(['authkey','balance','level','totalspent','username','useruid','webuid','referredBy','referredByWebuid','referralCount','referralCredits','referralInviteeUsed','referredAt','referralUpdatedAt'])
                     // phone مسموح فقط كإضافة أولى
                     && (
                          !request.resource.data.diff(resource.data).changedKeys().hasAny(['phone'])

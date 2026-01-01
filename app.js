@@ -11,6 +11,7 @@
   const PUBLIC_SNAPSHOT_COOLDOWN_MS = 12000;
   const SNAPSHOT_FAIL_COOLDOWN_MS = 5000;
   const FEES_COOLDOWN_MS = 120000;
+  const REFERRAL_COOLDOWN_MS = 120000;
   const REQUEST_TIMEOUT_MS = 15000;
 
   const state = {
@@ -34,6 +35,7 @@
     wallet: 0,
     categories: [],
     fees: null,
+    referralConfig: null,
     userProfile: null,
     adminUser: null,
     adminUserMeta: null,
@@ -49,8 +51,11 @@
     lastSnapshotFailAt: 0,
     lastFeesAt: 0,
     feesLoading: false,
+    lastReferralAt: 0,
+    referralLoading: false,
   };
   state.fees = getDefaultFees();
+  state.referralConfig = getDefaultReferralConfig();
 
   function normalizeMethod(method, fallbackId) {
     if (!method) return null;
@@ -331,6 +336,23 @@
     };
   }
 
+  function getDefaultReferralConfig(){
+    return {
+      enabled: false,
+      discountPct: 0,
+      mode: 'after',
+      minReferrals: 1,
+      maxReferrals: 0,
+    };
+  }
+
+  function normalizeReferralMode(value){
+    const v = (value || '').toString().trim().toLowerCase();
+    if (v === 'per' || v === 'per_referral' || v === 'per-referral') return 'per';
+    if (v === 'after' || v === 'threshold' || v === 'count') return 'after';
+    return 'after';
+  }
+
   function normalizeBuyerLevel(value){
     const v = (value || '').toString().trim().toLowerCase();
     if (!v) return 'customer';
@@ -353,11 +375,53 @@
     return { level, pct, final };
   }
 
+  function getReferralDiscountPct(){
+    const cfg = state.referralConfig || getDefaultReferralConfig();
+    if (!cfg.enabled) return 0;
+    const pct = Number(cfg.discountPct) || 0;
+    if (pct <= 0) return 0;
+    const profile = state.userProfile || {};
+    const referredBy = (profile.referredBy || profile.referred_by || '').toString().trim();
+    const inviteeUsed = profile.referralInviteeUsed === true || profile.referral_invitee_used === true;
+    if (referredBy && !inviteeUsed) return pct;
+    const mode = normalizeReferralMode(cfg.mode);
+    if (mode === 'after'){
+      const count = Number(profile.referralCount || profile.referralsCount || 0);
+      const min = Math.max(1, Number(cfg.minReferrals) || 1);
+      if (count >= min) return pct;
+    } else if (mode === 'per') {
+      const credits = Number(profile.referralCredits || profile.referral_credits || 0);
+      if (credits > 0) return pct;
+    }
+    return 0;
+  }
+
+  function applyReferralDiscount(amount){
+    const pct = getReferralDiscountPct();
+    const base = Number(amount || 0);
+    if (!pct || !Number.isFinite(base)) return { final: base, pct: 0, amount: 0 };
+    const final = Math.max(0, Math.round(base * (1 - pct / 100) * 100) / 100);
+    const diff = Math.max(0, Math.round((base - final) * 100) / 100);
+    return { final, pct, amount: diff };
+  }
+
   function getDisplayPrice(acc, opts = {}){
     const base = Number(acc?.price) || 0;
-    if (opts.skipMarkup) return { base, final: base, pct: 0, level: null };
+    if (opts.skipMarkup) return { base, final: base, pct: 0, level: null, discountPct: 0, discountedFrom: base };
     const applied = applyBuyerMarkup(base);
-    return { base, final: applied.final, pct: applied.pct, level: applied.level };
+    if (opts.skipDiscount || opts.admin) {
+      return { base, final: applied.final, pct: applied.pct, level: applied.level, discountPct: 0, discountedFrom: applied.final };
+    }
+    const discounted = applyReferralDiscount(applied.final);
+    return {
+      base,
+      final: discounted.final,
+      pct: applied.pct,
+      level: applied.level,
+      discountPct: discounted.pct,
+      discountedFrom: applied.final,
+      discountAmount: discounted.amount,
+    };
   }
   const els = {
     userChip: document.getElementById('userChip'),
@@ -471,6 +535,13 @@
     feeTraderInput: document.getElementById('feeTraderInput'),
     feeVipInput: document.getElementById('feeVipInput'),
     feeSellerInput: document.getElementById('feeSellerInput'),
+    referralsForm: document.getElementById('referralsForm'),
+    referralEnabledInput: document.getElementById('referralEnabledInput'),
+    referralDiscountInput: document.getElementById('referralDiscountInput'),
+    referralModeInput: document.getElementById('referralModeInput'),
+    referralMinInput: document.getElementById('referralMinInput'),
+    referralMaxInput: document.getElementById('referralMaxInput'),
+    referralStatus: document.getElementById('referralStatus'),
     levelForm: document.getElementById('levelForm'),
     levelWebuidInput: document.getElementById('levelWebuidInput'),
     levelSelect: document.getElementById('levelSelect'),
@@ -704,6 +775,7 @@ const firebaseConfig = {
     'purchase:review',
     'purchase:delete',
     'fees:set',
+    'referrals:set',
     'category:add',
     'category:delete',
     'currency:add',
@@ -1382,6 +1454,51 @@ const firebaseConfig = {
       state.lastFeesAt = Date.now();
     }
     renderFeesForm();
+    renderListings();
+    renderAdminQueue();
+    renderAdminManageList();
+  }
+
+  async function loadReferralConfig(opts = {}) {
+    const options = opts || {};
+    const force = !!options.force;
+    const now = Date.now();
+    if (!force && state.lastReferralAt && now - state.lastReferralAt < REFERRAL_COOLDOWN_MS) {
+      renderReferralForm();
+      return;
+    }
+    if (state.referralLoading) return;
+    state.referralLoading = true;
+    try {
+      if (!ADMIN_ROUTER_BASE) {
+        state.referralConfig = state.referralConfig || getDefaultReferralConfig();
+      } else {
+        const res = await fetchWithTimeout(`${ADMIN_ROUTER_BASE}/accounts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'referrals:get' })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) {
+          throw new Error(data.error || data.message || 'تعذر تحميل إعدادات الإحالة');
+        }
+        const cfg = data.referrals || data.referral || {};
+        state.referralConfig = {
+          enabled: cfg.enabled === true || cfg.enabled === 1 || cfg.enabled === '1' || cfg.enabled === 'true',
+          discountPct: Number(cfg.discountPct ?? cfg.discount ?? cfg.percent ?? 0) || 0,
+          mode: normalizeReferralMode(cfg.mode || cfg.type),
+          minReferrals: Math.max(1, Number(cfg.minReferrals ?? cfg.min ?? 1) || 1),
+          maxReferrals: Math.max(0, Number(cfg.maxReferrals ?? cfg.max ?? 0) || 0),
+        };
+      }
+    } catch (err) {
+      console.warn('referral config load failed', err);
+      state.referralConfig = state.referralConfig || getDefaultReferralConfig();
+    } finally {
+      state.referralLoading = false;
+      state.lastReferralAt = Date.now();
+    }
+    renderReferralForm();
     renderListings();
     renderAdminQueue();
     renderAdminManageList();
@@ -2127,6 +2244,9 @@ const firebaseConfig = {
     const markupNote = (!opts.skipMarkup && !opts.admin && priceInfo.pct)
       ? `<div class="muted tiny">+${priceInfo.pct}% (${priceInfo.level === 'trader' ? 'تجار' : priceInfo.level === 'vip' ? 'VIP' : 'زبائن'})</div>`
       : '';
+    const discountNote = (!opts.skipMarkup && !opts.admin && priceInfo.discountPct)
+      ? `<div class="muted tiny">خصم إحالة -${priceInfo.discountPct}%</div>`
+      : '';
 
     const footer = (opts.showContact && contactVal)
       ? `<div class="muted tiny">تواصل: ${contactVal}</div>`
@@ -2149,6 +2269,7 @@ const firebaseConfig = {
             <span class="price-tag">${priceTag}</span>
           </div>
           ${markupNote}
+          ${discountNote}
           <h3>${titleText}</h3>
           <div class="muted tiny">${game ? game.name : ''} ${created ? `• ${created}` : ''}</div>
           ${categoryLabel ? `<div class="muted tiny">القسم: ${categoryLabel}</div>` : ''}
@@ -2446,6 +2567,8 @@ const firebaseConfig = {
       const buyerContact = (p.buyerPhone || p.buyerContact || '').trim();
       const buyerLabel = (p.buyerWebuid || p.buyerId || '').toString().trim();
       const ownerLabel = (p.sellerWebuid || p.accountOwnerId || p.ownerId || '').toString().trim();
+      const discountPct = Number(p.referralDiscountPct || 0);
+      const discountAmount = Number(p.referralDiscountAmount || 0);
       const acc = accountsById.get(p.accountId) || {};
       const thumb = (acc.images && acc.images[0]) || acc.image || '';
       return `
@@ -2468,6 +2591,7 @@ const firebaseConfig = {
               <span class="badge ${p.status || 'pending'}">${p.status || 'pending'}</span>
               <span class="price-tag">${formatPriceCurrency(p.chargedPrice || p.price || 0)}</span>
               ${p.price && p.chargedPrice && p.chargedPrice !== p.price ? `<span class="muted tiny">أساس: ${formatPriceCurrency(p.price || 0)}</span>` : ''}
+              ${discountPct ? `<span class="muted tiny">خصم إحالة -${discountPct}%${discountAmount ? ` (${formatPriceCurrency(discountAmount)})` : ''}</span>` : ''}
               ${p.sellerNet ? `<span class="muted tiny">صافي البائع: ${formatPriceCurrency(p.sellerNet)}</span>` : ''}
             </div>
           </div>
@@ -3160,6 +3284,25 @@ const firebaseConfig = {
     if (els.feeSellerInput) els.feeSellerInput.value = fees?.sellerFee ?? 0;
   }
 
+  function setReferralStatus(text, isError = false) {
+    if (!els.referralStatus) return;
+    els.referralStatus.textContent = text || '-';
+    els.referralStatus.style.color = isError ? '#ef4444' : '';
+  }
+
+  function renderReferralForm() {
+    if (!els.referralsForm) return;
+    const cfg = state.referralConfig || getDefaultReferralConfig();
+    if (els.referralEnabledInput) {
+      const enabled = cfg.enabled === true || cfg.enabled === 1 || cfg.enabled === '1' || cfg.enabled === 'true';
+      els.referralEnabledInput.value = enabled ? '1' : '0';
+    }
+    if (els.referralDiscountInput) els.referralDiscountInput.value = cfg.discountPct ?? 0;
+    if (els.referralModeInput) els.referralModeInput.value = normalizeReferralMode(cfg.mode);
+    if (els.referralMinInput) els.referralMinInput.value = cfg.minReferrals ?? 1;
+    if (els.referralMaxInput) els.referralMaxInput.value = cfg.maxReferrals ?? 0;
+  }
+
   function updateMethodTypeUI(kind) {
     const isDeposit = kind === 'deposit';
     const typeEl = isDeposit ? els.depositMethodTypeInput : els.withdrawMethodTypeInput;
@@ -3351,6 +3494,35 @@ const firebaseConfig = {
     }).catch((err) => notify(err?.message || 'تعذر حفظ الرسوم'));
   }
 
+  function handleSaveReferrals(e) {
+    e.preventDefault();
+    if (!state.isAdmin) { notify('صلاحية الأدمن مطلوبة'); return; }
+    if (!ADMIN_ROUTER_BASE) { notify('اضبط ADMIN_ROUTER_BASE للعمليات الإدارية'); return; }
+    const enabledRaw = (els.referralEnabledInput?.value || '0').toString();
+    const enabled = enabledRaw === '1' || enabledRaw === 'true';
+    const discountPct = Number(els.referralDiscountInput?.value || 0);
+    const minReferrals = Math.max(1, Number(els.referralMinInput?.value || 1) || 1);
+    const maxReferrals = Math.max(0, Number(els.referralMaxInput?.value || 0) || 0);
+    const mode = normalizeReferralMode(els.referralModeInput?.value || 'after');
+    setReferralStatus('جارٍ الحفظ...');
+    sendAdminRequest({
+      action: 'referrals:set',
+      enabled,
+      discountPct,
+      mode,
+      minReferrals,
+      maxReferrals,
+    }).then((res) => {
+      state.referralConfig = res?.referrals || { enabled, discountPct, mode, minReferrals, maxReferrals };
+      renderReferralForm();
+      renderListings();
+      renderAdminQueue();
+      setReferralStatus('تم الحفظ');
+    }).catch((err) => {
+      setReferralStatus(err?.message || 'تعذر حفظ الإحالة', true);
+    });
+  }
+
   function handleLevelSubmit(e) {
     e.preventDefault();
     if (!state.isAdmin) { notify('صلاحية الأدمن مطلوبة'); return; }
@@ -3456,6 +3628,7 @@ const firebaseConfig = {
     if (els.addCurrencyForm) els.addCurrencyForm.addEventListener('submit', handleAddCurrency);
     if (els.currencyAdminList) els.currencyAdminList.addEventListener('click', handleCurrencyAdminClick);
     if (els.feesForm) els.feesForm.addEventListener('submit', handleSaveFees);
+    if (els.referralsForm) els.referralsForm.addEventListener('submit', handleSaveReferrals);
     if (els.levelForm) els.levelForm.addEventListener('submit', handleLevelSubmit);
     if (els.adminPromoteForm) els.adminPromoteForm.addEventListener('submit', handleAdminPromoteSubmit);
     if (els.userLookupForm) els.userLookupForm.addEventListener('submit', handleUserLookupSubmit);
@@ -3771,6 +3944,7 @@ const firebaseConfig = {
           renderCategoryAdminList();
           renderWalletTotals();
           await loadFeesConfig({ force: forceRefresh });
+          await loadReferralConfig({ force: forceRefresh });
           await loadWallet();
           state.dataUpdatedAt = Date.now();
           state.dataSource = 'router-admin';
@@ -3821,6 +3995,7 @@ const firebaseConfig = {
           updateAdminProfitTotal();
           renderCategoryAdminList();
           await loadFeesConfig({ force: forceRefresh });
+          await loadReferralConfig({ force: forceRefresh });
           await loadWallet();
           state.dataUpdatedAt = Date.now();
           state.dataSource = 'router-public';
@@ -3949,6 +4124,7 @@ const firebaseConfig = {
       updateAdminProfitTotal();
       renderCategoryAdminList();
       await loadFeesConfig({ force: forceRefresh });
+          await loadReferralConfig({ force: forceRefresh });
       state.dataUpdatedAt = Date.now();
       state.dataSource = 'firebase';
       setAdminTopupsLoadStatus(`آخر تحديث: ${new Date(state.dataUpdatedAt).toLocaleTimeString('ar-EG')}`);

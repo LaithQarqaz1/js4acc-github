@@ -3081,6 +3081,9 @@ button#logoutBtn:hover{background:#990000}
             '      <div class="info-card col-6"><div class="label"><i class="fa-solid fa-wallet"></i> الرصيد</div><div class="value"><span id="balance" class="copyable">--</span></div></div>',
             '      <div class="info-card col-6"><div class="label"><i class="fa-solid fa-coins"></i>الإنفاق</div><div class="value"><span id="totalspent" class="copyable">--</span><span class="badge">$</span></div></div>',
             '      <div class="info-card col-12"><div class="label"><i class="fa-regular fa-hashtag"></i> الايدي</div><div class="value"><span id="webuid" class="copyable">--</span></div></div>',
+            '      <div class="info-card col-12"><div class="label"><i class="fa-solid fa-link"></i> رابط الإحالة</div><div class="value"><span id="referralLink" class="copyable">--</span></div></div>',
+            '      <div class="info-card col-6"><div class="label"><i class="fa-solid fa-user-plus"></i> عدد الإحالات</div><div class="value"><span id="referralCount" class="copyable">0</span></div></div>',
+            '      <div class="info-card col-6"><div class="label"><i class="fa-solid fa-gift"></i> خصم الاحاله</div><div class="value"><span id="referralCredits" class="copyable">0</span></div></div>',
             '    </div>',
             '    <button id="resetBtn" type="button"><i class="fa-solid fa-key"></i> إعادة تعيين كلمة المرور</button>',
             '    <div id="msg"></div>',
@@ -3098,11 +3101,14 @@ button#logoutBtn:hover{background:#990000}
             balance: root.querySelector('#balance'),
             totalspent: root.querySelector('#totalspent'),
             webuid: root.querySelector('#webuid'),
+            referralLink: root.querySelector('#referralLink'),
+            referralCount: root.querySelector('#referralCount'),
+            referralCredits: root.querySelector('#referralCredits'),
             resetBtn: root.querySelector('#resetBtn'),
             msg: root.querySelector('#msg'),
             themeToggle: root.querySelector('#themeToggle')
           };
-          ['username','level','email','phone','balance','totalspent','webuid'].forEach(function(key){
+          ['username','level','email','phone','balance','totalspent','webuid','referralLink','referralCount','referralCredits'].forEach(function(key){
             var el = state.refs[key];
             if (el && !el.dataset.copy){ el.dataset.copy = el.textContent || ''; }
           });
@@ -3144,6 +3150,49 @@ button#logoutBtn:hover{background:#990000}
             try { return window.formatCurrencyFromJOD(v); } catch(_){}
           }
           return v.toFixed(2) + ' $';
+        }
+
+        function resolvePublicBase(){
+          var candidates = [
+            window.PUBLIC_SITE_URL,
+            window.SITE_URL,
+            window.APP_BASE_URL,
+            window.PUBLIC_BASE_URL,
+            window.BASE_URL
+          ];
+          for (var i = 0; i < candidates.length; i += 1){
+            var val = (candidates[i] || '').toString().trim();
+            if (val) return val;
+          }
+          try{
+            if (window.location && (window.location.protocol === 'http:' || window.location.protocol === 'https:')){
+              var basePath = window.location.pathname || '/';
+              if (basePath.slice(-1) !== '/') basePath = basePath.replace(/[^/]*$/, '');
+              return window.location.origin + basePath;
+            }
+          }catch(_){}
+          return '';
+        }
+
+        function buildReferralLink(code){
+          var raw = (code || '').toString().trim();
+          if (!raw || raw === '--') return '--';
+          try{
+            var base = resolvePublicBase();
+            if (base){
+              var url = new URL('login.html', base);
+              url.searchParams.set('ref', raw);
+              return url.toString();
+            }
+          }catch(_){}
+          try{
+            if (window.location && (window.location.protocol === 'http:' || window.location.protocol === 'https:')){
+              var url = new URL('login.html', window.location.href);
+              url.searchParams.set('ref', raw);
+              return url.toString();
+            }
+          }catch(_){}
+          return 'login.html?ref=' + encodeURIComponent(raw);
         }
 
         function renderBalance(value){
@@ -3375,7 +3424,11 @@ button#logoutBtn:hover{background:#990000}
               updateField(state.refs.level, data.level || '--');
               updateField(state.refs.totalspent, (data.totalspent == null ? 0 : data.totalspent).toString());
               updateField(state.refs.phone, data.phone || '--');
-              updateField(state.refs.webuid, data.webuid || '--');
+              var webuid = data.webuid || '--';
+              updateField(state.refs.webuid, webuid);
+              updateField(state.refs.referralLink, buildReferralLink(webuid));
+              updateField(state.refs.referralCount, (data.referralCount || data.referralsCount || 0).toString());
+              updateField(state.refs.referralCredits, (data.referralCredits || data.referral_credits || 0).toString());
               renderBalance(data.balance == null ? 0 : data.balance);
               try { localStorage.setItem('balance:cache:' + user.uid, String(Number(data.balance == null ? 0 : data.balance) || 0)); } catch(_){}
             }).catch(function(){
